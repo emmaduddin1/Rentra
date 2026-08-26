@@ -47,7 +47,7 @@ class RestoreProperty
 
         // Deleting parked the listing as Inactive, so undo exactly that: it
         // comes back ready to publish in one click, but still a draft, so
-        // nothing reaches applicants until the owner says so (FR-PROP-004).
+        // nothing reaches renters until the owner says so (FR-PROP-004).
         if ($property->status === PropertyStatus::Inactive) {
             $property->status = PropertyStatus::Available;
             $property->save();

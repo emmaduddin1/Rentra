@@ -27,7 +27,7 @@ class DashboardController extends Controller
         return view('owner.dashboard', [
             // NFR-PERF-003 - eager loaded, so the recent lists stay at one query each.
             'recentApplications' => Application::forOwner($owner)
-                ->with(['property', 'applicant'])
+                ->with(['property', 'renter'])
                 ->latest('submitted_at')
                 ->limit(5)
                 ->get(),

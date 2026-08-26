@@ -17,7 +17,7 @@ All 13 entities exist with their relationships, indexes, and integrity constrain
 Enforced at the database level:
 
 - unique `(tenancy_id, period_month)` on `monthly_records` (BR-003)
-- unique `(applicant_id, property_id)` on `favorites` (§8.3)
+- unique `(renter_id, property_id)` on `favorites` (§8.3)
 - unique `users.email` and `users.phone` (FR-AUTH-001)
 - `DECIMAL(14,2)` for every money column (BR-012)
 - foreign keys that cascade so no orphan images, proofs, attachments, or history rows survive
@@ -43,7 +43,7 @@ scaffolding to unpick later:
 
 - register (FR-AUTH-001), login/logout (FR-AUTH-002), password reset (FR-AUTH-003)
 - login accepts either the email or the phone on the account
-- role-based routing to `/owner`, `/renter`, `/applicant` (FR-AUTH-004)
+- role-based routing to `/owner` and `/renter` (FR-AUTH-004)
 - profile and password management (FR-AUTH-005)
 - suspension (FR-AUTH-006): a suspended account cannot log in, an existing session is
   terminated on its next request, and `Gate::before` denies every policy check
@@ -86,7 +86,7 @@ the suite (`.github/workflows/tests.yml`).
 | 4 | `notifications` follows the SRS shape (`user_id`, `title`, `body`, `data_json`), not Laravel's polymorphic notifications table | §8.1 specifies the columns. Consequence: the framework's `database` notification channel is not used; the relation is `User::inAppNotifications()` so the mail channel keeps working. A nullable unique `idempotency_key` supports FR-NOT-004. |
 | 5 | Status columns are strings cast to PHP backed enums, not SQL `ENUM` | §8.3 permits "validated enums or constrained string values"; strings stay portable between MySQL and the SQLite test database and avoid a migration for every new state. |
 | 6 | BR-002 (one active tenancy per property) is enforced in the assignment service and the policy, not by a partial unique index | Partial/filtered unique indexes are not portable across MySQL and SQLite. The Phase 3 service will do the check inside a transaction (NFR-REL-002). |
-| 7 | Self-registration is limited to applicants and owners | SRS §19 - renters are onboarded by their owner. Configurable in `config/rental.php`. |
+| 7 | Self-registration is limited to renters and owners | SRS §19 - the two roles the system has. Configurable in `config/rental.php`. |
 | 8 | `Model::preventLazyLoading` is **not** enabled | Policies traverse `record -> tenancy -> property` during authorisation, which is legitimate lazy loading. Index and dashboard queries eager-load explicitly instead (NFR-PERF-003). |
 | 9 | Totals are summed with `bcadd`, never floats | BR-012. |
 
@@ -100,6 +100,6 @@ the suite (`.github/workflows/tests.yml`).
   and be served through an authorised route (NFR-SEC-007); Phase 4 adds that route.
 - **Notifications**: `Notification` model and table exist; the dispatch service, queued
   mail, and the read/unread UI arrive with Phase 5 (FR-NOT-001 to FR-NOT-004).
-- **Deferred by design**: property CRUD and the applicant feed (Phase 2), tenancy
+- **Deferred by design**: property CRUD and the public listing feed (Phase 2), tenancy
   assignment (Phase 3), monthly submission and approval (Phase 4), maintenance workflow
   (Phase 5), reporting and exports (Phase 6), versioned REST API (Phase 7).

@@ -33,7 +33,7 @@ return new class extends Migration
             $table->smallInteger('floor_number')->nullable()->after('unit_label');
 
             $table->index(['parent_id', 'floor_number']);
-            // BR-001 - the applicant feed skips houses that are split into floors.
+            // BR-001 - the public feed skips houses that are split into floors.
             $table->index(['rental_mode', 'publication_status', 'status'], 'properties_feed_mode_index');
         });
     }

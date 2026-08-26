@@ -44,7 +44,7 @@
 
             <div class="mt-4 grid gap-4 sm:grid-cols-2">
                 @if ($isFloor)
-                    <x-form.field :label="__('Floor name')" name="unit_label" required :hint="__('Shown to applicants, for example Ground Floor.')">
+                    <x-form.field :label="__('Floor name')" name="unit_label" required :hint="__('Shown to renters, for example Ground Floor.')">
                         <x-form.input name="unit_label" :value="old('unit_label', $property->unit_label)" maxlength="255" />
                     </x-form.field>
 
@@ -96,7 +96,7 @@
                 </div>
 
                 @unless ($isFloor)
-                    <x-form.field :label="__('Area')" name="area" required :hint="__('Applicants search by this field.')">
+                    <x-form.field :label="__('Area')" name="area" required :hint="__('Renters search by this field.')">
                         <x-form.input name="area" :value="old('area', $property->area)" maxlength="255" />
                     </x-form.field>
 
@@ -259,7 +259,7 @@
         @unless ($isFloor)
             {{-- BR-013 - what changes when the arrangement is floor by floor. --}}
             <p class="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600" data-rental-mode-note hidden>
-                {{ __('This house becomes a container: it stays out of the applicant feed, and you publish, price, and rent each floor on its own.') }}
+                {{ __('This house becomes a container: it stays out of the public feed, and you publish, price, and rent each floor on its own.') }}
             </p>
         @endunless
 

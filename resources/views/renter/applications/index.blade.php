@@ -48,7 +48,7 @@
                             @endif
 
                             @if ($application->status === \App\Enums\ApplicationStatus::Pending)
-                                <form method="POST" action="{{ route('applicant.applications.destroy', $application) }}" class="mt-3">
+                                <form method="POST" action="{{ route('renter.applications.destroy', $application) }}" class="mt-3">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-sm font-medium text-red-700 hover:text-red-800">{{ __('Withdraw application') }}</button>

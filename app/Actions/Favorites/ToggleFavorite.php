@@ -8,16 +8,16 @@ use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
 
 /**
- * SRS FR-APP-007 - saved listings, unique per applicant and property (8.3).
+ * SRS FR-APP-007 - saved listings, unique per renter and property (8.3).
  *
  * @return bool true when the listing is now saved, false when it was removed
  */
 class ToggleFavorite
 {
-    public function handle(User $applicant, Property $property): bool
+    public function handle(User $renter, Property $property): bool
     {
         $existing = Favorite::query()
-            ->where('applicant_id', $applicant->id)
+            ->where('renter_id', $renter->id)
             ->where('property_id', $property->id)
             ->first();
 
@@ -29,7 +29,7 @@ class ToggleFavorite
 
         try {
             Favorite::create([
-                'applicant_id' => $applicant->id,
+                'renter_id' => $renter->id,
                 'property_id' => $property->id,
             ]);
         } catch (UniqueConstraintViolationException) {

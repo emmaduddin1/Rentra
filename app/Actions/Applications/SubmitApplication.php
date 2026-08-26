@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * SRS FR-APP-005 - a logged-in applicant submits an inquiry against a published
+ * SRS FR-APP-005 - a logged-in renter submits an inquiry against a published
  * listing, and the owner is notified.
  */
 class SubmitApplication
@@ -25,13 +25,13 @@ class SubmitApplication
     /**
      * @param  array{message?: string|null, contact_phone?: string|null}  $data
      */
-    public function handle(User $applicant, Property $property, array $data = []): Application
+    public function handle(User $renter, Property $property, array $data = []): Application
     {
         // SRS 12 - a duplicate inquiry returns a clear message rather than a
         // second row the owner has to reconcile.
         $open = Application::query()
             ->where('property_id', $property->id)
-            ->where('applicant_id', $applicant->id)
+            ->where('renter_id', $renter->id)
             ->whereIn('status', [ApplicationStatus::Pending->value, ApplicationStatus::Reviewed->value])
             ->exists();
 
@@ -41,12 +41,12 @@ class SubmitApplication
             ]);
         }
 
-        return DB::transaction(function () use ($applicant, $property, $data) {
+        return DB::transaction(function () use ($renter, $property, $data) {
             $application = Application::create([
                 'property_id' => $property->id,
-                'applicant_id' => $applicant->id,
+                'renter_id' => $renter->id,
                 'message' => $data['message'] ?? null,
-                'contact_phone' => $data['contact_phone'] ?? $applicant->phone,
+                'contact_phone' => $data['contact_phone'] ?? $renter->phone,
                 'status' => ApplicationStatus::Pending,
                 'submitted_at' => now(),
             ]);
@@ -55,7 +55,7 @@ class SubmitApplication
                 recipient: $property->owner,
                 type: 'application.submitted',
                 title: __('New application for :property', ['property' => $property->title]),
-                body: __(':name applied for this listing.', ['name' => $applicant->name]),
+                body: __(':name applied for this listing.', ['name' => $renter->name]),
                 actionUrl: route('owner.applications.show', $application),
                 data: ['application_id' => $application->id, 'property_id' => $property->id],
                 idempotencyKey: 'application.submitted:'.$application->id,
@@ -65,7 +65,7 @@ class SubmitApplication
                 action: 'application.submitted',
                 subject: $application,
                 newValues: ['property_id' => $property->id, 'status' => ApplicationStatus::Pending->value],
-                actor: $applicant,
+                actor: $renter,
             );
 
             return $application;

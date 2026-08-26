@@ -10,7 +10,7 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * SRS FR-PROP-004 / BR-001 - publication is the owner's decision; visibility to
- * applicants additionally requires the property to be Available.
+ * renters additionally requires the property to be Available.
  *
  * Publishing an occupied property is allowed: the listing simply stays out of
  * the feed until the tenancy ends, instead of forcing the owner to republish.

@@ -61,19 +61,19 @@ class User extends Authenticatable
     /** @return HasMany<Application, $this> */
     public function applications(): HasMany
     {
-        return $this->hasMany(Application::class, 'applicant_id');
+        return $this->hasMany(Application::class, 'renter_id');
     }
 
     /** @return HasMany<Favorite, $this> */
     public function favorites(): HasMany
     {
-        return $this->hasMany(Favorite::class, 'applicant_id');
+        return $this->hasMany(Favorite::class, 'renter_id');
     }
 
     /** @return BelongsToMany<Property, $this> */
     public function favoriteProperties(): BelongsToMany
     {
-        return $this->belongsToMany(Property::class, 'favorites', 'applicant_id', 'property_id')
+        return $this->belongsToMany(Property::class, 'favorites', 'renter_id', 'property_id')
             ->withTimestamps();
     }
 
@@ -109,11 +109,6 @@ class User extends Authenticatable
     public function isRenter(): bool
     {
         return $this->role === UserRole::Renter;
-    }
-
-    public function isApplicant(): bool
-    {
-        return $this->role === UserRole::Applicant;
     }
 
     /**

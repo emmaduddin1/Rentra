@@ -8,19 +8,19 @@ use App\Models\Property;
 use App\Models\User;
 
 /**
- * SRS FR-APP-005/006 - applicants own their applications, owners respond to
- * applications made against their own listings.
+ * SRS FR-APP-005/006 - renters own the applications they send, owners respond
+ * to applications made against their own listings.
  */
 class ApplicationPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isOwner() || $user->isApplicant();
+        return $user->isOwner() || $user->isRenter();
     }
 
     public function view(User $user, Application $application): bool
     {
-        return $this->isApplicantOf($user, $application) || $this->isOwnerOf($user, $application);
+        return $this->isRenterOf($user, $application) || $this->isOwnerOf($user, $application);
     }
 
     /**
@@ -29,7 +29,7 @@ class ApplicationPolicy
      */
     public function create(User $user, Property $property): bool
     {
-        return $user->isApplicant()
+        return $user->isRenter()
             && $property->isPubliclyVisible()
             && ! $property->isOwnedBy($user);
     }
@@ -41,13 +41,13 @@ class ApplicationPolicy
 
     public function withdraw(User $user, Application $application): bool
     {
-        return $this->isApplicantOf($user, $application)
+        return $this->isRenterOf($user, $application)
             && $application->status === ApplicationStatus::Pending;
     }
 
-    protected function isApplicantOf(User $user, Application $application): bool
+    protected function isRenterOf(User $user, Application $application): bool
     {
-        return $application->applicant_id === $user->id;
+        return $application->renter_id === $user->id;
     }
 
     protected function isOwnerOf(User $user, Application $application): bool

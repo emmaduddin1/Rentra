@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'property_id', 'applicant_id', 'message', 'contact_phone', 'status',
+    'property_id', 'renter_id', 'message', 'contact_phone', 'status',
     'submitted_at', 'responded_by', 'responded_at', 'owner_note',
 ])]
 class Application extends Model
@@ -36,9 +36,9 @@ class Application extends Model
     }
 
     /** @return BelongsTo<User, $this> */
-    public function applicant(): BelongsTo
+    public function renter(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'applicant_id');
+        return $this->belongsTo(User::class, 'renter_id');
     }
 
     /** @return BelongsTo<User, $this> */
@@ -60,8 +60,8 @@ class Application extends Model
     }
 
     /** @param  Builder<static>  $query */
-    public function scopeForApplicant(Builder $query, User|int $applicant): void
+    public function scopeForRenter(Builder $query, User|int $renter): void
     {
-        $query->where('applicant_id', $applicant instanceof User ? $applicant->id : $applicant);
+        $query->where('renter_id', $renter instanceof User ? $renter->id : $renter);
     }
 }

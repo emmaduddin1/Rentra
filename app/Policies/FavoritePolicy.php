@@ -7,22 +7,22 @@ use App\Models\Property;
 use App\Models\User;
 
 /**
- * SRS FR-APP-007 - saved listings belong to the authenticated applicant.
+ * SRS FR-APP-007 - saved listings belong to the authenticated renter.
  */
 class FavoritePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->isApplicant();
+        return $user->isRenter();
     }
 
     public function create(User $user, Property $property): bool
     {
-        return $user->isApplicant() && $property->isPubliclyVisible();
+        return $user->isRenter() && $property->isPubliclyVisible();
     }
 
     public function delete(User $user, Favorite $favorite): bool
     {
-        return $favorite->applicant_id === $user->id;
+        return $favorite->renter_id === $user->id;
     }
 }

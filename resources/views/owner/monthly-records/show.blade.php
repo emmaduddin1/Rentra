@@ -26,21 +26,12 @@
             {{-- SRS 5.3 step 14 - the owner checks amounts, images, notes, and tenancy. --}}
             <section class="card p-6">
                 <h2 class="text-sm font-semibold text-slate-900">{{ __('Amounts and evidence') }}</h2>
+                <p class="mt-1 text-xs text-slate-500">
+                    {{ __('What the renter says they paid this month, and the receipt for each charge.') }}
+                </p>
 
-                <div class="mt-4 space-y-4">
-                    @foreach ($categories as $category)
-                        @if ((float) $record->{$category->amountColumn()} > 0 || $record->proofs->where('category', $category)->isNotEmpty())
-                            <div class="rounded-lg border border-slate-200 p-4">
-                                <div class="flex flex-wrap items-center justify-between gap-2">
-                                    <h3 class="text-sm font-medium text-slate-900">{{ $category->label() }}</h3>
-                                    <span class="text-sm font-medium"><x-money :amount="$record->{$category->amountColumn()}" /></span>
-                                </div>
-                                <div class="mt-3">
-                                    <x-proof-list :record="$record" :category="$category" />
-                                </div>
-                            </div>
-                        @endif
-                    @endforeach
+                <div class="mt-4">
+                    <x-payment-evidence :record="$record" :categories="$categories" />
                 </div>
 
                 @if ($record->notes)

@@ -1,5 +1,5 @@
 <x-layouts.app
-    :title="__('Application from :name', ['name' => $application->applicant->name])"
+    :title="__('Application from :name', ['name' => $application->renter->name])"
     :heading="__('Application')"
     :subheading="$application->property->title"
     :back="['href' => route('owner.applications.index'), 'label' => __('Applications')]"
@@ -9,7 +9,7 @@
             <section class="card p-6">
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                        <h2 class="text-sm font-semibold text-slate-900">{{ $application->applicant->name }}</h2>
+                        <h2 class="text-sm font-semibold text-slate-900">{{ $application->renter->name }}</h2>
                         <p class="mt-1 text-xs text-slate-500">
                             {{ __('Applied :date', ['date' => $application->submitted_at->format('d M Y, H:i')]) }}
                         </p>
@@ -20,11 +20,11 @@
                 <dl class="mt-4 grid gap-4 sm:grid-cols-2">
                     <div>
                         <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Phone') }}</dt>
-                        <dd class="mt-1 text-sm text-slate-900">{{ $application->contact_phone ?? $application->applicant->phone ?? '—' }}</dd>
+                        <dd class="mt-1 text-sm text-slate-900">{{ $application->contact_phone ?? $application->renter->phone ?? '—' }}</dd>
                     </div>
                     <div>
                         <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Email') }}</dt>
-                        <dd class="mt-1 text-sm text-slate-900">{{ $application->applicant->email ?? '—' }}</dd>
+                        <dd class="mt-1 text-sm text-slate-900">{{ $application->renter->email ?? '—' }}</dd>
                     </div>
                 </dl>
 
@@ -70,12 +70,12 @@
                 </div>
             </section>
 
-            {{-- FR-APP-006 - the status the applicant will see. --}}
+            {{-- FR-APP-006 - the status the renter will see. --}}
             <section class="card p-6">
                 <h2 class="text-sm font-semibold text-slate-900">{{ __('Respond') }}</h2>
 
                 @if ($application->status === \App\Enums\ApplicationStatus::Withdrawn)
-                    <p class="mt-2 text-sm text-slate-600">{{ __('The applicant withdrew this application.') }}</p>
+                    <p class="mt-2 text-sm text-slate-600">{{ __('The renter withdrew this application.') }}</p>
                 @else
                     <form method="POST" action="{{ route('owner.applications.update', $application) }}" class="mt-4 space-y-4">
                         @csrf
@@ -92,7 +92,7 @@
                             />
                         </x-form.field>
 
-                        <x-form.field :label="__('Note to applicant')" name="owner_note">
+                        <x-form.field :label="__('Note to renter')" name="owner_note">
                             <x-form.textarea name="owner_note" rows="4" :value="$application->owner_note" />
                         </x-form.field>
 

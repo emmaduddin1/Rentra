@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Applicant;
+namespace App\Http\Controllers\Renter;
 
 use App\Actions\Favorites\ToggleFavorite;
 use App\Http\Controllers\Controller;
@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 /**
- * SRS FR-APP-007 - saved listings for the authenticated applicant.
+ * SRS FR-APP-007 - saved listings for the authenticated renter.
  */
 class FavoriteController extends Controller
 {
@@ -20,7 +20,7 @@ class FavoriteController extends Controller
     {
         Gate::authorize('viewAny', Favorite::class);
 
-        return view('applicant.favorites.index', [
+        return view('renter.favorites.index', [
             'listings' => $request->user()
                 ->favoriteProperties()
                 ->with('primaryImage')
@@ -31,10 +31,10 @@ class FavoriteController extends Controller
 
     public function toggle(Request $request, Property $property, ToggleFavorite $toggleFavorite): RedirectResponse
     {
-        $applicant = $request->user();
+        $renter = $request->user();
 
         $existing = Favorite::query()
-            ->where('applicant_id', $applicant->id)
+            ->where('renter_id', $renter->id)
             ->where('property_id', $property->id)
             ->first();
 
@@ -46,7 +46,7 @@ class FavoriteController extends Controller
             Gate::authorize('create', [Favorite::class, $property]);
         }
 
-        $saved = $toggleFavorite->handle($applicant, $property);
+        $saved = $toggleFavorite->handle($renter, $property);
 
         return back()->with('status', $saved ? __('Listing saved.') : __('Listing removed from saved.'));
     }

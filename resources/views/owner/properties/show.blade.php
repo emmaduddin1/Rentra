@@ -35,10 +35,10 @@
             <x-badge :variant="$property->publication_status->badge()" dot>{{ $property->publication_status->label() }}</x-badge>
 
             @if ($property->isPubliclyVisible())
-                <span class="text-sm text-emerald-700">{{ __('Visible in the applicant feed') }}</span>
+                <span class="text-sm text-emerald-700">{{ __('Visible in the public feed') }}</span>
             @else
                 {{-- BR-001 spelled out, so the owner knows why it is hidden. --}}
-                <span class="text-sm text-slate-500">{{ __('Not visible to applicants') }}</span>
+                <span class="text-sm text-slate-500">{{ __('Not visible to renters') }}</span>
             @endif
         @endif
     </div>
@@ -240,7 +240,7 @@
                         </div>
                     @endif
 
-                    {{-- FR-PROP-005 - a deleted floor is hidden from applicants
+                    {{-- FR-PROP-005 - a deleted floor is hidden from renters
                          but stays here, so the owner can bring it back. --}}
                     @if ($deletedFloors->isNotEmpty())
                         <div class="mt-6 border-t border-slate-100 pt-5">
@@ -253,7 +253,7 @@
                                             <span class="text-sm font-medium text-slate-700">{{ $floor->unit_label }}</span>
                                             <span class="block text-xs text-slate-500">
                                                 {{ __('Deleted :date', ['date' => $floor->deleted_at->format('d M Y')]) }}
-                                                · {{ __('Hidden from applicants') }}
+                                                · {{ __('Hidden from renters') }}
                                             </span>
                                         </span>
 
@@ -343,7 +343,7 @@
                             <li class="flex flex-wrap items-center justify-between gap-2 py-3">
                                 <span>
                                     <a href="{{ route('owner.applications.show', $application) }}" class="text-sm font-medium text-slate-900 hover:underline">
-                                        {{ $application->applicant->name }}
+                                        {{ $application->renter->name }}
                                     </a>
                                     <span class="block text-xs text-slate-500">{{ $application->submitted_at->format('d M Y') }}</span>
                                 </span>
@@ -363,7 +363,7 @@
                 @if ($isHouse)
                     {{-- BR-013 - nothing to publish here; the floors carry it. --}}
                     <p class="mt-3 rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                        {{ __('This house is rented floor by floor, so it never appears in the applicant feed. Publish each floor from its own page.') }}
+                        {{ __('This house is rented floor by floor, so it never appears in the public feed. Publish each floor from its own page.') }}
                     </p>
                 @endif
 
@@ -405,8 +405,8 @@
                     {{-- FR-PROP-005 / BR-009 - a delete unpublishes and hides,
                          it never destroys the record or its history. --}}
                     {{ $isHouse
-                        ? __('The house and all of its floors are unpublished and hidden from applicants. You keep seeing them under Deleted, and you can restore and publish them again at any time.')
-                        : __('The listing is unpublished and hidden from applicants. You keep seeing it under Deleted, and you can restore and publish it again at any time.') }}
+                        ? __('The house and all of its floors are unpublished and hidden from renters. You keep seeing them under Deleted, and you can restore and publish them again at any time.')
+                        : __('The listing is unpublished and hidden from renters. You keep seeing it under Deleted, and you can restore and publish it again at any time.') }}
                 </p>
 
                 @error('property')

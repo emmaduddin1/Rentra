@@ -23,7 +23,7 @@ class HomeController extends Controller
                 ->limit(6)
                 ->get(),
             // FR-APP-007 - so the save control shows the real state.
-            'favoriteIds' => $user?->isApplicant()
+            'favoriteIds' => $user?->isRenter()
                 ? $user->favorites()->pluck('property_id')->all()
                 : [],
         ]);

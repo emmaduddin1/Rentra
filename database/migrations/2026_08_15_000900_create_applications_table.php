@@ -6,7 +6,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * SRS 8.1 - applications: applicant interest in a property.
+ * SRS 8.1 - applications: renter interest in a property.
  */
 return new class extends Migration
 {
@@ -15,7 +15,7 @@ return new class extends Migration
         Schema::create('applications', function (Blueprint $table) {
             $table->id();
             $table->foreignId('property_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('applicant_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('renter_id')->constrained('users')->cascadeOnDelete();
             $table->text('message')->nullable();
             $table->string('contact_phone', 32)->nullable();
             $table->string('status')->default(ApplicationStatus::Pending->value);
@@ -26,7 +26,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['property_id', 'status']);
-            $table->index(['applicant_id', 'status']);
+            $table->index(['renter_id', 'status']);
         });
     }
 

@@ -35,7 +35,6 @@ class RoleRoutingTest extends TestCase
         $cases = [
             'owner' => 'owner.dashboard',
             'renter' => 'renter.dashboard',
-            'applicant' => 'applicant.dashboard',
         ];
 
         foreach ($cases as $role => $route) {
@@ -55,15 +54,6 @@ class RoleRoutingTest extends TestCase
         $this->actingAs(User::factory()->renter()->create())
             ->get(route('owner.dashboard'))
             ->assertForbidden();
-    }
-
-    #[Test]
-    public function an_applicant_cannot_open_the_owner_or_renter_portal(): void
-    {
-        $applicant = User::factory()->applicant()->create();
-
-        $this->actingAs($applicant)->get(route('owner.dashboard'))->assertForbidden();
-        $this->actingAs($applicant)->get(route('renter.dashboard'))->assertForbidden();
     }
 
     #[Test]

@@ -24,18 +24,18 @@ return [
     | Registration
     |--------------------------------------------------------------------------
     |
-    | SRS 19 - self-registration is open to applicants; owner and renter
-    | onboarding rules are configurable. Renters are normally created by an
-    | owner (Phase 3), so they are not self-registerable by default.
+    | SRS 19 - self-registration is open to renters and owners. A renter signs
+    | up, browses, applies, and becomes a tenant once an owner accepts; an owner
+    | may also add a renter account directly (Phase 3).
     |
     */
 
     'registration' => [
         'allowed_roles' => [
-            UserRole::Applicant->value,
+            UserRole::Renter->value,
             UserRole::Owner->value,
         ],
-        'default_role' => UserRole::Applicant->value,
+        'default_role' => UserRole::Renter->value,
     ],
 
     /*
@@ -98,7 +98,7 @@ return [
 
     'listings' => [
         'per_page' => 12,
-        // SRS 19 - hide full owner contact until the applicant is logged in.
+        // SRS 19 - hide full owner contact until the visitor is logged in.
         'require_login_for_contact' => true,
     ],
 

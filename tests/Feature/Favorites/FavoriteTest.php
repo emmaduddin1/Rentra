@@ -17,18 +17,18 @@ class FavoriteTest extends TestCase
     use RefreshDatabase;
 
     #[Test]
-    public function an_applicant_saves_and_removes_a_listing(): void
+    public function a_renter_saves_and_removes_a_listing(): void
     {
         $property = Property::factory()->published()->create();
-        $applicant = User::factory()->applicant()->create();
+        $renter = User::factory()->renter()->create();
 
-        $this->actingAs($applicant)->post(route('applicant.favorites.toggle', $property))->assertRedirect();
+        $this->actingAs($renter)->post(route('renter.favorites.toggle', $property))->assertRedirect();
         $this->assertDatabaseHas('favorites', [
-            'applicant_id' => $applicant->id,
+            'renter_id' => $renter->id,
             'property_id' => $property->id,
         ]);
 
-        $this->actingAs($applicant)->post(route('applicant.favorites.toggle', $property))->assertRedirect();
+        $this->actingAs($renter)->post(route('renter.favorites.toggle', $property))->assertRedirect();
         $this->assertDatabaseCount('favorites', 0);
     }
 
@@ -38,12 +38,12 @@ class FavoriteTest extends TestCase
         $mine = Property::factory()->published()->create(['title' => 'My saved listing']);
         $theirs = Property::factory()->published()->create(['title' => 'Someone elses listing']);
 
-        $applicant = User::factory()->applicant()->create();
-        Favorite::factory()->create(['applicant_id' => $applicant->id, 'property_id' => $mine->id]);
+        $renter = User::factory()->renter()->create();
+        Favorite::factory()->create(['renter_id' => $renter->id, 'property_id' => $mine->id]);
         Favorite::factory()->create(['property_id' => $theirs->id]);
 
-        $this->actingAs($applicant)
-            ->get(route('applicant.favorites.index'))
+        $this->actingAs($renter)
+            ->get(route('renter.favorites.index'))
             ->assertOk()
             ->assertSee('My saved listing')
             ->assertDontSee('Someone elses listing');
@@ -53,44 +53,42 @@ class FavoriteTest extends TestCase
     public function a_hidden_listing_cannot_be_saved_but_can_be_removed(): void
     {
         $draft = Property::factory()->create();
-        $applicant = User::factory()->applicant()->create();
+        $renter = User::factory()->renter()->create();
 
-        $this->actingAs($applicant)
-            ->post(route('applicant.favorites.toggle', $draft))
+        $this->actingAs($renter)
+            ->post(route('renter.favorites.toggle', $draft))
             ->assertForbidden();
 
         // A listing saved while it was public stays removable after it is hidden.
-        Favorite::factory()->create(['applicant_id' => $applicant->id, 'property_id' => $draft->id]);
+        Favorite::factory()->create(['renter_id' => $renter->id, 'property_id' => $draft->id]);
 
-        $this->actingAs($applicant)->post(route('applicant.favorites.toggle', $draft))->assertRedirect();
+        $this->actingAs($renter)->post(route('renter.favorites.toggle', $draft))->assertRedirect();
         $this->assertDatabaseCount('favorites', 0);
     }
 
     #[Test]
-    public function only_applicants_have_saved_listings(): void
+    public function only_renters_have_saved_listings(): void
     {
         $property = Property::factory()->published()->create();
 
-        $this->post(route('applicant.favorites.toggle', $property))->assertRedirect(route('login'));
+        $this->post(route('renter.favorites.toggle', $property))->assertRedirect(route('login'));
 
-        foreach (['owner', 'renter'] as $role) {
-            $this->actingAs(User::factory()->{$role}()->create())
-                ->post(route('applicant.favorites.toggle', $property))
-                ->assertForbidden();
-        }
+        $this->actingAs(User::factory()->owner()->create())
+            ->post(route('renter.favorites.toggle', $property))
+            ->assertForbidden();
     }
 
     #[Test]
     public function the_same_listing_is_never_saved_twice(): void
     {
         $property = Property::factory()->published()->create();
-        $applicant = User::factory()->applicant()->create();
+        $renter = User::factory()->renter()->create();
 
-        // 8.3 - unique (applicant_id, property_id).
-        Favorite::factory()->create(['applicant_id' => $applicant->id, 'property_id' => $property->id]);
+        // 8.3 - unique (renter_id, property_id).
+        Favorite::factory()->create(['renter_id' => $renter->id, 'property_id' => $property->id]);
 
-        $this->actingAs($applicant)->post(route('applicant.favorites.toggle', $property));
-        $this->actingAs($applicant)->post(route('applicant.favorites.toggle', $property));
+        $this->actingAs($renter)->post(route('renter.favorites.toggle', $property));
+        $this->actingAs($renter)->post(route('renter.favorites.toggle', $property));
 
         $this->assertDatabaseCount('favorites', 1);
     }

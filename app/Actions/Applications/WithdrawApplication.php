@@ -8,7 +8,7 @@ use App\Services\AuditLogger;
 use Illuminate\Support\Facades\DB;
 
 /**
- * SRS FR-APP-005 - an applicant may take back an inquiry that has not been
+ * SRS FR-APP-005 - a renter may take back an inquiry that has not been
  * answered yet. The row is kept so the owner's history stays complete (BR-009).
  */
 class WithdrawApplication

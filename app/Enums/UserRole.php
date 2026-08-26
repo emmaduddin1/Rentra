@@ -6,14 +6,12 @@ enum UserRole: string
 {
     case Owner = 'owner';
     case Renter = 'renter';
-    case Applicant = 'applicant';
 
     public function label(): string
     {
         return match ($this) {
             self::Owner => 'Owner',
             self::Renter => 'Renter',
-            self::Applicant => 'Applicant',
         };
     }
 
@@ -25,7 +23,6 @@ enum UserRole: string
         return match ($this) {
             self::Owner => 'owner.dashboard',
             self::Renter => 'renter.dashboard',
-            self::Applicant => 'applicant.dashboard',
         };
     }
 }

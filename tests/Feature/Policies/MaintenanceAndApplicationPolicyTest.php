@@ -55,32 +55,32 @@ class MaintenanceAndApplicationPolicyTest extends TestCase
     #[Test]
     public function applications_are_only_accepted_for_publicly_visible_listings(): void
     {
-        $applicant = User::factory()->applicant()->create();
+        $renter = User::factory()->renter()->create();
         $published = Property::factory()->published()->create();
         $draft = Property::factory()->create();
         $occupied = Property::factory()->published()->occupied()->create();
 
-        $this->assertTrue(Gate::forUser($applicant)->allows('create', [Application::class, $published]));
-        $this->assertFalse(Gate::forUser($applicant)->allows('create', [Application::class, $draft]));
-        $this->assertFalse(Gate::forUser($applicant)->allows('create', [Application::class, $occupied]));
+        $this->assertTrue(Gate::forUser($renter)->allows('create', [Application::class, $published]));
+        $this->assertFalse(Gate::forUser($renter)->allows('create', [Application::class, $draft]));
+        $this->assertFalse(Gate::forUser($renter)->allows('create', [Application::class, $occupied]));
     }
 
     #[Test]
-    public function an_application_is_visible_to_its_applicant_and_the_listing_owner_only(): void
+    public function an_application_is_visible_to_its_renter_and_the_listing_owner_only(): void
     {
         $application = Application::factory()->create();
         $owner = $application->property->owner;
 
-        $this->assertTrue(Gate::forUser($application->applicant)->allows('view', $application));
+        $this->assertTrue(Gate::forUser($application->renter)->allows('view', $application));
         $this->assertTrue(Gate::forUser($owner)->allows('view', $application));
         $this->assertTrue(Gate::forUser($owner)->allows('updateStatus', $application));
 
-        $otherApplicant = User::factory()->applicant()->create();
+        $otherRenter = User::factory()->renter()->create();
         $otherOwner = User::factory()->owner()->create();
 
-        $this->assertFalse(Gate::forUser($otherApplicant)->allows('view', $application));
+        $this->assertFalse(Gate::forUser($otherRenter)->allows('view', $application));
         $this->assertFalse(Gate::forUser($otherOwner)->allows('view', $application));
         $this->assertFalse(Gate::forUser($otherOwner)->allows('updateStatus', $application));
-        $this->assertFalse(Gate::forUser($application->applicant)->allows('updateStatus', $application));
+        $this->assertFalse(Gate::forUser($application->renter)->allows('updateStatus', $application));
     }
 }

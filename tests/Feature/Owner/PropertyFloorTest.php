@@ -137,7 +137,7 @@ class PropertyFloorTest extends TestCase
     }
 
     #[Test]
-    public function only_the_floors_of_a_split_house_reach_the_applicant_feed(): void
+    public function only_the_floors_of_a_split_house_reach_the_public_feed(): void
     {
         $owner = User::factory()->owner()->create();
         $house = Property::factory()->splitIntoFloors()->for($owner, 'owner')->create(['title' => 'Gulberg Villa']);
@@ -379,7 +379,7 @@ class PropertyFloorTest extends TestCase
 
         $this->actingAs($owner)->delete(route('owner.properties.destroy', $floor));
 
-        // The owner keeps seeing it on the house page; the applicant does not.
+        // The owner keeps seeing it on the house page; the renter does not.
         $this->actingAs($owner)
             ->get(route('owner.properties.show', $house))
             ->assertOk()
@@ -437,7 +437,7 @@ class PropertyFloorTest extends TestCase
     }
 
     #[Test]
-    public function a_floor_listing_points_applicants_at_the_other_floors(): void
+    public function a_floor_listing_points_renters_at_the_other_floors(): void
     {
         $owner = User::factory()->owner()->create();
         $house = Property::factory()->splitIntoFloors()->for($owner, 'owner')->create();

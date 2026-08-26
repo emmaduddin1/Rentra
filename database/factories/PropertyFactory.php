@@ -68,7 +68,7 @@ class PropertyFactory extends Factory
 
     /**
      * BR-013 - a house whose floors are let separately. It holds no rent and
-     * never reaches the applicant feed itself.
+     * never reaches the public feed itself.
      */
     public function splitIntoFloors(): static
     {

@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * SRS FR-APP-006 - the owner reviews an application and the status becomes
- * visible to the applicant.
+ * visible to the renter who sent it.
  */
 class RespondToApplication
 {
@@ -23,16 +23,16 @@ class RespondToApplication
 
     public function handle(Application $application, User $owner, ApplicationStatus $status, ?string $note = null): Application
     {
-        // An applicant who has walked away is not dragged back into the flow.
+        // A renter who has walked away is not dragged back into the flow.
         if ($application->status === ApplicationStatus::Withdrawn) {
             throw ValidationException::withMessages([
-                'status' => __('This application was withdrawn by the applicant.'),
+                'status' => __('This application was withdrawn by the renter.'),
             ]);
         }
 
         if ($status === ApplicationStatus::Withdrawn) {
             throw ValidationException::withMessages([
-                'status' => __('Only the applicant can withdraw an application.'),
+                'status' => __('Only the renter can withdraw an application.'),
             ]);
         }
 
@@ -47,11 +47,11 @@ class RespondToApplication
             ])->save();
 
             $this->notifier->send(
-                recipient: $application->applicant,
+                recipient: $application->renter,
                 type: 'application.status_changed',
                 title: __('Your application is now :status', ['status' => $status->label()]),
                 body: $note,
-                actionUrl: route('applicant.applications.index'),
+                actionUrl: route('renter.applications.index'),
                 data: ['application_id' => $application->id, 'status' => $status->value],
                 idempotencyKey: 'application.status:'.$application->id.':'.$status->value.':'.$application->responded_at->timestamp,
             );

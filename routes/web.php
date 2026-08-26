@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Applicant;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
@@ -21,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 | Public
 |--------------------------------------------------------------------------
 |
-| SRS 5.5 / FR-APP-001 to FR-APP-004 - the applicant feed is open to guests.
+| SRS 5.5 / FR-APP-001 to FR-APP-004 - the public listing feed is open to guests.
 | NFR-SEC-006 - the search endpoint is rate limited.
 |
 */
@@ -183,6 +182,21 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:renter')->prefix('renter')->name('renter.')->group(function () {
         Route::get('dashboard', Renter\DashboardController::class)->name('dashboard');
 
+        // FR-APP-005 - the renter applies for a listing; NFR-SEC-006 rate
+        // limits the contact/application endpoint.
+        Route::get('applications', [Renter\ApplicationController::class, 'index'])->name('applications.index');
+        Route::post('listings/{property}/applications', [Renter\ApplicationController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('applications.store');
+        Route::delete('applications/{application}', [Renter\ApplicationController::class, 'destroy'])
+            ->name('applications.destroy');
+
+        // FR-APP-007 - saved listings.
+        Route::get('favorites', [Renter\FavoriteController::class, 'index'])->name('favorites.index');
+        Route::post('favorites/{property}', [Renter\FavoriteController::class, 'toggle'])
+            ->middleware('throttle:60,1')
+            ->name('favorites.toggle');
+
         // SRS 11.3 "My property" - current and historical tenancies.
         Route::get('tenancies', [Renter\TenancyController::class, 'index'])->name('tenancies.index');
         Route::get('tenancies/{tenancy}', [Renter\TenancyController::class, 'show'])->name('tenancies.show');
@@ -209,26 +223,5 @@ Route::middleware('auth')->group(function () {
         Route::get('maintenance/{maintenance}', [Renter\MaintenanceRequestController::class, 'show'])->name('maintenance.show');
         Route::post('maintenance/{maintenance}/comments', [Renter\MaintenanceRequestController::class, 'comment'])
             ->name('maintenance.comments.store');
-    });
-
-    /*
-    | Applicant portal (SRS 11.4).
-    */
-    Route::middleware('role:applicant')->prefix('applicant')->name('applicant.')->group(function () {
-        Route::get('dashboard', Applicant\DashboardController::class)->name('dashboard');
-
-        // FR-APP-005 - NFR-SEC-006 rate limits the contact/application endpoint.
-        Route::get('applications', [Applicant\ApplicationController::class, 'index'])->name('applications.index');
-        Route::post('listings/{property}/applications', [Applicant\ApplicationController::class, 'store'])
-            ->middleware('throttle:10,1')
-            ->name('applications.store');
-        Route::delete('applications/{application}', [Applicant\ApplicationController::class, 'destroy'])
-            ->name('applications.destroy');
-
-        // FR-APP-007.
-        Route::get('favorites', [Applicant\FavoriteController::class, 'index'])->name('favorites.index');
-        Route::post('favorites/{property}', [Applicant\FavoriteController::class, 'toggle'])
-            ->middleware('throttle:60,1')
-            ->name('favorites.toggle');
     });
 });

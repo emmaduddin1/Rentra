@@ -27,7 +27,7 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'role' => UserRole::Applicant,
+            'role' => UserRole::Renter,
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
@@ -56,11 +56,6 @@ class UserFactory extends Factory
     public function renter(): static
     {
         return $this->state(fn (array $attributes) => ['role' => UserRole::Renter]);
-    }
-
-    public function applicant(): static
-    {
-        return $this->state(fn (array $attributes) => ['role' => UserRole::Applicant]);
     }
 
     /**

@@ -4,7 +4,7 @@ namespace App\Enums;
 
 /**
  * SRS FR-PROP-004 / BR-001 - occupancy state of a property. Visibility to
- * applicants also depends on PublicationStatus.
+ * renters also depends on PublicationStatus.
  */
 enum PropertyStatus: string
 {

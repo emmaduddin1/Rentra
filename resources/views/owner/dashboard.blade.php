@@ -64,7 +64,7 @@
                         <li class="flex flex-wrap items-center justify-between gap-2 px-5 py-3.5">
                             <span class="min-w-0">
                                 <a href="{{ route('owner.applications.show', $application) }}" class="text-sm font-medium text-slate-900 hover:underline">
-                                    {{ $application->applicant->name }}
+                                    {{ $application->renter->name }}
                                 </a>
                                 <span class="block truncate text-xs text-slate-500">
                                     {{ $application->property->title }} · {{ $application->submitted_at->format('d M Y') }}

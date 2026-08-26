@@ -36,14 +36,14 @@ class PropertyAndTenancyPolicyTest extends TestCase
     public function a_draft_property_is_not_viewable_by_outsiders(): void
     {
         $owner = User::factory()->owner()->create();
-        $applicant = User::factory()->applicant()->create();
+        $renter = User::factory()->renter()->create();
 
         $draft = Property::factory()->for($owner, 'owner')->create();
         $published = Property::factory()->published()->for($owner, 'owner')->create();
 
         // BR-001.
-        $this->assertFalse(Gate::forUser($applicant)->allows('view', $draft));
-        $this->assertTrue(Gate::forUser($applicant)->allows('view', $published));
+        $this->assertFalse(Gate::forUser($renter)->allows('view', $draft));
+        $this->assertTrue(Gate::forUser($renter)->allows('view', $published));
         $this->assertTrue(Gate::forUser($owner)->allows('view', $draft));
     }
 

@@ -1,8 +1,8 @@
 # Phase 2 - Property Discovery
 
-Delivered against SRS §16 Phase 2: *Property CRUD, images, publication, applicant feed,
-area search, listing detail* - plus the applicant inquiry flow (FR-APP-005 to FR-APP-007),
-which completes the §5.5 applicant journey and the §15 MVP criterion "applicant can search
+Delivered against SRS §16 Phase 2: *Property CRUD, images, publication, listing feed,
+area search, listing detail* - plus the renter inquiry flow (FR-APP-005 to FR-APP-007),
+which completes the §5.5 search journey and the §15 MVP criterion "a renter can search
 available listings by area, open details, and submit an application/inquiry".
 
 ## What is in place
@@ -32,7 +32,7 @@ next one, and files are removed from disk when their row goes. If the database w
 already-stored files are deleted rather than orphaned. Uploads are validated by extension,
 MIME type, size, and per-property count - the cap lives in `config/rental.php`.
 
-### Applicant feed (FR-APP-001 to FR-APP-004)
+### Listing feed (FR-APP-001 to FR-APP-004)
 
 `Property::publiclyVisible()` gates the feed, the detail page, applications, and favourites,
 so BR-001 is enforced in one place. Area search matches area *or* city; type and rent-range
@@ -43,9 +43,9 @@ address and owner contact details are hidden from guests (SRS §19,
 
 ### Applications and saved listings (FR-APP-005 to FR-APP-007)
 
-Applicants submit an inquiry from the listing page; owners review it and set the status the
-applicant sees. A second *open* inquiry for the same property is refused with a clear message
-instead of creating a duplicate row (SRS §12). Withdrawal is the applicant's alone - the
+Renters submit an inquiry from the listing page; owners review it and set the status the
+renter sees. A second *open* inquiry for the same property is refused with a clear message
+instead of creating a duplicate row (SRS §12). Withdrawal is the renter's alone - the
 owner cannot set `Withdrawn`, and a withdrawn application cannot be answered. Withdrawn rows
 are kept, so the owner's history stays complete (BR-009).
 
@@ -60,7 +60,7 @@ meantime.
 ### Dashboards
 
 FR-ADM-003 recent lists now exist for the data that exists: recent applications and recent
-properties on the owner dashboard, recent applications and saved listings on the applicant
+properties on the owner dashboard, recent applications and saved listings on the renter
 dashboard. Monthly submissions and maintenance join them in Phases 4 and 5; charts
 (FR-ADM-004) are Phase 6.
 
@@ -72,8 +72,8 @@ dashboard. Monthly submissions and maintenance join them in Phases 4 and 5; char
 | 2 | A hidden listing returns 404, not 403 | SRS §12 requires that unauthorised access does not disclose whether another user's record exists. For a public feed, "not published" and "does not exist" must look identical. |
 | 3 | Archiving forces publication back to Draft and status to Inactive | So restoring a listing months later cannot silently push it back into the public feed. |
 | 4 | Business-rule violations are thrown as `ValidationException` | They render inline next to the field on the web, and the same actions return a 422 with the same messages once the API lands (SRS §12, §9.3). |
-| 5 | Applications are part of Phase 2, not a later phase | §16 does not name them in any phase, but §5.5 and the §15 MVP criteria put them in the applicant journey, and the owner dashboard already counted them. |
-| 6 | Duplicate applications are blocked on *open* status only | Pending and Reviewed block a resubmission; a rejected or withdrawn applicant may apply again if circumstances change. |
+| 5 | Applications are part of Phase 2, not a later phase | §16 does not name them in any phase, but §5.5 and the §15 MVP criteria put them in the renter journey, and the owner dashboard already counted them. |
+| 6 | Duplicate applications are blocked on *open* status only | Pending and Reviewed block a resubmission; a rejected or withdrawn renter may apply again if circumstances change. |
 | 7 | A saved listing can always be *removed*, even after it is unpublished | Adding requires a visible listing; removing must not become impossible because the owner changed something. |
 | 8 | Search and application endpoints are rate limited | NFR-SEC-006 names search and contact endpoints explicitly. |
 
@@ -100,8 +100,8 @@ the real project path.
   with an owner preview, guest contact/address hiding, and the empty state.
 - **`Applications/ApplicationTest`** - submission with notification and audit, message
   validation, the duplicate guard, applying to a hidden listing, role lockout, owner review
-  and applicant visibility, cross-owner and cross-applicant scoping, withdrawal rules.
-- **`Favorites/FavoriteTest`** - toggle on/off, per-applicant scoping, the hidden-listing
+  and renter visibility, cross-owner and cross-renter scoping, withdrawal rules.
+- **`Favorites/FavoriteTest`** - toggle on/off, per-renter scoping, the hidden-listing
   asymmetry, role lockout, and the unique constraint.
 - **`ScreenSmokeTest`** - every Phase 2 screen renders for the role that owns it.
 

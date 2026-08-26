@@ -192,7 +192,7 @@ class PropertyVideoTest extends TestCase
     }
 
     #[Test]
-    public function an_applicant_can_watch_the_walkthrough_of_a_published_listing(): void
+    public function a_renter_can_watch_the_walkthrough_of_a_published_listing(): void
     {
         $property = Property::factory()->published()->create();
         $video = PropertyVideo::factory()->for($property)->create();

@@ -15,7 +15,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * SRS 5.5 step 28 / FR-APP-006 - the owner reviews applicant inquiries.
+ * SRS 5.5 step 28 / FR-APP-006 - the owner reviews renter inquiries.
  */
 class ApplicationController extends Controller
 {
@@ -29,7 +29,7 @@ class ApplicationController extends Controller
         ]);
 
         $applications = Application::forOwner($request->user())
-            ->with(['property', 'applicant'])
+            ->with(['property', 'renter'])
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when(
                 $filters['property_id'] ?? null,
@@ -51,7 +51,7 @@ class ApplicationController extends Controller
     {
         Gate::authorize('view', $application);
 
-        $application->load(['property.primaryImage', 'applicant', 'responder']);
+        $application->load(['property.primaryImage', 'renter', 'responder']);
 
         return view('owner.applications.show', [
             'application' => $application,
@@ -73,6 +73,6 @@ class ApplicationController extends Controller
             note: $request->validated('owner_note'),
         );
 
-        return back()->with('status', __('Application updated. The applicant can see the new status.'));
+        return back()->with('status', __('Application updated. The renter can see the new status.'));
     }
 }

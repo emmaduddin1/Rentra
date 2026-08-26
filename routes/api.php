@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function () {
     /*
-    | Public - the applicant feed and authentication.
+    | Public - the listing feed and authentication.
     | NFR-SEC-006 - login, password reset, and search are rate limited.
     */
     Route::post('login', [V1\AuthController::class, 'login'])
@@ -44,7 +44,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('notifications', [V1\NotificationController::class, 'index'])->name('notifications.index');
         Route::post('notifications/read', [V1\NotificationController::class, 'read'])->name('notifications.read');
 
-        // FR-APP-005 - applicants apply; FR-APP-006 - owners respond.
+        // FR-APP-005 - renters apply; FR-APP-006 - owners respond.
         Route::get('applications', [V1\ApplicationController::class, 'index'])->name('applications.index');
         Route::post('listings/{property}/applications', [V1\ApplicationController::class, 'store'])
             ->middleware('throttle:10,1')

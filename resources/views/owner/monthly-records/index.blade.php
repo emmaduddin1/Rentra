@@ -58,7 +58,7 @@
                                 <th scope="col">{{ __('Renter') }}</th>
                                 <th scope="col">{{ __('Property') }}</th>
                                 <th scope="col">{{ __('Total') }}</th>
-                                <th scope="col">{{ __('Proofs') }}</th>
+                                <th scope="col">{{ __('Receipts') }}</th>
                                 <th scope="col">{{ __('Status') }}</th>
                                 <th scope="col" class="text-right">{{ __('Actions') }}</th>
                             </tr>
@@ -78,7 +78,20 @@
                                     </td>
                                     <td class="text-slate-600">{{ $record->tenancy->property->title }}</td>
                                     <td class="whitespace-nowrap"><x-money :amount="$record->total_amount" /></td>
-                                    <td class="tabular-nums">{{ $record->proofs_count }}</td>
+                                    {{-- FR-MON-006 - how much of this month is
+                                         actually evidenced, so an incomplete
+                                         submission is visible before opening it. --}}
+                                    <td class="whitespace-nowrap">
+                                        @if ($record->chargeCount() === 0)
+                                            <span class="text-xs text-slate-400">{{ __('Nothing charged') }}</span>
+                                        @else
+                                            <x-badge :variant="$record->isFullyEvidenced() ? 'success' : 'warning'" dot>
+                                                <span class="tabular-nums">
+                                                    {{ $record->evidencedChargeCount() }}/{{ $record->chargeCount() }}
+                                                </span>
+                                            </x-badge>
+                                        @endif
+                                    </td>
                                     <td>
                                         <x-badge :variant="$record->displayStatusBadge()">{{ $record->displayStatusLabel() }}</x-badge>
                                     </td>

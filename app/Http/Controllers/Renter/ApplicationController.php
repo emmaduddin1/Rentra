@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Applicant;
+namespace App\Http\Controllers\Renter;
 
 use App\Actions\Applications\SubmitApplication;
 use App\Actions\Applications\WithdrawApplication;
@@ -14,10 +14,11 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 /**
- * SRS 5.5 / FR-APP-005 - the applicant side of the inquiry flow.
+ * SRS 5.5 / FR-APP-005 - the renter side of the inquiry flow. A renter applies
+ * for a listing here and becomes its tenant once the owner accepts.
  *
- * BR-010 - the list is scoped to the authenticated applicant, so one applicant
- * never sees another's inquiries.
+ * BR-010 - the list is scoped to the authenticated renter, so one renter never
+ * sees another's inquiries.
  */
 class ApplicationController extends Controller
 {
@@ -25,8 +26,8 @@ class ApplicationController extends Controller
     {
         Gate::authorize('viewAny', Application::class);
 
-        return view('applicant.applications.index', [
-            'applications' => Application::forApplicant($request->user())
+        return view('renter.applications.index', [
+            'applications' => Application::forRenter($request->user())
                 ->with(['property.primaryImage'])
                 ->latest('submitted_at')
                 ->paginate(config('rental.pagination.per_page')),
@@ -42,13 +43,13 @@ class ApplicationController extends Controller
         Gate::authorize('create', [Application::class, $property]);
 
         $submitApplication->handle(
-            applicant: $request->user(),
+            renter: $request->user(),
             property: $property,
             data: $request->validated(),
         );
 
         return redirect()
-            ->route('applicant.applications.index')
+            ->route('renter.applications.index')
             ->with('status', __('Application sent. The owner has been notified.'));
     }
 

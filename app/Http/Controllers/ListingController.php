@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * SRS 5.5 / FR-APP-001 to FR-APP-004 - the public applicant feed.
+ * SRS 5.5 / FR-APP-001 to FR-APP-004 - the public listing feed.
  *
  * BR-001 is applied through Property::publiclyVisible(), so draft, inactive and
  * occupied listings can never leak into the feed or the detail page.
@@ -85,7 +85,7 @@ class ListingController extends Controller
     }
 
     /**
-     * FR-PROP-001 / BR-013 - the sibling floors an applicant can also apply for.
+     * FR-PROP-001 / BR-013 - the sibling floors a renter can also apply for.
      *
      * @return Collection<int, Property>
      */
@@ -112,7 +112,7 @@ class ListingController extends Controller
     {
         $user = $request->user();
 
-        if ($user === null || ! $user->isApplicant()) {
+        if ($user === null || ! $user->isRenter()) {
             return [];
         }
 
@@ -128,7 +128,7 @@ class ListingController extends Controller
     {
         $user = $request->user();
 
-        if ($user === null || ! $user->isApplicant()) {
+        if ($user === null || ! $user->isRenter()) {
             return null;
         }
 

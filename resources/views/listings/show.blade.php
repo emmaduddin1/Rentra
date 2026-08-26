@@ -8,7 +8,7 @@
     @unless ($property->isPubliclyVisible())
         {{-- Only the owner can reach this state (ListingController 404s everyone else). --}}
         <x-alert variant="warning" role="status" class="mb-6">
-            {{ __('Preview only. This listing is :publication and :status, so applicants cannot see it.', [
+            {{ __('Preview only. This listing is :publication and :status, so renters cannot see it.', [
                 'publication' => $property->publication_status->label(),
                 'status' => $property->status->label(),
             ]) }}
@@ -142,11 +142,11 @@
                 @endif
             </div>
 
-            @if ($user?->isApplicant())
+            @if ($user?->isRenter())
                 <div class="card p-6">
                     <div class="flex items-center justify-between gap-3">
                         <h2 class="text-sm font-semibold text-slate-900">{{ __('Apply for this property') }}</h2>
-                        <form method="POST" action="{{ route('applicant.favorites.toggle', $property) }}">
+                        <form method="POST" action="{{ route('renter.favorites.toggle', $property) }}">
                             @csrf
                             <button
                                 type="submit"
@@ -164,11 +164,11 @@
                             {{ __('You applied on :date.', ['date' => $openApplication->submitted_at->format('d M Y')]) }}
                         </p>
                         <p class="mt-2"><x-badge :variant="$openApplication->status->badge()">{{ $openApplication->status->label() }}</x-badge></p>
-                        <a href="{{ route('applicant.applications.index') }}" class="mt-3 inline-block link text-sm">
+                        <a href="{{ route('renter.applications.index') }}" class="mt-3 inline-block link text-sm">
                             {{ __('View my applications') }}
                         </a>
                     @else
-                        <form method="POST" action="{{ route('applicant.applications.store', $property) }}" class="mt-4 space-y-4">
+                        <form method="POST" action="{{ route('renter.applications.store', $property) }}" class="mt-4 space-y-4">
                             @csrf
 
                             <x-form.field :label="__('Message')" name="message" required :hint="__('Tell the owner when you would like to move in.')">
@@ -186,7 +186,7 @@
             @elseif (! $user)
                 <div class="card p-6">
                     <h2 class="text-sm font-semibold text-slate-900">{{ __('Interested?') }}</h2>
-                    <p class="mt-2 text-sm text-slate-600">{{ __('Create an applicant account to send an inquiry and save listings.') }}</p>
+                    <p class="mt-2 text-sm text-slate-600">{{ __('Create a renter account to send an inquiry and save listings.') }}</p>
                     <a href="{{ route('register') }}" class="mt-4 btn btn-primary">
                         {{ __('Register to apply') }}
                     </a>
@@ -194,7 +194,7 @@
             @endif
 
             {{-- FR-PROP-001 - the other floors of the same house are rented
-                 separately, so an applicant can pick a different one. --}}
+                 separately, so a renter can pick a different one. --}}
             @if ($otherFloors->isNotEmpty())
                 <div class="card p-6">
                     <h2 class="text-sm font-semibold text-slate-900">{{ __('Other floors in this house') }}</h2>

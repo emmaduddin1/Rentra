@@ -7,15 +7,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['applicant_id', 'property_id'])]
+#[Fillable(['renter_id', 'property_id'])]
 class Favorite extends Model
 {
     use HasFactory;
 
     /** @return BelongsTo<User, $this> */
-    public function applicant(): BelongsTo
+    public function renter(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'applicant_id');
+        return $this->belongsTo(User::class, 'renter_id');
     }
 
     /** @return BelongsTo<Property, $this> */

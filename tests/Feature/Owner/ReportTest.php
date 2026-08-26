@@ -159,10 +159,8 @@ class ReportTest extends TestCase
     {
         $this->get(route('owner.reports.index'))->assertRedirect(route('login'));
 
-        foreach (['renter', 'applicant'] as $role) {
-            $this->actingAs(User::factory()->{$role}()->create())
-                ->get(route('owner.reports.index'))
-                ->assertForbidden();
-        }
+        $this->actingAs(User::factory()->renter()->create())
+            ->get(route('owner.reports.index'))
+            ->assertForbidden();
     }
 }

@@ -1,7 +1,7 @@
 <x-layouts.app
     :title="__('Applications')"
     :heading="__('Applications')"
-    :subheading="__('Inquiries applicants have sent about your listings.')"
+    :subheading="__('Inquiries renters have sent about your listings.')"
 >
     <form method="GET" action="{{ route('owner.applications.index') }}" class="card p-4">
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -33,7 +33,7 @@
         @if ($applications->isEmpty())
             <x-empty-state
                 :title="__('No applications yet.')"
-                :description="__('Applications appear here as soon as an applicant contacts you about a published listing.')"
+                :description="__('Applications appear here as soon as a renter contacts you about a published listing.')"
             />
         @else
             <div class="card overflow-hidden">
@@ -41,7 +41,7 @@
                     <table class="table">
                         <thead>
                             <tr>
-                                <th scope="col">{{ __('Applicant') }}</th>
+                                <th scope="col">{{ __('Renter') }}</th>
                                 <th scope="col">{{ __('Property') }}</th>
                                 <th scope="col">{{ __('Submitted') }}</th>
                                 <th scope="col">{{ __('Status') }}</th>
@@ -52,7 +52,7 @@
                             @foreach ($applications as $application)
                                 <tr>
                                     <td>
-                                        <span class="font-medium text-slate-900">{{ $application->applicant->name }}</span>
+                                        <span class="font-medium text-slate-900">{{ $application->renter->name }}</span>
                                         @if ($application->contact_phone)
                                             <span class="block text-xs text-slate-500">{{ $application->contact_phone }}</span>
                                         @endif

@@ -37,7 +37,7 @@ class CreateProperty
             $property->owner_id = $owner->id;
 
             // BR-013 - a house created as "floor by floor" is a container from
-            // the start: it holds no rent and never reaches the applicant feed.
+            // the start: it holds no rent and never reaches the public feed.
             if (! $property->isRentable()) {
                 $property->rent_amount = 0;
                 $property->publication_status = PublicationStatus::Draft;

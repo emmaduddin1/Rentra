@@ -7,7 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * SRS FR-APP-006 - the owner sets the status the applicant will see.
+ * SRS FR-APP-006 - the owner sets the status the renter will see.
  */
 class RespondToApplicationRequest extends FormRequest
 {

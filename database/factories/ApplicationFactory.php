@@ -22,7 +22,7 @@ class ApplicationFactory extends Factory
     {
         return [
             'property_id' => Property::factory()->published(),
-            'applicant_id' => User::factory()->applicant(),
+            'renter_id' => User::factory()->renter(),
             'message' => fake()->sentence(12),
             'contact_phone' => fake()->numerify('+9230########'),
             'status' => ApplicationStatus::Pending,

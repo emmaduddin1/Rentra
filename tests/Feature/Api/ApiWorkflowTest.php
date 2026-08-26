@@ -49,7 +49,7 @@ class ApiWorkflowTest extends TestCase
         $this->assertNull($guestView->json('data.address'));
         $this->assertTrue($guestView->json('data.contact_requires_login'));
 
-        Sanctum::actingAs(User::factory()->applicant()->create());
+        Sanctum::actingAs(User::factory()->renter()->create());
 
         $memberView = $this->getJson(route('api.v1.listings.show', $visible))->assertOk();
         $this->assertSame('12 Main Boulevard', $memberView->json('data.address'));
@@ -124,11 +124,9 @@ class ApiWorkflowTest extends TestCase
         Sanctum::actingAs(User::factory()->owner()->create());
         $this->getJson(route('api.v1.properties.show', $property))->assertForbidden();
 
-        // The role middleware keeps renters and applicants out entirely.
+        // The role middleware keeps renters out entirely.
         Sanctum::actingAs(User::factory()->renter()->create());
         $this->getJson(route('api.v1.properties.index'))->assertForbidden();
-
-        Sanctum::actingAs(User::factory()->applicant()->create());
         $this->postJson(route('api.v1.properties.store'), [])->assertForbidden();
     }
 
@@ -306,12 +304,12 @@ class ApiWorkflowTest extends TestCase
     }
 
     #[Test]
-    public function an_applicant_applies_and_the_owner_responds_over_the_api(): void
+    public function a_renter_applies_and_the_owner_responds_over_the_api(): void
     {
         $property = Property::factory()->published()->create();
-        $applicant = User::factory()->applicant()->create();
+        $renter = User::factory()->renter()->create();
 
-        Sanctum::actingAs($applicant);
+        Sanctum::actingAs($renter);
 
         $created = $this->postJson(route('api.v1.applications.store', $property), [
             'message' => 'I would like to view this property this weekend.',

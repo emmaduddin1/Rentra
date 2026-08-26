@@ -45,16 +45,16 @@ class SchemaConstraintTest extends TestCase
     }
 
     #[Test]
-    public function a_listing_can_only_be_saved_once_per_applicant(): void
+    public function a_listing_can_only_be_saved_once_per_renter(): void
     {
-        $applicant = User::factory()->applicant()->create();
+        $renter = User::factory()->renter()->create();
         $property = Property::factory()->published()->create();
 
-        Favorite::create(['applicant_id' => $applicant->id, 'property_id' => $property->id]);
+        Favorite::create(['renter_id' => $renter->id, 'property_id' => $property->id]);
 
         $this->expectException(QueryException::class);
 
-        Favorite::create(['applicant_id' => $applicant->id, 'property_id' => $property->id]);
+        Favorite::create(['renter_id' => $renter->id, 'property_id' => $property->id]);
     }
 
     #[Test]

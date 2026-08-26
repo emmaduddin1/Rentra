@@ -1,8 +1,8 @@
 @props(['listing', 'saved' => false])
 
 @php
-    // FR-APP-007 - the save control only exists for a signed-in applicant.
-    $canSave = auth()->user()?->isApplicant() ?? false;
+    // FR-APP-007 - the save control only exists for a signed-in renter.
+    $canSave = auth()->user()?->isRenter() ?? false;
 @endphp
 
 {{-- FR-APP-003 - primary image, type, rent, area, and a short description. --}}
@@ -28,7 +28,7 @@
 
         @if ($canSave)
             {{-- Saving stays a one-tap action, right where the photo is. --}}
-            <form method="POST" action="{{ route('applicant.favorites.toggle', $listing) }}" class="absolute top-2 right-2 z-10">
+            <form method="POST" action="{{ route('renter.favorites.toggle', $listing) }}" class="absolute top-2 right-2 z-10">
                 @csrf
                 <button
                     type="submit"

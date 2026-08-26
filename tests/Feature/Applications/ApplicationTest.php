@@ -11,28 +11,28 @@ use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * SRS 5.5 / FR-APP-005 and FR-APP-006 - applicant inquiries and owner responses.
+ * SRS 5.5 / FR-APP-005 and FR-APP-006 - renter inquiries and owner responses.
  */
 class ApplicationTest extends TestCase
 {
     use RefreshDatabase;
 
     #[Test]
-    public function an_applicant_applies_for_a_published_listing(): void
+    public function a_renter_applies_for_a_published_listing(): void
     {
         $property = Property::factory()->published()->create();
-        $applicant = User::factory()->applicant()->create();
+        $renter = User::factory()->renter()->create();
 
-        $this->actingAs($applicant)
-            ->post(route('applicant.applications.store', $property), [
+        $this->actingAs($renter)
+            ->post(route('renter.applications.store', $property), [
                 'message' => 'I would like to move in next month.',
                 'contact_phone' => '+923004445566',
             ])
-            ->assertRedirect(route('applicant.applications.index'));
+            ->assertRedirect(route('renter.applications.index'));
 
         $application = Application::firstOrFail();
 
-        $this->assertSame($applicant->id, $application->applicant_id);
+        $this->assertSame($renter->id, $application->renter_id);
         $this->assertSame(ApplicationStatus::Pending, $application->status);
         $this->assertNotNull($application->submitted_at);
 
@@ -44,7 +44,7 @@ class ApplicationTest extends TestCase
 
         // BR-008.
         $this->assertDatabaseHas('audit_logs', [
-            'user_id' => $applicant->id,
+            'user_id' => $renter->id,
             'action' => 'application.submitted',
         ]);
     }
@@ -53,10 +53,10 @@ class ApplicationTest extends TestCase
     public function the_inquiry_message_is_validated(): void
     {
         $property = Property::factory()->published()->create();
-        $applicant = User::factory()->applicant()->create();
+        $renter = User::factory()->renter()->create();
 
-        $this->actingAs($applicant)
-            ->post(route('applicant.applications.store', $property), ['message' => 'hi'])
+        $this->actingAs($renter)
+            ->post(route('renter.applications.store', $property), ['message' => 'hi'])
             ->assertSessionHasErrors('message');
 
         $this->assertDatabaseCount('applications', 0);
@@ -66,14 +66,14 @@ class ApplicationTest extends TestCase
     public function a_second_open_application_is_rejected_with_a_clear_message(): void
     {
         $property = Property::factory()->published()->create();
-        $applicant = User::factory()->applicant()->create();
+        $renter = User::factory()->renter()->create();
         $payload = ['message' => 'I would like to move in next month.'];
 
-        $this->actingAs($applicant)->post(route('applicant.applications.store', $property), $payload);
+        $this->actingAs($renter)->post(route('renter.applications.store', $property), $payload);
 
         // SRS 12 - duplicates return a clear message, not a second row.
-        $this->actingAs($applicant)
-            ->post(route('applicant.applications.store', $property), $payload)
+        $this->actingAs($renter)
+            ->post(route('renter.applications.store', $property), $payload)
             ->assertSessionHasErrors('message');
 
         $this->assertDatabaseCount('applications', 1);
@@ -83,33 +83,31 @@ class ApplicationTest extends TestCase
     public function only_visible_listings_accept_applications(): void
     {
         $draft = Property::factory()->create();
-        $applicant = User::factory()->applicant()->create();
+        $renter = User::factory()->renter()->create();
 
         // FR-APP-001/005.
-        $this->actingAs($applicant)
-            ->post(route('applicant.applications.store', $draft), ['message' => 'Is this available at all?'])
+        $this->actingAs($renter)
+            ->post(route('renter.applications.store', $draft), ['message' => 'Is this available at all?'])
             ->assertForbidden();
 
         $this->assertDatabaseCount('applications', 0);
     }
 
     #[Test]
-    public function owners_and_renters_cannot_use_the_applicant_routes(): void
+    public function guests_and_owners_cannot_use_the_application_routes(): void
     {
         $property = Property::factory()->published()->create();
 
-        $this->post(route('applicant.applications.store', $property), ['message' => 'Let me in please.'])
+        $this->post(route('renter.applications.store', $property), ['message' => 'Let me in please.'])
             ->assertRedirect(route('login'));
 
-        foreach (['owner', 'renter'] as $role) {
-            $this->actingAs(User::factory()->{$role}()->create())
-                ->post(route('applicant.applications.store', $property), ['message' => 'Let me in please.'])
-                ->assertForbidden();
-        }
+        $this->actingAs(User::factory()->owner()->create())
+            ->post(route('renter.applications.store', $property), ['message' => 'Let me in please.'])
+            ->assertForbidden();
     }
 
     #[Test]
-    public function an_owner_reviews_an_application_and_the_applicant_sees_the_status(): void
+    public function an_owner_reviews_an_application_and_the_renter_sees_the_status(): void
     {
         $application = Application::factory()->create();
         $owner = $application->property->owner;
@@ -129,12 +127,12 @@ class ApplicationTest extends TestCase
         $this->assertNotNull($application->responded_at);
 
         $this->assertDatabaseHas('notifications', [
-            'user_id' => $application->applicant_id,
+            'user_id' => $application->renter_id,
             'type' => 'application.status_changed',
         ]);
 
-        $this->actingAs($application->applicant)
-            ->get(route('applicant.applications.index'))
+        $this->actingAs($application->renter)
+            ->get(route('renter.applications.index'))
             ->assertOk()
             ->assertSee('Accepted')
             ->assertSee('Please call to arrange the paperwork.');
@@ -164,30 +162,30 @@ class ApplicationTest extends TestCase
     }
 
     #[Test]
-    public function an_applicant_only_sees_their_own_applications(): void
+    public function a_renter_only_sees_their_own_applications(): void
     {
         $mine = Application::factory()->create();
         $theirs = Application::factory()->create();
 
-        $this->actingAs($mine->applicant)
-            ->get(route('applicant.applications.index'))
+        $this->actingAs($mine->renter)
+            ->get(route('renter.applications.index'))
             ->assertOk()
             ->assertSee($mine->property->title)
             ->assertDontSee($theirs->property->title);
     }
 
     #[Test]
-    public function a_pending_application_can_be_withdrawn_by_its_applicant_only(): void
+    public function a_pending_application_can_be_withdrawn_by_its_renter_only(): void
     {
         $application = Application::factory()->create();
-        $stranger = User::factory()->applicant()->create();
+        $stranger = User::factory()->renter()->create();
 
         $this->actingAs($stranger)
-            ->delete(route('applicant.applications.destroy', $application))
+            ->delete(route('renter.applications.destroy', $application))
             ->assertForbidden();
 
-        $this->actingAs($application->applicant)
-            ->delete(route('applicant.applications.destroy', $application))
+        $this->actingAs($application->renter)
+            ->delete(route('renter.applications.destroy', $application))
             ->assertRedirect();
 
         // BR-009 - the row survives so the owner's history stays complete.

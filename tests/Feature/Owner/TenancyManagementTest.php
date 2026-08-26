@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Owner;
 
+use App\Enums\ApplicationStatus;
 use App\Enums\PropertyStatus;
 use App\Enums\TenancyStatus;
 use App\Enums\UserRole;
+use App\Models\Application;
 use App\Models\AuditLog;
 use App\Models\Property;
 use App\Models\Tenancy;
@@ -149,11 +151,82 @@ class TenancyManagementTest extends TestCase
     {
         $owner = User::factory()->owner()->create();
         $property = Property::factory()->for($owner, 'owner')->create();
-        $applicant = User::factory()->applicant()->create();
+        $notARenter = User::factory()->owner()->create();
 
         $this->actingAs($owner)
-            ->post(route('owner.tenancies.store'), $this->payload($property, ['renter_id' => $applicant->id]))
+            ->post(route('owner.tenancies.store'), $this->payload($property, ['renter_id' => $notARenter->id]))
             ->assertSessionHasErrors('renter_id');
+    }
+
+    #[Test]
+    public function the_assign_screen_only_offers_the_renters_who_applied_for_each_property(): void
+    {
+        // FR-TEN-001 / FR-APP-006 - the owner picks from people who asked for
+        // that property, not from every renter on the platform.
+        $owner = User::factory()->owner()->create();
+        $wanted = Property::factory()->published()->for($owner, 'owner')->create(['title' => 'Wanted flat']);
+        $other = Property::factory()->published()->for($owner, 'owner')->create(['title' => 'Other flat']);
+
+        $applied = User::factory()->renter()->create(['name' => 'Applied Renter']);
+        $appliedElsewhere = User::factory()->renter()->create(['name' => 'Elsewhere Renter']);
+        $neverApplied = User::factory()->renter()->create(['name' => 'Stranger Renter']);
+
+        Application::factory()->for($wanted, 'property')->create(['renter_id' => $applied->id]);
+        Application::factory()->for($other, 'property')->create(['renter_id' => $appliedElsewhere->id]);
+
+        $response = $this->actingAs($owner)->get(route('owner.tenancies.create'))->assertOk();
+
+        // Each applicant is tagged with the property they applied for, so the
+        // select can narrow itself down to one property's people.
+        $response->assertSee('data-property-id="'.$wanted->id.'"', false);
+        $response->assertSee('Applied Renter');
+        $response->assertSee('Elsewhere Renter');
+
+        // A renter who never applied for anything is not on the screen at all.
+        $response->assertDontSee('Stranger Renter');
+        $this->assertNotNull($neverApplied->id);
+    }
+
+    #[Test]
+    public function a_rejected_or_withdrawn_applicant_is_not_offered_for_assignment(): void
+    {
+        $owner = User::factory()->owner()->create();
+        $property = Property::factory()->published()->for($owner, 'owner')->create();
+
+        foreach ([ApplicationStatus::Rejected, ApplicationStatus::Withdrawn] as $status) {
+            Application::factory()->for($property, 'property')->create([
+                'renter_id' => User::factory()->renter()->create(['name' => 'Gone '.$status->value])->id,
+                'status' => $status,
+            ]);
+        }
+
+        $live = User::factory()->renter()->create(['name' => 'Live Applicant']);
+        Application::factory()->for($property, 'property')->create([
+            'renter_id' => $live->id,
+            'status' => ApplicationStatus::Reviewed,
+        ]);
+
+        $response = $this->actingAs($owner)->get(route('owner.tenancies.create'))->assertOk();
+
+        $response->assertSee('Live Applicant');
+        $response->assertDontSee('Gone rejected');
+        $response->assertDontSee('Gone withdrawn');
+    }
+
+    #[Test]
+    public function a_suspended_applicant_is_not_offered_for_assignment(): void
+    {
+        // FR-AUTH-006 - a suspended account cannot be handed a tenancy.
+        $owner = User::factory()->owner()->create();
+        $property = Property::factory()->published()->for($owner, 'owner')->create();
+
+        $suspended = User::factory()->renter()->suspended()->create(['name' => 'Suspended Applicant']);
+        Application::factory()->for($property, 'property')->create(['renter_id' => $suspended->id]);
+
+        $this->actingAs($owner)
+            ->get(route('owner.tenancies.create'))
+            ->assertOk()
+            ->assertDontSee('Suspended Applicant');
     }
 
     #[Test]

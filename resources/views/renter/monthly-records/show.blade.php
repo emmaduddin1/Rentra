@@ -10,6 +10,10 @@
         @if ($record->isFrozen())
             {{-- BR-006 - an approved record is frozen against normal edits. --}}
             <span class="text-sm text-slate-500">{{ __('Approved and locked. Ask your owner if something needs correcting.') }}</span>
+        @elseif (! $record->isEditableByRenter())
+            {{-- BR-004 - submitted means handed over: amounts and receipts stay
+                 as they were sent until the owner approves or returns it. --}}
+            <span class="text-sm text-slate-500">{{ __('Submitted and locked. You cannot change the amounts or receipts while your owner reviews them.') }}</span>
         @endif
 
         @if ($record->isEditableByRenter())
@@ -34,22 +38,13 @@
     <div class="grid gap-6 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
             <section class="card p-6">
-                <h2 class="text-sm font-semibold text-slate-900">{{ __('Proofs by category') }}</h2>
+                <h2 class="text-sm font-semibold text-slate-900">{{ __('Payments and receipts') }}</h2>
+                <p class="mt-1 text-xs text-slate-500">
+                    {{ __('This is exactly what your owner sees when reviewing the month.') }}
+                </p>
 
-                <div class="mt-4 space-y-4">
-                    @foreach ($categories as $category)
-                        @if ((float) $record->{$category->amountColumn()} > 0 || $record->proofs->where('category', $category)->isNotEmpty())
-                            <div class="rounded-lg border border-slate-200 p-4">
-                                <div class="flex flex-wrap items-center justify-between gap-2">
-                                    <h3 class="text-sm font-medium text-slate-900">{{ $category->label() }}</h3>
-                                    <span class="text-sm"><x-money :amount="$record->{$category->amountColumn()}" /></span>
-                                </div>
-                                <div class="mt-3">
-                                    <x-proof-list :record="$record" :category="$category" />
-                                </div>
-                            </div>
-                        @endif
-                    @endforeach
+                <div class="mt-4">
+                    <x-payment-evidence :record="$record" :categories="$categories" />
                 </div>
 
                 @if ($record->notes)

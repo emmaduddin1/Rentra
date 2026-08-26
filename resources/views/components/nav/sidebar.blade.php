@@ -41,20 +41,22 @@
                 'label' => null,
                 'links' => [
                     ['label' => __('Dashboard'), 'route' => 'renter.dashboard', 'icon' => 'home'],
+                ],
+            ],
+            [
+                'label' => __('Find a place'),
+                'links' => [
+                    ['label' => __('Browse'), 'route' => 'listings.index', 'match' => 'listings.*', 'icon' => 'search'],
+                    ['label' => __('My applications'), 'route' => 'renter.applications.index', 'icon' => 'inbox'],
+                    ['label' => __('Saved'), 'route' => 'renter.favorites.index', 'icon' => 'heart'],
+                ],
+            ],
+            [
+                'label' => __('My tenancy'),
+                'links' => [
                     ['label' => __('My property'), 'route' => 'renter.tenancies.index', 'match' => 'renter.tenancies.*', 'icon' => 'key'],
                     ['label' => __('Monthly'), 'route' => 'renter.monthly-records.index', 'match' => 'renter.monthly-records.*', 'icon' => 'banknotes'],
                     ['label' => __('Maintenance'), 'route' => 'renter.maintenance.index', 'match' => 'renter.maintenance.*', 'icon' => 'wrench'],
-                ],
-            ],
-        ],
-        $user?->isApplicant() => [
-            [
-                'label' => null,
-                'links' => [
-                    ['label' => __('Dashboard'), 'route' => 'applicant.dashboard', 'icon' => 'home'],
-                    ['label' => __('Browse'), 'route' => 'listings.index', 'match' => 'listings.*', 'icon' => 'search'],
-                    ['label' => __('My applications'), 'route' => 'applicant.applications.index', 'icon' => 'inbox'],
-                    ['label' => __('Saved'), 'route' => 'applicant.favorites.index', 'icon' => 'heart'],
                 ],
             ],
         ],

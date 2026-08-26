@@ -108,18 +108,18 @@ class ScreenSmokeTest extends TestCase
     }
 
     #[Test]
-    public function the_applicant_screens_render(): void
+    public function the_renter_search_screens_render(): void
     {
-        $applicant = User::factory()->applicant()->create();
+        $renter = User::factory()->renter()->create();
         $property = Property::factory()->published()->create();
         PropertyImage::factory()->primary()->for($property)->create();
-        Favorite::factory()->create(['applicant_id' => $applicant->id, 'property_id' => $property->id]);
-        Application::factory()->create(['applicant_id' => $applicant->id, 'property_id' => $property->id]);
+        Favorite::factory()->create(['renter_id' => $renter->id, 'property_id' => $property->id]);
+        Application::factory()->create(['renter_id' => $renter->id, 'property_id' => $property->id]);
 
         $screens = [
-            route('applicant.dashboard'),
-            route('applicant.applications.index'),
-            route('applicant.favorites.index'),
+            route('renter.dashboard'),
+            route('renter.applications.index'),
+            route('renter.favorites.index'),
             route('listings.index'),
             route('listings.show', $property),
             route('notifications.index'),
@@ -127,7 +127,7 @@ class ScreenSmokeTest extends TestCase
         ];
 
         foreach ($screens as $screen) {
-            $this->actingAs($applicant)->get($screen)->assertOk();
+            $this->actingAs($renter)->get($screen)->assertOk();
         }
     }
 

@@ -47,7 +47,7 @@ without the owner maintaining a second number by hand.
 
 | Rule | Where it lives |
 |------|----------------|
-| A house let floor by floor never reaches the applicant feed | `Property::scopeRentable`, used by `publiclyVisible()` |
+| A house let floor by floor never reaches the public feed | `Property::scopeRentable`, used by `publiclyVisible()` |
 | ...and cannot be published | `PublishProperty`, `PropertyPolicy::publish` |
 | ...and cannot take a tenancy | `PropertyPolicy::assignRenter`, the tenancy dropdowns |
 | ...and has no occupancy status of its own | `ChangePropertyStatus` |
@@ -67,7 +67,7 @@ without the owner maintaining a second number by hand.
   This is progressive enhancement only: without JavaScript the fields stay visible, the rules
   make the rent optional, and the actions ignore the rest.
 - **Public listing** - a floor shows its name beside the type and links to the other floors of
-  the same house, which are the closest alternatives an applicant has.
+  the same house, which are the closest alternatives a renter has.
 
 ## API (SRS §9.3)
 

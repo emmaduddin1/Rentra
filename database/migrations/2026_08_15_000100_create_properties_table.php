@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('type');
             $table->string('title');
             $table->decimal('rent_amount', 14, 2);
-            // FR-APP-002 - applicants search listings by area.
+            // FR-APP-002 - renters search listings by area.
             $table->string('area')->index();
             $table->string('city')->nullable()->index();
             $table->string('address');
@@ -33,7 +33,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            // BR-001 - the applicant feed filters on both flags together.
+            // BR-001 - the public feed filters on both flags together.
             $table->index(['publication_status', 'status']);
             $table->index(['owner_id', 'status']);
         });

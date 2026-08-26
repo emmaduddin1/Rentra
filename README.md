@@ -5,13 +5,13 @@ The backend is layered so the same business logic can be exposed as REST APIs fo
 future Flutter clients (SRS §4, §9.3).
 
 **Current state: all seven SRS phases delivered.** Every workflow in SRS §5 runs end to
-end - property publication, applicant inquiry, renter assignment, monthly submission, owner
+end - property publication, renter inquiry, renter assignment, monthly submission, owner
 approval and freeze, maintenance tracking, reporting, and the versioned REST API.
 
 A house can also be rented **floor by floor**: each floor is listed, priced, and let on its
 own, while an independent house stays a single listing - see
 [docs/MULTI-FLOOR-HOUSES.md](docs/MULTI-FLOOR-HOUSES.md). Every listing carries 3 to 12
-photos and optional walkthrough videos, and deleting one hides it from applicants without
+photos and optional walkthrough videos, and deleting one hides it from renters without
 losing it - see [docs/LISTING-MEDIA-AND-DELETION.md](docs/LISTING-MEDIA-AND-DELETION.md).
 
 See [docs/PHASE-1.md](docs/PHASE-1.md), [docs/PHASE-2.md](docs/PHASE-2.md), and
@@ -44,18 +44,22 @@ php artisan serve
 
 ### Demo accounts
 
-`php artisan migrate:fresh --seed` creates three accounts and nothing else, all with the
+`php artisan migrate:fresh --seed` creates two accounts and nothing else, both with the
 password `password`. Properties, tenancies, records, and applications are created through
 the application itself, so the seeded state never diverges from what the workflows produce.
 
-| Role      | Email                   |
-| --------- | ----------------------- |
-| Owner     | `owner@example.com`     |
-| Renter    | `renter@example.com`    |
-| Applicant | `applicant@example.com` |
+| Role   | Email                |
+| ------ | -------------------- |
+| Owner  | `owner@example.com`  |
+| Renter | `renter@example.com` |
 
-To see the whole system: sign in as the owner, add and publish a property, assign the demo
-renter to it, then sign in as the renter to submit a month and raise a maintenance request.
+There are two roles. A **renter** covers the whole journey: they browse the public feed,
+apply for a listing, and become its tenant once an owner accepts - so the same account
+keeps searching for other properties while renting one.
+
+To see the whole system: sign in as the owner, add and publish a property, sign in as the
+renter to apply for it, then assign the renter to it as the owner and submit a month and
+raise a maintenance request as the renter.
 
 ## REST API
 

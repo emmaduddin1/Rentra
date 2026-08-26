@@ -17,7 +17,7 @@
                         <span class="flex h-full flex-col rounded-lg border border-slate-200 px-3 py-2.5 text-sm transition hover:border-slate-300 hover:bg-slate-50 peer-checked:border-brand-500 peer-checked:bg-brand-50 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500/40">
                             <span class="font-medium text-slate-900">{{ $role->label() }}</span>
                             <span class="text-xs text-slate-500">
-                                {{ $role->value === 'owner' ? __('List and manage properties') : __('Find a property to rent') }}
+                                {{ $role->value === 'owner' ? __('List and manage properties') : __('Find a property, apply, and manage your tenancy') }}
                             </span>
                         </span>
                     </label>
@@ -50,10 +50,6 @@
         <p class="text-center text-sm text-slate-600">
             {{ __('Already registered?') }}
             <a href="{{ route('login') }}" class="link">{{ __('Log in') }}</a>
-        </p>
-
-        <p class="text-center text-xs text-slate-500">
-            {{ __('Renters are added by their property owner (SRS 19).') }}
         </p>
     </form>
 </x-layouts.guest>

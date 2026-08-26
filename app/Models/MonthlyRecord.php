@@ -104,6 +104,66 @@ class MonthlyRecord extends Model
         return ! $this->isFrozen() && $this->status->isEditableByRenter();
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Evidence
+    |--------------------------------------------------------------------------
+    |
+    | FR-MON-002/003 - there is no "paid" flag: a charge counts as evidenced
+    | when the renter declared an amount for it and attached a receipt. These
+    | read the loaded `proofs` relation, so eager load it before calling them.
+    |
+    */
+
+    /** @return array<int, PaymentCategory> */
+    public function chargedCategories(): array
+    {
+        return array_values(array_filter(
+            PaymentCategory::cases(),
+            fn (PaymentCategory $category) => (float) $this->{$category->amountColumn()} > 0,
+        ));
+    }
+
+    public function hasProofFor(PaymentCategory $category): bool
+    {
+        return $this->proofs->contains(
+            fn (MonthlyProof $proof) => $proof->category === $category
+        );
+    }
+
+    /**
+     * How many of the charges carry a receipt - the owner's "is this ready to
+     * approve?" number, and the renter's "what am I still missing?" one.
+     */
+    public function evidencedChargeCount(): int
+    {
+        return count(array_filter(
+            $this->chargedCategories(),
+            fn (PaymentCategory $category) => $this->hasProofFor($category),
+        ));
+    }
+
+    public function chargeCount(): int
+    {
+        return count($this->chargedCategories());
+    }
+
+    /**
+     * @return array<int, PaymentCategory> charges still waiting for a receipt
+     */
+    public function unevidencedCategories(): array
+    {
+        return array_values(array_filter(
+            $this->chargedCategories(),
+            fn (PaymentCategory $category) => ! $this->hasProofFor($category),
+        ));
+    }
+
+    public function isFullyEvidenced(): bool
+    {
+        return $this->chargeCount() > 0 && $this->unevidencedCategories() === [];
+    }
+
     /**
      * SRS 9.1 keeps "Frozen" as a user-visible status even though it is stored
      * as approved + frozen_at.

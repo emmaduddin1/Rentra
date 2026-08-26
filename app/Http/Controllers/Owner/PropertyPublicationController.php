@@ -26,7 +26,7 @@ class PropertyPublicationController extends Controller
 
         // BR-001 - being published is not the same as being visible.
         $message = $property->isPubliclyVisible()
-            ? __('Property published and now visible to applicants.')
+            ? __('Property published and now visible to renters.')
             : __('Property published. It appears in the feed once its status is Available.');
 
         return back()->with('status', $message);

@@ -123,7 +123,7 @@ class PropertyController extends Controller
 
         $property->load([
             'images',
-            'applications.applicant',
+            'applications.renter',
             // BR-013 - a house shows its floors, a floor shows its house.
             'videos',
             'floors' => fn ($query) => $query->withCount('applications'),
@@ -195,8 +195,8 @@ class PropertyController extends Controller
                 $property->isFloor() ? $property->parent_id : []
             )
             ->with('status', $property->isFloor()
-                ? __('Floor archived. It is no longer visible to applicants.')
-                : __('Property archived. It is no longer visible to applicants.'));
+                ? __('Floor archived. It is no longer visible to renters.')
+                : __('Property archived. It is no longer visible to renters.'));
     }
 
     public function restore(Property $property, RestoreProperty $restoreProperty): RedirectResponse

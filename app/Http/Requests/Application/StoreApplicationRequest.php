@@ -5,7 +5,7 @@ namespace App\Http\Requests\Application;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * SRS FR-APP-005 - the applicant inquiry form.
+ * SRS FR-APP-005 - the renter inquiry form.
  */
 class StoreApplicationRequest extends FormRequest
 {

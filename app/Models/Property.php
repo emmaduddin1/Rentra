@@ -157,7 +157,7 @@ class Property extends Model
     */
 
     /**
-     * BR-001 - only Published + Available properties are visible to applicants,
+     * BR-001 - only Published + Available properties are visible to renters,
      * and BR-013 keeps a house that is split into floors out of the feed.
      */
     public function isPubliclyVisible(): bool
@@ -212,7 +212,7 @@ class Property extends Model
     */
 
     /**
-     * BR-001 - the applicant feed.
+     * BR-001 - the public listing feed.
      *
      * @param  Builder<static>  $query
      */
@@ -224,7 +224,7 @@ class Property extends Model
     }
 
     /**
-     * BR-013 - everything an applicant or a tenancy may point at: independent
+     * BR-013 - everything a renter or a tenancy may point at: independent
      * properties and individual floors, but not the houses that hold floors.
      *
      * @param  Builder<static>  $query

@@ -27,7 +27,7 @@ class ApplicationResource extends JsonResource
             'submitted_at' => $this->submitted_at?->toIso8601String(),
             'responded_at' => $this->responded_at?->toIso8601String(),
             'property' => new ListingResource($this->whenLoaded('property')),
-            'applicant' => new UserResource($this->whenLoaded('applicant')),
+            'renter' => new UserResource($this->whenLoaded('renter')),
         ];
     }
 }

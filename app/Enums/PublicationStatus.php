@@ -3,7 +3,7 @@
 namespace App\Enums;
 
 /**
- * SRS BR-001 - only Published + Available properties reach the applicant feed.
+ * SRS BR-001 - only Published + Available properties reach the public feed.
  */
 enum PublicationStatus: string
 {

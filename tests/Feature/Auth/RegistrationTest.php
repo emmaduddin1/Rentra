@@ -26,10 +26,10 @@ class RegistrationTest extends TestCase
     }
 
     #[Test]
-    public function an_applicant_can_register_with_an_email(): void
+    public function a_renter_can_register_with_an_email(): void
     {
         $response = $this->post(route('register'), [
-            'role' => UserRole::Applicant->value,
+            'role' => UserRole::Renter->value,
             'name' => 'Ayesha Khan',
             'email' => 'ayesha@example.com',
             'password' => 'correct-horse-battery',
@@ -37,10 +37,10 @@ class RegistrationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('applicant.dashboard'));
+        $response->assertRedirect(route('renter.dashboard'));
 
         $user = User::where('email', 'ayesha@example.com')->sole();
-        $this->assertSame(UserRole::Applicant, $user->role);
+        $this->assertSame(UserRole::Renter, $user->role);
         $this->assertSame(UserStatus::Active, $user->status);
     }
 
@@ -66,7 +66,7 @@ class RegistrationTest extends TestCase
     public function registration_requires_an_email_or_a_phone_number(): void
     {
         $this->post(route('register'), [
-            'role' => UserRole::Applicant->value,
+            'role' => UserRole::Renter->value,
             'name' => 'No Contact',
             'password' => 'correct-horse-battery',
             'password_confirmation' => 'correct-horse-battery',
@@ -81,7 +81,7 @@ class RegistrationTest extends TestCase
         User::factory()->create(['email' => 'taken@example.com', 'phone' => '+923009999999']);
 
         $this->post(route('register'), [
-            'role' => UserRole::Applicant->value,
+            'role' => UserRole::Renter->value,
             'name' => 'Copycat',
             'email' => 'taken@example.com',
             'password' => 'correct-horse-battery',
@@ -89,7 +89,7 @@ class RegistrationTest extends TestCase
         ])->assertSessionHasErrors('email');
 
         $this->post(route('register'), [
-            'role' => UserRole::Applicant->value,
+            'role' => UserRole::Renter->value,
             'name' => 'Copycat',
             'phone' => '+923009999999',
             'password' => 'correct-horse-battery',
@@ -98,13 +98,13 @@ class RegistrationTest extends TestCase
     }
 
     #[Test]
-    public function renters_cannot_self_register(): void
+    public function an_unknown_role_cannot_self_register(): void
     {
-        // SRS 19 - renters are onboarded by their owner.
+        // SRS 19 - only the configured roles are self-registerable.
         $this->post(route('register'), [
-            'role' => UserRole::Renter->value,
-            'name' => 'Sneaky Renter',
-            'email' => 'renter@example.com',
+            'role' => 'applicant',
+            'name' => 'Sneaky User',
+            'email' => 'sneaky@example.com',
             'password' => 'correct-horse-battery',
             'password_confirmation' => 'correct-horse-battery',
         ])->assertSessionHasErrors('role');
@@ -116,7 +116,7 @@ class RegistrationTest extends TestCase
     public function registration_is_audited_without_storing_the_password(): void
     {
         $this->post(route('register'), [
-            'role' => UserRole::Applicant->value,
+            'role' => UserRole::Renter->value,
             'name' => 'Audited User',
             'email' => 'audited@example.com',
             'password' => 'correct-horse-battery',

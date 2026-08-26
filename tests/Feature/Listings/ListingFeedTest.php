@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * SRS 5.5 / FR-APP-001 to FR-APP-004 - the public applicant feed.
+ * SRS 5.5 / FR-APP-001 to FR-APP-004 - the public listing feed.
  */
 class ListingFeedTest extends TestCase
 {
@@ -103,8 +103,8 @@ class ListingFeedTest extends TestCase
         // SRS 12 - nothing is disclosed about another owner's record.
         $this->get(route('listings.show', $draft))->assertNotFound();
 
-        $applicant = User::factory()->applicant()->create();
-        $this->actingAs($applicant)->get(route('listings.show', $draft))->assertNotFound();
+        $renter = User::factory()->renter()->create();
+        $this->actingAs($renter)->get(route('listings.show', $draft))->assertNotFound();
 
         // The owner keeps a preview of their own draft.
         $this->actingAs($draft->owner)->get(route('listings.show', $draft))->assertOk()->assertSee('Preview only');
@@ -125,7 +125,7 @@ class ListingFeedTest extends TestCase
             ->assertDontSee('12 Main Boulevard')
             ->assertSee('Log in to see the full address.');
 
-        $this->actingAs(User::factory()->applicant()->create())
+        $this->actingAs(User::factory()->renter()->create())
             ->get(route('listings.show', $listing))
             ->assertOk()
             ->assertSee('+923001112233')

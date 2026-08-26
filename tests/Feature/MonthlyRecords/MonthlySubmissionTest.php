@@ -251,14 +251,12 @@ class MonthlySubmissionTest extends TestCase
     }
 
     #[Test]
-    public function owners_and_applicants_cannot_use_the_renter_submission_routes(): void
+    public function owners_cannot_use_the_renter_submission_routes(): void
     {
         $record = MonthlyRecord::factory()->create();
 
-        foreach (['owner', 'applicant'] as $role) {
-            $this->actingAs(User::factory()->{$role}()->create())
-                ->post(route('renter.monthly-records.submit', $record))
-                ->assertForbidden();
-        }
+        $this->actingAs(User::factory()->owner()->create())
+            ->post(route('renter.monthly-records.submit', $record))
+            ->assertForbidden();
     }
 }

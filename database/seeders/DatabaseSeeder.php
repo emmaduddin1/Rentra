@@ -29,12 +29,6 @@ class DatabaseSeeder extends Seeder
             'phone' => '+923004445566',
         ]);
 
-        User::factory()->applicant()->create([
-            'name' => 'Demo Applicant',
-            'email' => 'applicant@example.com',
-            'phone' => '+923007778899',
-        ]);
-
-        $this->command?->info('Seeded demo accounts: owner@example.com / renter@example.com / applicant@example.com (password: "password")');
+        $this->command?->info('Seeded demo accounts: owner@example.com / renter@example.com (password: "password")');
     }
 }

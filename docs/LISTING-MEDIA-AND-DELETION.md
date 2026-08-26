@@ -57,14 +57,14 @@ failed write cleans up after itself rather than leaving a 200 MB orphan.
 > whole form — several videos plus the photos in one submit. Laravel cannot
 > raise these; PHP discards the request body before the framework runs.
 
-Owners manage videos from the property page; applicants see them on the public
+Owners manage videos from the property page; renters see them on the public
 listing, right under the gallery. The API exposes them as `videos` on both
 `PropertyResource` and `ListingResource`.
 
 ## Delete
 
 **Delete unpublishes and hides — it never destroys the record.** The listing
-stops being visible to applicants, keeps appearing for its owner under
+stops being visible to renters, keeps appearing for its owner under
 **Deleted**, and can be restored and published again at any time. Underneath it
 is a soft delete (`deleted_at`), so tenancy, payment and audit history survive
 intact (BR-009).

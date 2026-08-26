@@ -6,16 +6,19 @@ use App\Actions\Renters\CreateRenterAccount;
 use App\Actions\Tenancies\AssignRenter;
 use App\Actions\Tenancies\EndTenancy;
 use App\Actions\Tenancies\UpdateTenancy;
+use App\Enums\ApplicationStatus;
 use App\Enums\PropertyStatus;
 use App\Enums\TenancyStatus;
-use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenancy\EndTenancyRequest;
 use App\Http\Requests\Tenancy\StoreTenancyRequest;
 use App\Http\Requests\Tenancy\UpdateTenancyRequest;
+use App\Models\Application;
 use App\Models\Property;
 use App\Models\Tenancy;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -63,21 +66,50 @@ class TenancyController extends Controller
 
         $owner = $request->user();
 
+        // BR-002 - a property already under an active tenancy is not offered.
+        // BR-013 - and a house let floor by floor is rented as floors.
+        $properties = Property::ownedBy($owner)
+            ->rentable()
+            ->whereDoesntHave('activeTenancy')
+            ->orderBy('title')
+            ->get();
+
         return view('owner.tenancies.create', [
-            // BR-002 - a property already under an active tenancy is not offered.
-            // BR-013 - and a house let floor by floor is rented as floors.
-            'properties' => Property::ownedBy($owner)
-                ->rentable()
-                ->whereDoesntHave('activeTenancy')
-                ->orderBy('title')
-                ->get(),
+            'properties' => $properties,
             'selectedPropertyId' => $request->integer('property_id') ?: null,
-            'renters' => User::query()
-                ->role(UserRole::Renter)
-                ->active()
-                ->orderBy('name')
-                ->get(['id', 'name', 'email', 'phone']),
+            'applicants' => $this->applicantsFor($properties),
         ]);
+    }
+
+    /**
+     * FR-TEN-001 / FR-APP-006 - the renters offered for a property are the ones
+     * who applied for it, so the owner picks from people who actually asked.
+     *
+     * Rejected and withdrawn inquiries are left out: the owner turned them down,
+     * or the renter walked away, so neither is an offer to rent. A renter who
+     * never applied is onboarded through the "create a new renter" mode instead.
+     *
+     * @param  Collection<int, Property>  $properties
+     * @return Collection<int, Application>
+     */
+    protected function applicantsFor(Collection $properties): Collection
+    {
+        if ($properties->isEmpty()) {
+            return Application::query()->whereRaw('1 = 0')->get();
+        }
+
+        return Application::query()
+            ->whereIn('property_id', $properties->modelKeys())
+            ->whereIn('status', [
+                ApplicationStatus::Pending->value,
+                ApplicationStatus::Reviewed->value,
+                ApplicationStatus::Accepted->value,
+            ])
+            // FR-AUTH-006 - a suspended account cannot be handed a tenancy.
+            ->whereHas('renter', fn (Builder $renter) => $renter->active())
+            ->with('renter:id,name,email,phone')
+            ->latest('submitted_at')
+            ->get();
     }
 
     public function store(

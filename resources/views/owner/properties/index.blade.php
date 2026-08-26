@@ -54,7 +54,7 @@
         @if ($properties->isEmpty())
             <x-empty-state
                 :title="$archived ? __('Nothing deleted.') : __('No properties yet.')"
-                :description="$archived ? __('Deleted listings are hidden from applicants and stay here until you restore them.') : __('Create your first listing to start receiving applications.')"
+                :description="$archived ? __('Deleted listings are hidden from renters and stay here until you restore them.') : __('Create your first listing to start receiving applications.')"
             >
                 @unless ($archived)
                     <a href="{{ route('owner.properties.create') }}" class="btn btn-primary">
@@ -126,7 +126,7 @@
                                         <td>
                                             <x-badge :variant="$property->publication_status->badge()">{{ $property->publication_status->label() }}</x-badge>
                                             @if ($property->isPubliclyVisible())
-                                                <span class="mt-1 block text-xs text-emerald-700">{{ __('Visible to applicants') }}</span>
+                                                <span class="mt-1 block text-xs text-emerald-700">{{ __('Visible to renters') }}</span>
                                             @endif
                                         </td>
                                         <td class="tabular-nums">{{ $property->applications_count }}</td>
@@ -198,7 +198,7 @@
                                         <td>
                                             <x-badge :variant="$floor->publication_status->badge()">{{ $floor->publication_status->label() }}</x-badge>
                                             @if ($floor->isPubliclyVisible())
-                                                <span class="mt-1 block text-xs text-emerald-700">{{ __('Visible to applicants') }}</span>
+                                                <span class="mt-1 block text-xs text-emerald-700">{{ __('Visible to renters') }}</span>
                                             @endif
                                         </td>
                                         <td class="tabular-nums">{{ $floor->applications_count }}</td>

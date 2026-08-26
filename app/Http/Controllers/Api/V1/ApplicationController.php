@@ -27,11 +27,11 @@ class ApplicationController extends Controller
         $user = $request->user();
 
         $applications = Application::query()
-            // BR-010 - an owner sees inquiries on their listings, an applicant
+            // BR-010 - an owner sees inquiries on their listings, a renter
             // sees their own, and nobody sees anything else.
             ->when($user->isOwner(), fn ($query) => $query->forOwner($user))
-            ->when($user->isApplicant(), fn ($query) => $query->forApplicant($user))
-            ->with(['property.primaryImage', 'applicant'])
+            ->when($user->isRenter(), fn ($query) => $query->forRenter($user))
+            ->with(['property.primaryImage', 'renter'])
             ->latest('submitted_at')
             ->paginate($request->integer('per_page') ?: config('rental.pagination.per_page'));
 
@@ -47,7 +47,7 @@ class ApplicationController extends Controller
         Gate::authorize('create', [Application::class, $property]);
 
         $application = $submitApplication->handle(
-            applicant: $request->user(),
+            renter: $request->user(),
             property: $property,
             data: $request->validated(),
         );
@@ -72,6 +72,6 @@ class ApplicationController extends Controller
             note: $request->validated('owner_note'),
         );
 
-        return new ApplicationResource($application->fresh()->load(['property', 'applicant']));
+        return new ApplicationResource($application->fresh()->load(['property', 'renter']));
     }
 }

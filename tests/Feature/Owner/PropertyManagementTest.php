@@ -317,12 +317,10 @@ class PropertyManagementTest extends TestCase
 
         $this->get(route('owner.properties.index'))->assertRedirect(route('login'));
 
-        foreach (['renter', 'applicant'] as $role) {
-            $user = User::factory()->{$role}()->create();
+        $user = User::factory()->renter()->create();
 
-            $this->actingAs($user)->get(route('owner.properties.index'))->assertForbidden();
-            $this->actingAs($user)->get(route('owner.properties.create'))->assertForbidden();
-            $this->actingAs($user)->delete(route('owner.properties.destroy', $property))->assertForbidden();
-        }
+        $this->actingAs($user)->get(route('owner.properties.index'))->assertForbidden();
+        $this->actingAs($user)->get(route('owner.properties.create'))->assertForbidden();
+        $this->actingAs($user)->delete(route('owner.properties.destroy', $property))->assertForbidden();
     }
 }

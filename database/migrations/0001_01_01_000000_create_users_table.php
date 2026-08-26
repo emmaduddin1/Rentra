@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             // SRS FR-AUTH-004 - one primary role per account for the MVP.
-            $table->string('role')->default(UserRole::Applicant->value)->index();
+            $table->string('role')->default(UserRole::Renter->value)->index();
             $table->string('name');
             // SRS FR-AUTH-001 / 8.3 - unique email or phone; either identifier
             // may be absent, so both are nullable with a unique index.

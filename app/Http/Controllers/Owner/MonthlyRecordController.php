@@ -39,7 +39,9 @@ class MonthlyRecordController extends Controller
         $status = $filters['status'] ?? MonthlyRecordStatus::Pending->value;
 
         $records = MonthlyRecord::forOwner($owner)
-            ->with(['tenancy.property', 'tenancy.renter'])
+            // The queue shows receipt coverage per row, so the categories
+            // of each proof come along; the amounts are on the record.
+            ->with(['tenancy.property', 'tenancy.renter', 'proofs:id,monthly_record_id,category'])
             ->withCount('proofs')
             ->when($status !== 'all', fn ($query) => $query->where('status', $status))
             ->when(

@@ -3,7 +3,7 @@
 Delivered against SRS §16 phases 3 through 7, on top of the foundation in
 [PHASE-1.md](PHASE-1.md) and the property discovery work in [PHASE-2.md](PHASE-2.md).
 
-At this point every workflow in SRS §5 runs end to end: property publication → applicant
+At this point every workflow in SRS §5 runs end to end: property publication → renter
 inquiry → renter assignment → monthly submission → owner approval and freeze → maintenance
 tracking → reporting → the same operations over a versioned REST API.
 
@@ -133,7 +133,7 @@ group too, and deletes the presented token instead of invalidating a session (FR
   transitions, cross-owner refusal, idempotent approval.
 - **`MonthlyRecords/MonthlyProofTest`** (7) - private-disk placement, MIME and size
   rejection, the per-category cap, refusal on pending/frozen records, and the download
-  matrix (renter ✓, owner ✓, other owner ✗, other renter ✗, applicant ✗, guest → login).
+  matrix (renter ✓, owner ✓, other owner ✗, other renter ✗, guest → login).
 - **`Maintenance/MaintenanceTest`** (11) - creation with attachments and notification,
   validation, cross-tenancy refusal, ended-tenancy refusal, the status timeline, illegal and
   no-op transitions, renter read-only status, two-way comments, scoping, attachment
@@ -149,7 +149,7 @@ group too, and deletes the presented token instead of invalidating a session (FR
   (create → duplicate refused → submit → lock → approve/freeze → reopen → reject), approval
   endpoints closed to renters, role-scoped lists, tenancy assign/end with BR-002, the
   maintenance lifecycle, applications, notifications.
-- **`ScreenSmokeTest`** (4) - all 24 owner screens, 13 renter screens, 7 applicant screens,
+- **`ScreenSmokeTest`** (4) - all 24 owner screens, 13 renter tenancy screens, 7 renter search screens,
   and the public pages render.
 
 ## Known gaps

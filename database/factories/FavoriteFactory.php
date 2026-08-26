@@ -20,7 +20,7 @@ class FavoriteFactory extends Factory
     public function definition(): array
     {
         return [
-            'applicant_id' => User::factory()->applicant(),
+            'renter_id' => User::factory()->renter(),
             'property_id' => Property::factory()->published(),
         ];
     }

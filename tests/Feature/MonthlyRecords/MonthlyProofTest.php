@@ -47,6 +47,175 @@ class MonthlyProofTest extends TestCase
     }
 
     #[Test]
+    public function the_owner_review_screen_previews_image_proofs_and_lists_documents(): void
+    {
+        // SRS 5.3 step 14 / FR-MON-006 - the owner verifies the receipt by
+        // looking at it, so a photo is rendered rather than only linked.
+        Storage::fake('local');
+        $record = MonthlyRecord::factory()->create();
+
+        $this->actingAs($record->tenancy->renter)
+            ->post(route('renter.monthly-records.proofs.store', $record), [
+                'category' => PaymentCategory::Rent->value,
+                'files' => [
+                    UploadedFile::fake()->image('receipt.jpg'),
+                    UploadedFile::fake()->create('receipt.pdf', 100, 'application/pdf'),
+                ],
+            ]);
+
+        $record->refresh()->load('proofs');
+        $image = $record->proofs->firstWhere('original_name', 'receipt.jpg');
+        $document = $record->proofs->firstWhere('original_name', 'receipt.pdf');
+
+        $response = $this->actingAs($record->tenancy->property->owner)
+            ->get(route('owner.monthly-records.show', $record))
+            ->assertOk();
+
+        // NFR-SEC-007 - the preview points at the authorised download route,
+        // so the private disk is still never exposed as a public URL.
+        $response->assertSee('<img', false);
+        $response->assertSee('src="'.route('monthly-proofs.download', $image).'"', false);
+
+        // A PDF has no thumbnail to show, so it stays a plain row.
+        $response->assertSee(route('monthly-proofs.download', $document), false);
+        $response->assertDontSee('src="'.route('monthly-proofs.download', $document).'"', false);
+    }
+
+    #[Test]
+    public function both_parties_see_which_charges_have_a_receipt(): void
+    {
+        // FR-MON-002/003 - there is no "paid" flag; a charge counts as paid
+        // when an amount was declared for it and a receipt is attached.
+        Storage::fake('local');
+
+        $record = MonthlyRecord::factory()->create([
+            'rent_amount' => '50000.00',
+            'electricity_amount' => '4000.00',
+            'gas_amount' => '0.00',
+        ]);
+
+        MonthlyProof::factory()->for($record, 'monthlyRecord')->create([
+            'category' => PaymentCategory::Rent,
+        ]);
+
+        $record->refresh()->load('proofs');
+
+        $this->assertSame(2, $record->chargeCount());
+        $this->assertSame(1, $record->evidencedChargeCount());
+        $this->assertFalse($record->isFullyEvidenced());
+        $this->assertSame([PaymentCategory::Electricity], $record->unevidencedCategories());
+
+        foreach ([$record->tenancy->property->owner, $record->tenancy->renter] as $viewer) {
+            $route = $viewer->isOwner()
+                ? route('owner.monthly-records.show', $record)
+                : route('renter.monthly-records.show', $record);
+
+            $this->actingAs($viewer)
+                ->get($route)
+                ->assertOk()
+                ->assertSee('1 of 2 charges have a receipt')
+                ->assertSee('Receipt attached')
+                ->assertSee('No receipt')
+                // Gas was never charged, so it is named rather than silently dropped.
+                ->assertSee('Not charged this month:');
+        }
+    }
+
+    #[Test]
+    public function the_approval_queue_shows_receipt_coverage_per_row(): void
+    {
+        Storage::fake('local');
+
+        $record = MonthlyRecord::factory()->pending()->create([
+            'rent_amount' => '50000.00',
+            'electricity_amount' => '4000.00',
+            'gas_amount' => '0.00',
+        ]);
+
+        MonthlyProof::factory()->for($record, 'monthlyRecord')->create([
+            'category' => PaymentCategory::Rent,
+        ]);
+
+        $this->actingAs($record->tenancy->property->owner)
+            ->get(route('owner.monthly-records.index'))
+            ->assertOk()
+            ->assertSee('1/2');
+    }
+
+    #[Test]
+    public function a_submitted_record_locks_its_receipts_against_the_renter(): void
+    {
+        // BR-004 - once submitted, the renter can neither add nor remove a
+        // receipt; the owner reviews exactly what was sent.
+        Storage::fake('local');
+
+        $record = MonthlyRecord::factory()->pending()->create();
+        $proof = MonthlyProof::factory()->for($record, 'monthlyRecord')->create([
+            'category' => PaymentCategory::Rent,
+        ]);
+
+        $renter = $record->tenancy->renter;
+
+        $this->actingAs($renter)
+            ->post(route('renter.monthly-records.proofs.store', $record), [
+                'category' => PaymentCategory::Rent->value,
+                'files' => [UploadedFile::fake()->image('late.jpg')],
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($renter)
+            ->delete(route('renter.monthly-records.proofs.destroy', [$record, $proof]))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('monthly_proofs', ['id' => $proof->id]);
+        $this->assertSame(1, $record->fresh()->proofs()->count());
+
+        // The screen says so rather than just hiding the controls.
+        $this->actingAs($renter)
+            ->get(route('renter.monthly-records.show', $record))
+            ->assertOk()
+            ->assertSee('Submitted and locked.', false)
+            ->assertDontSee(route('renter.monthly-records.edit', $record));
+    }
+
+    #[Test]
+    public function an_approved_record_stays_locked_for_the_renter(): void
+    {
+        // BR-006 - approval freezes the record on top of the submit lock.
+        Storage::fake('local');
+
+        $record = MonthlyRecord::factory()->approved()->create();
+        $proof = MonthlyProof::factory()->for($record, 'monthlyRecord')->create([
+            'category' => PaymentCategory::Rent,
+        ]);
+
+        $this->actingAs($record->tenancy->renter)
+            ->delete(route('renter.monthly-records.proofs.destroy', [$record, $proof]))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('monthly_proofs', ['id' => $proof->id]);
+    }
+
+    #[Test]
+    public function a_returned_record_can_be_corrected_again(): void
+    {
+        // BR-004 - returning the record hands editing back to the renter, so
+        // the lock is about the review window, not a one-way door.
+        Storage::fake('local');
+
+        $record = MonthlyRecord::factory()->rejected()->create();
+
+        $this->actingAs($record->tenancy->renter)
+            ->post(route('renter.monthly-records.proofs.store', $record), [
+                'category' => PaymentCategory::Rent->value,
+                'files' => [UploadedFile::fake()->image('corrected.jpg')],
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(1, $record->fresh()->proofs()->count());
+    }
+
+    #[Test]
     public function uploads_are_validated_by_type_and_size(): void
     {
         Storage::fake('local');
@@ -143,11 +312,10 @@ class MonthlyProofTest extends TestCase
             ->get(route('monthly-proofs.download', $proof))
             ->assertOk();
 
-        // Another owner, another renter, and an applicant are all refused.
+        // Another owner and another renter are both refused.
         foreach ([
             User::factory()->owner()->create(),
             User::factory()->renter()->create(),
-            User::factory()->applicant()->create(),
         ] as $stranger) {
             $this->actingAs($stranger)
                 ->get(route('monthly-proofs.download', $proof))
