@@ -3,11 +3,15 @@
 namespace Tests\Feature\MonthlyRecords;
 
 use App\Enums\MonthlyRecordStatus;
+use App\Enums\PaymentCategory;
+use App\Models\MonthlyProof;
 use App\Models\MonthlyRecord;
 use App\Models\Tenancy;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Concerns\AttachesReceipts;
 use Tests\TestCase;
 
 /**
@@ -15,6 +19,7 @@ use Tests\TestCase;
  */
 class MonthlySubmissionTest extends TestCase
 {
+    use AttachesReceipts;
     use RefreshDatabase;
 
     /**
@@ -143,7 +148,7 @@ class MonthlySubmissionTest extends TestCase
     #[Test]
     public function submitting_moves_the_record_to_pending_and_notifies_the_owner(): void
     {
-        $record = MonthlyRecord::factory()->create();
+        $record = $this->attachReceipts(MonthlyRecord::factory()->create());
         $renter = $record->tenancy->renter;
         $owner = $record->tenancy->property->owner;
 
@@ -215,7 +220,7 @@ class MonthlySubmissionTest extends TestCase
     public function a_rejected_record_becomes_editable_again_and_keeps_the_reason(): void
     {
         // BR-005.
-        $record = MonthlyRecord::factory()->rejected()->create();
+        $record = $this->attachReceipts(MonthlyRecord::factory()->rejected()->create());
 
         $this->assertTrue($record->isEditableByRenter());
 
@@ -248,6 +253,92 @@ class MonthlySubmissionTest extends TestCase
         $this->actingAs($mine->tenancy->renter)
             ->get(route('renter.monthly-records.show', $theirs))
             ->assertForbidden();
+    }
+
+    #[Test]
+    public function a_charge_without_a_receipt_cannot_be_submitted(): void
+    {
+        // FR-MON-003/006 - the month is a claim that the bills were paid and
+        // the owner confirms it against the receipts, so every charge needs one.
+        Storage::fake('local');
+
+        $record = MonthlyRecord::factory()->create([
+            'rent_amount' => '50000.00',
+            'electricity_amount' => '4000.00',
+            'gas_amount' => '0.00',
+        ]);
+
+        MonthlyProof::factory()->for($record, 'monthlyRecord')->create([
+            'category' => PaymentCategory::Rent,
+        ]);
+
+        $this->actingAs($record->tenancy->renter)
+            ->post(route('renter.monthly-records.submit', $record))
+            ->assertSessionHasErrors('files');
+
+        // BR-004 - it stays a draft, so the renter can still fix it.
+        $record->refresh();
+        $this->assertSame(MonthlyRecordStatus::Draft, $record->status);
+        $this->assertNull($record->submitted_at);
+        $this->assertTrue($record->isEditableByRenter());
+
+        // The owner is not told about a month that never left the renter.
+        $this->assertDatabaseMissing('notifications', [
+            'type' => 'monthly_record.submitted',
+        ]);
+    }
+
+    #[Test]
+    public function the_month_submits_once_every_charge_has_a_receipt(): void
+    {
+        Storage::fake('local');
+
+        $record = MonthlyRecord::factory()->create([
+            'rent_amount' => '50000.00',
+            'electricity_amount' => '4000.00',
+            'gas_amount' => '0.00',
+        ]);
+
+        foreach ([PaymentCategory::Rent, PaymentCategory::Electricity] as $category) {
+            MonthlyProof::factory()->for($record, 'monthlyRecord')->create(['category' => $category]);
+        }
+
+        $this->actingAs($record->tenancy->renter)
+            ->post(route('renter.monthly-records.submit', $record))
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $record->refresh();
+        $this->assertSame(MonthlyRecordStatus::Pending, $record->status);
+        $this->assertNotNull($record->submitted_at);
+
+        // FR-MON-005 - and now the owner has something to approve.
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $record->tenancy->property->owner_id,
+            'type' => 'monthly_record.submitted',
+        ]);
+    }
+
+    #[Test]
+    public function the_edit_screen_names_the_charges_still_missing_a_receipt(): void
+    {
+        Storage::fake('local');
+
+        $record = MonthlyRecord::factory()->create([
+            'rent_amount' => '50000.00',
+            'electricity_amount' => '4000.00',
+            'gas_amount' => '0.00',
+        ]);
+
+        MonthlyProof::factory()->for($record, 'monthlyRecord')->create([
+            'category' => PaymentCategory::Rent,
+        ]);
+
+        $this->actingAs($record->tenancy->renter)
+            ->get(route('renter.monthly-records.edit', $record))
+            ->assertOk()
+            ->assertSee('Attach a receipt for Electricity before you can submit.')
+            ->assertSee('disabled', false);
     }
 
     #[Test]

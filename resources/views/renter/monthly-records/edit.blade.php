@@ -132,9 +132,36 @@
                     <p class="mt-2 text-sm text-red-700" role="alert">{{ $message }}</p>
                 @enderror
 
+                {{-- FR-MON-003 - the owner confirms the month against the
+                     receipts, so a charge without one blocks the submission.
+                     Say which ones here, before the button is pressed. --}}
+                @php $missingReceipts = $record->unevidencedCategories(); @endphp
+
+                @if ($record->chargeCount() === 0)
+                    <p class="mt-3 rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                        {{ __('Enter what you paid this month, then attach a receipt for each amount.') }}
+                    </p>
+                @elseif ($missingReceipts !== [])
+                    <p class="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900" role="status">
+                        {{ __('Attach a receipt for :categories before you can submit.', [
+                            'categories' => collect($missingReceipts)
+                                ->map(fn ($category) => $category->label())
+                                ->join(', ', ' and '),
+                        ]) }}
+                    </p>
+                @else
+                    <p class="mt-3 rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+                        {{ __('Every charge has a receipt. Ready to send to your owner.') }}
+                    </p>
+                @endif
+
                 <form method="POST" action="{{ route('renter.monthly-records.submit', $record) }}" class="mt-4">
                     @csrf
-                    <x-form.button type="submit" class="w-full">{{ __('Submit for approval') }}</x-form.button>
+                    <x-form.button
+                        type="submit"
+                        class="w-full"
+                        :disabled="$record->chargeCount() === 0 || $missingReceipts !== []"
+                    >{{ __('Submit for approval') }}</x-form.button>
                 </form>
             </section>
         </aside>

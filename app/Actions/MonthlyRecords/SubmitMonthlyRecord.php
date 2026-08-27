@@ -37,6 +37,28 @@ class SubmitMonthlyRecord
             ]);
         }
 
+        /*
+        | FR-MON-003/006 - the month is a claim that the rent and the bills were
+        | paid, and the owner confirms it against the receipts. A charge with no
+        | receipt is nothing the owner can confirm, and submitting locks the
+        | record (BR-004), so the check belongs here rather than after the fact.
+        |
+        | Read from the database: the caller may hold a stale proofs relation.
+        */
+        $record->load('proofs');
+
+        $missing = $record->unevidencedCategories();
+
+        if ($missing !== []) {
+            throw ValidationException::withMessages([
+                'files' => __('Attach a receipt for :categories before submitting.', [
+                    'categories' => collect($missing)
+                        ->map(fn ($category) => $category->label())
+                        ->join(', ', ' and '),
+                ]),
+            ]);
+        }
+
         return DB::transaction(function () use ($record, $renter) {
             $from = $record->status;
 

@@ -15,6 +15,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\Concerns\AttachesReceipts;
 use Tests\TestCase;
 
 /**
@@ -23,6 +24,7 @@ use Tests\TestCase;
  */
 class ApiWorkflowTest extends TestCase
 {
+    use AttachesReceipts;
     use RefreshDatabase;
 
     #[Test]
@@ -158,8 +160,9 @@ class ApiWorkflowTest extends TestCase
             'rent_amount' => '50000.00',
         ])->assertStatus(422)->assertJsonValidationErrors('period_month');
 
-        // FR-MON-005 - submitting locks it.
+        // FR-MON-005 - submitting locks it, once every charge is evidenced.
         $record = MonthlyRecord::findOrFail($recordId);
+        $this->attachReceipts($record);
         $this->postJson(route('api.v1.monthly-records.submit', $record))->assertOk();
         $this->assertSame(MonthlyRecordStatus::Pending, $record->fresh()->status);
 
@@ -342,7 +345,7 @@ class ApiWorkflowTest extends TestCase
     public function notifications_are_listed_and_marked_read_over_the_api(): void
     {
         // FR-NOT-003.
-        $record = MonthlyRecord::factory()->create();
+        $record = $this->attachReceipts(MonthlyRecord::factory()->create());
         $renter = $record->tenancy->renter;
 
         Sanctum::actingAs($renter);
