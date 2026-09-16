@@ -53,45 +53,37 @@
                                 {{ __('Use an existing renter account') }}
                             </label>
 
-                            {{-- FR-TEN-001 - only the people who applied for the
-                                 chosen property are offered. The option list is
-                                 tagged per property and narrowed by app.js; with
-                                 no JS every applicant stays selectable and the
-                                 status beside each name says which is which. --}}
                             <div class="mt-3">
                                 <x-form.field
                                     :label="__('Renter')"
                                     name="renter_id"
-                                    :hint="__('Renters who applied for the selected property.')"
+                                    :hint="__('All active renter accounts are listed.')"
                                 >
                                     <select
                                         id="renter_id"
                                         name="renter_id"
-                                        data-applicant-select
                                         @error('renter_id') aria-invalid="true" aria-describedby="renter_id-error" @enderror
                                         @class(['input', 'input-error' => $errors->has('renter_id')])
                                     >
-                                        <option value="" data-placeholder-for="chosen">{{ __('Choose a renter') }}</option>
-                                        <option value="" data-placeholder-for="none" hidden>{{ __('Nobody has applied for this property yet') }}</option>
-                                        <option value="" data-placeholder-for="unchosen" hidden>{{ __('Choose a property first') }}</option>
+                                        <option value="">{{ __('Choose a renter') }}</option>
 
-                                        @foreach ($applicants as $application)
+                                        @foreach ($renters as $renter)
                                             <option
-                                                value="{{ $application->renter_id }}"
-                                                data-property-id="{{ $application->property_id }}"
-                                                @selected((string) old('renter_id') === (string) $application->renter_id)
+                                                value="{{ $renter->id }}"
+                                                @selected((string) old('renter_id') === (string) $renter->id)
                                             >
-                                                {{ $application->renter->name }}
-                                                ({{ $application->renter->email ?? $application->renter->phone }})
-                                                &mdash; {{ $application->status->label() }}
+                                                {{ $renter->name }}
+                                                ({{ $renter->email ?? $renter->phone }})
                                             </option>
                                         @endforeach
                                     </select>
                                 </x-form.field>
 
-                                <p class="mt-2 text-xs text-slate-500" data-applicant-empty-note hidden>
-                                    {{ __('No applications for this property yet. Create the renter account below to assign someone who contacted you another way.') }}
-                                </p>
+                                @if ($renters->isEmpty())
+                                    <p class="mt-2 text-xs text-slate-500">
+                                        {{ __('No active renter accounts exist yet. Use the new renter option below.') }}
+                                    </p>
+                                @endif
                             </div>
                         </div>
 

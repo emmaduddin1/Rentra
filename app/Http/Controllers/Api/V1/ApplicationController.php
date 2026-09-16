@@ -38,6 +38,13 @@ class ApplicationController extends Controller
         return ApplicationResource::collection($applications);
     }
 
+    public function show(Application $application): ApplicationResource
+    {
+        Gate::authorize('view', $application);
+
+        return new ApplicationResource($application->load(['property.primaryImage', 'renter']));
+    }
+
     public function store(
         StoreApplicationRequest $request,
         Property $property,

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Tenancy;
 
 use App\Enums\UserRole;
+use App\Enums\UserStatus;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -32,21 +33,25 @@ class StoreTenancyRequest extends FormRequest
             'renter_mode' => ['required', Rule::in(['existing', 'new'])],
 
             'renter_id' => [
+                'exclude_unless:renter_mode,existing',
                 'required_if:renter_mode,existing',
                 'nullable',
                 Rule::exists('users', 'id')
                     ->where('role', UserRole::Renter->value)
+                    ->where('status', UserStatus::Active->value)
                     ->whereNull('deleted_at'),
             ],
 
-            'renter_name' => ['required_if:renter_mode,new', 'nullable', 'string', 'max:255'],
+            'renter_name' => ['exclude_unless:renter_mode,new', 'required', 'string', 'max:255'],
             'renter_email' => [
+                'exclude_unless:renter_mode,new',
                 'nullable',
                 'email',
                 'max:255',
                 Rule::unique('users', 'email'),
             ],
             'renter_phone' => [
+                'exclude_unless:renter_mode,new',
                 'nullable',
                 'string',
                 'max:32',

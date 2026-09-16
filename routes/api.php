@@ -46,6 +46,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
         // FR-APP-005 - renters apply; FR-APP-006 - owners respond.
         Route::get('applications', [V1\ApplicationController::class, 'index'])->name('applications.index');
+        Route::get('applications/{application}', [V1\ApplicationController::class, 'show'])->name('applications.show');
         Route::post('listings/{property}/applications', [V1\ApplicationController::class, 'store'])
             ->middleware('throttle:10,1')
             ->name('applications.store');
