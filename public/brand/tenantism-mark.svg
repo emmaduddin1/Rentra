@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Tenantism icon">
+  <path fill="#1A273A" d="M14 111 128 20l114 91-18 23-96-77-96 77z"/>
+  <path fill="#3E4A62" d="M40 115h27v70c0 17 9 26 26 26h18v27H89c-33 0-49-17-49-50zm176 0h-27v70c0 17-9 26-26 26h-18v27h22c33 0 49-17 49-50z"/>
+  <path fill="#C24D2C" d="M67 115h20v60c0 9 5 14 14 14h10v22H96c-19 0-29-10-29-30zm122 0h-20v60c0 9-5 14-14 14h-10v22h15c19 0 29-10 29-30z"/>
+  <path fill="#1A273A" d="M80 96h96v32h-31v110h-34V128H80z"/>
+  <path fill="#C24D2C" d="m128 56 34 27H94z"/>
+</svg>

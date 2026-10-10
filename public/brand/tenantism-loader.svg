@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Loading Tenantism">
+  <path d="M28 116 128 36l100 80" fill="none" stroke="#1A273A" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1">
+    <animate attributeName="stroke-dashoffset" values="1;0;0;1" keyTimes="0;.42;.76;1" dur="1.8s" repeatCount="indefinite"/>
+  </path>
+  <path d="M72 105h112M128 105v112" fill="none" stroke="#3E4A62" stroke-width="22" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1">
+    <animate attributeName="stroke-dashoffset" values="1;1;0;0;1" keyTimes="0;.28;.6;.8;1" dur="1.8s" repeatCount="indefinite"/>
+  </path>
+  <circle r="8" fill="#C24D2C">
+    <animateMotion dur="1.8s" repeatCount="indefinite" path="M28 116 L128 36 L228 116" keyTimes="0;.5;1"/>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.12;.82;1" dur="1.8s" repeatCount="indefinite"/>
+  </circle>
+</svg>

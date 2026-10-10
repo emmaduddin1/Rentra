@@ -23,7 +23,7 @@
         @endif
 
         <span class="absolute top-3 left-3">
-            <x-badge variant="muted" class="bg-white/90 ring-white/60 backdrop-blur">{{ $listing->type->label() }}</x-badge>
+            <x-badge variant="muted" class="bg-white ring-white/60">{{ $listing->type->label() }}</x-badge>
         </span>
 
         @if ($canSave)
@@ -32,7 +32,7 @@
                 @csrf
                 <button
                     type="submit"
-                    class="flex size-9 items-center justify-center rounded-full bg-white/90 text-slate-600 shadow-xs backdrop-blur transition hover:text-red-600"
+                    class="flex size-9 items-center justify-center rounded-full bg-white text-slate-600 shadow-xs transition hover:text-red-600"
                     aria-pressed="{{ $saved ? 'true' : 'false' }}"
                 >
                     <x-icon name="heart" @class(['size-5', 'fill-red-500 text-red-500' => $saved]) />
@@ -59,7 +59,7 @@
             <p class="mt-2 line-clamp-2 text-sm text-slate-500">{{ Str::limit($listing->description, 120) }}</p>
         @endif
 
-        <p class="mt-4 pt-1 text-lg font-semibold text-slate-900">
+        <p class="mt-4 pt-1 text-lg font-semibold text-rental-600">
             <x-money :amount="$listing->rent_amount" />
             <span class="text-sm font-normal text-slate-500">{{ __('/ month') }}</span>
         </p>

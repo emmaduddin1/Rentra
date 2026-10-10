@@ -6,7 +6,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ? $title.' · '.config('app.name') : config('app.name') }}</title>
+    <title>{{ $title ? $title.' · Tenantism' : 'Tenantism' }}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('icons/favicon-32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('icons/favicon-16.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ asset('site.webmanifest') }}">
+    <meta name="theme-color" content="#1A273A">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-dvh bg-slate-50 text-slate-900 antialiased">
@@ -38,7 +44,7 @@
             </main>
 
             <footer class="mx-auto w-full max-w-6xl px-4 py-8 text-xs text-slate-400 sm:px-6 lg:px-8">
-                &copy; {{ now()->year }} {{ config('app.name') }}
+                &copy; {{ now()->year }} Tenantism
             </footer>
         </div>
     @else
@@ -53,8 +59,16 @@
         </main>
 
         <footer class="mx-auto w-full max-w-6xl px-4 py-8 text-xs text-slate-400 sm:px-6 lg:px-8">
-            &copy; {{ now()->year }} {{ config('app.name') }}
+            &copy; {{ now()->year }} Tenantism
         </footer>
     @endauth
+
+    <div
+        id="page-transition-loader"
+        class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-slate-50/90 opacity-0 transition-opacity duration-200 motion-reduce:transition-none"
+        aria-hidden="true"
+    >
+        <x-brand.loader class="size-16" />
+    </div>
 </body>
 </html>

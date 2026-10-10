@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 260" role="img" aria-labelledby="title desc">
+  <title id="title">Tenantism logo</title>
+  <desc id="desc">A house containing a letter T beside the Tenantism wordmark.</desc>
+  <g transform="translate(20 16)">
+    <path fill="#1A273A" d="M12 104 120 18l108 86-17 22-91-73-91 73z"/>
+    <path fill="#3E4A62" d="M37 109h25v73c0 15 8 23 23 23h20v25H82c-30 0-45-15-45-45zm166 0h-25v73c0 15-8 23-23 23h-20v25h23c30 0 45-15 45-45z"/>
+    <path fill="#C24D2C" d="M62 109h18v64c0 8 4 12 12 12h13v20H88c-17 0-26-9-26-27zm116 0h-18v64c0 8-4 12-12 12h-13v20h17c17 0 26-9 26-27z"/>
+    <path fill="#1A273A" d="M75 91h90v31h-29v108h-32V122H75z"/>
+    <path fill="#C24D2C" d="m120 52 32 26H88z"/>
+  </g>
+  <text x="290" y="166" fill="#1A273A" font-family="Inter,Montserrat,Arial,sans-serif" font-size="112" font-weight="800" letter-spacing="3">TENANTISM</text>
+</svg>

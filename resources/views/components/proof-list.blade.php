@@ -23,7 +23,7 @@
                         href="{{ route('monthly-proofs.download', $proof) }}"
                         target="_blank"
                         rel="noopener"
-                        class="block overflow-hidden rounded-lg border border-slate-200 bg-slate-100 transition hover:border-slate-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+                        class="block overflow-hidden rounded-xl border border-slate-200 bg-slate-100 transition hover:border-slate-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rental-500"
                         title="{{ __('Open :name full size', ['name' => $proof->original_name ?? __('image')]) }}"
                     >
                         <img

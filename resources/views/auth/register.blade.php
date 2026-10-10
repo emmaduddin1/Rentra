@@ -14,7 +14,7 @@
                             class="peer sr-only"
                             @checked(old('role', config('rental.registration.default_role')) === $role->value)
                         >
-                        <span class="flex h-full flex-col rounded-lg border border-slate-200 px-3 py-2.5 text-sm transition hover:border-slate-300 hover:bg-slate-50 peer-checked:border-brand-500 peer-checked:bg-brand-50 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500/40">
+                        <span class="flex h-full flex-col rounded-xl border border-slate-200 px-3 py-2.5 text-sm transition hover:border-slate-300 hover:bg-slate-50 peer-checked:border-rental-500 peer-checked:bg-rental-50 peer-focus-visible:ring-2 peer-focus-visible:ring-rental-500/35">
                             <span class="font-medium text-slate-900">{{ $role->label() }}</span>
                             <span class="text-xs text-slate-500">
                                 {{ $role->value === 'owner' ? __('List and manage properties') : __('Find a property, apply, and manage your tenancy') }}

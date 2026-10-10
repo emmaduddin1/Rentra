@@ -5,13 +5,13 @@
     $unreadNotifications = auth()->user()?->inAppNotifications()->unread()->count() ?? 0;
 @endphp
 
-<header class="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-6 lg:px-8">
+<header class="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8">
     <label for="nav-toggle" class="btn btn-ghost -ml-2 cursor-pointer px-2 lg:hidden" aria-label="{{ __('Open menu') }}">
         <x-icon name="menu" class="size-6" />
     </label>
 
-    <a href="{{ route('home') }}" class="text-sm font-semibold tracking-tight text-slate-900 lg:hidden">
-        {{ config('app.name') }}
+    <a href="{{ route('home') }}" class="shrink-0 lg:hidden" aria-label="{{ __('Tenantism home') }}">
+        <x-brand.logo class="h-7 max-w-32" />
     </a>
 
     <div class="ms-auto flex items-center gap-1">
@@ -24,7 +24,7 @@
             <span class="hidden sm:inline">{{ __('Notifications') }}</span>
 
             @if ($unreadNotifications > 0)
-                <span class="inline-flex min-w-5 items-center justify-center rounded-full bg-brand-600 px-1.5 py-0.5 text-xs font-semibold text-white">
+                <span class="inline-flex min-w-5 items-center justify-center rounded-full bg-rental-500 px-1.5 py-0.5 text-xs font-semibold text-white">
                     {{ $unreadNotifications }}
                     <span class="sr-only">{{ __('unread') }}</span>
                 </span>

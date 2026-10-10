@@ -2,7 +2,7 @@
 
 {{-- NFR-UX-002 - an empty result is stated, never left as a blank page. --}}
 <div {{ $attributes->class(['card flex flex-col items-center px-6 py-12 text-center']) }}>
-    <span class="flex size-11 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+    <span class="flex size-11 items-center justify-center rounded-full bg-brand-100 text-brand-600">
         <x-icon :name="$icon" class="size-6" />
     </span>
 

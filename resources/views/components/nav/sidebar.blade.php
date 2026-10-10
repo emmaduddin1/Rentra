@@ -70,11 +70,8 @@
     class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col border-r border-slate-200 bg-white transition-transform duration-200 peer-checked:translate-x-0 lg:translate-x-0"
 >
     <div class="flex h-16 shrink-0 items-center justify-between gap-2 px-5">
-        <a href="{{ route('home') }}" class="flex items-center gap-2 text-base font-semibold tracking-tight text-slate-900">
-            <span class="flex size-8 items-center justify-center rounded-lg bg-brand-600 text-white">
-                <x-icon name="building" class="size-5" />
-            </span>
-            {{ config('app.name') }}
+        <a href="{{ route('home') }}" class="shrink-0" aria-label="{{ __('Tenantism home') }}">
+            <x-brand.logo class="h-8 max-w-40" />
         </a>
 
         <label for="nav-toggle" class="btn btn-ghost btn-sm -mr-2 cursor-pointer lg:hidden" aria-label="{{ __('Close menu') }}">

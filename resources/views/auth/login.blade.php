@@ -11,7 +11,7 @@
         </x-form.field>
 
         <label class="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" name="remember" value="1" class="size-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500/40">
+            <input type="checkbox" name="remember" value="1" class="size-4 rounded border-slate-300 text-rental-500 focus:ring-rental-500/35">
             {{ __('Remember me') }}
         </label>
 

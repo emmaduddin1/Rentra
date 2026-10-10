@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Tenantism favicon">
+  <rect width="256" height="256" rx="48" fill="#1A273A"/>
+  <path fill="#F8F7F4" d="M20 110 128 25l108 85-17 22-91-72-91 72z"/>
+  <path fill="#C6CDD6" d="M44 115h25v67c0 16 8 24 24 24h17v27H89c-30 0-45-16-45-47zm168 0h-25v67c0 16-8 24-24 24h-17v27h21c30 0 45-16 45-47z"/>
+  <path fill="#C24D2C" d="M69 115h19v57c0 9 4 13 13 13h9v21H96c-18 0-27-9-27-28zm118 0h-19v57c0 9-4 13-13 13h-9v21h14c18 0 27-9 27-28z"/>
+  <path fill="#F8F7F4" d="M82 97h92v31h-30v105h-33V128H82z"/>
+  <path fill="#C24D2C" d="m128 59 31 25H97z"/>
+</svg>

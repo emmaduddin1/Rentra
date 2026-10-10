@@ -4,26 +4,63 @@
 @source '../../storage/framework/views/*.php';
 
 /*
-| Design tokens
-| One neutral ramp (slate) + one brand accent, so a screen never has to decide
-| which of five blues it should use. Semantic colours stay for state only.
+| Tenantism design tokens
+| Tailwind v4 reads these CSS variables directly. The app already uses slate,
+| brand, and rental utilities heavily, so those ramps are mapped onto the
+| approved Tenantism palette here instead of scattering raw hex values across
+| Blade templates.
 */
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 
-    --color-brand-50: oklch(0.97 0.014 254.6);
-    --color-brand-100: oklch(0.94 0.03 255);
-    --color-brand-200: oklch(0.88 0.055 255);
-    --color-brand-300: oklch(0.81 0.086 255);
-    --color-brand-400: oklch(0.71 0.13 258);
-    --color-brand-500: oklch(0.62 0.17 262);
-    --color-brand-600: oklch(0.55 0.2 264);
-    --color-brand-700: oklch(0.49 0.19 265);
-    --color-brand-800: oklch(0.42 0.16 266);
-    --color-brand-900: oklch(0.37 0.13 266);
+    --color-tenant-bg: #f8f7f4;
+    --color-tenant-surface: #ffffff;
+    --color-tenant-primary: #1a273a;
+    --color-tenant-secondary: #3e4a62;
+    --color-tenant-accent: #c24d2c;
+    --color-tenant-text: #1a273a;
+    --color-tenant-text-secondary: #596273;
+    --color-tenant-text-muted: #7a8290;
+    --color-tenant-border: #d9d9d7;
+    --color-tenant-primary-container: #e4e8ed;
+    --color-tenant-accent-container: #fbe6de;
 
-    --radius-card: 0.875rem;
+    --color-slate-50: #f8f7f4;
+    --color-slate-100: #efeeeb;
+    --color-slate-200: #d9d9d7;
+    --color-slate-300: #c6cdd6;
+    --color-slate-400: #9aa5b4;
+    --color-slate-500: #7a8290;
+    --color-slate-600: #596273;
+    --color-slate-700: #3e4a62;
+    --color-slate-800: #223047;
+    --color-slate-900: #1a273a;
+    --color-slate-950: #101722;
+
+    --color-brand-50: #f8f7f4;
+    --color-brand-100: #e4e8ed;
+    --color-brand-200: #c6cdd6;
+    --color-brand-300: #9aa5b4;
+    --color-brand-400: #7a8290;
+    --color-brand-500: #596273;
+    --color-brand-600: #3e4a62;
+    --color-brand-700: #1a273a;
+    --color-brand-800: #172233;
+    --color-brand-900: #101722;
+
+    --color-rental-50: #fff5ef;
+    --color-rental-100: #fbe6de;
+    --color-rental-200: #f4cbbd;
+    --color-rental-300: #e8a086;
+    --color-rental-400: #d87352;
+    --color-rental-500: #c24d2c;
+    --color-rental-600: #a84025;
+    --color-rental-700: #87331f;
+    --color-rental-800: #68281b;
+    --color-rental-900: #461b13;
+
+    --radius-card: 1rem;
 }
 
 /*
@@ -52,18 +89,18 @@
 
     /* Buttons ------------------------------------------------------------ */
     .btn {
-        @apply inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium
+        @apply inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold
             whitespace-nowrap transition outline-none
-            focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-offset-2
+            focus-visible:ring-2 focus-visible:ring-rental-500/35 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50
             disabled:pointer-events-none disabled:opacity-50;
     }
 
     .btn-primary {
-        @apply bg-brand-600 text-white shadow-xs hover:bg-brand-700;
+        @apply bg-rental-500 text-white shadow-xs hover:bg-rental-600;
     }
 
     .btn-secondary {
-        @apply border border-slate-200 bg-white text-slate-700 shadow-xs hover:border-slate-300 hover:bg-slate-50;
+        @apply border border-slate-200 bg-white text-slate-800 shadow-xs hover:border-slate-300 hover:bg-slate-50;
     }
 
     .btn-ghost {
@@ -84,20 +121,20 @@
 
     /* Links -------------------------------------------------------------- */
     .link {
-        @apply rounded font-medium text-brand-700 underline-offset-4 outline-none hover:underline
-            focus-visible:ring-2 focus-visible:ring-brand-500/40;
+        @apply rounded font-semibold text-rental-600 underline-offset-4 outline-none hover:underline
+            focus-visible:ring-2 focus-visible:ring-rental-500/35;
     }
 
     .link-muted {
         @apply rounded font-medium text-slate-600 underline-offset-4 outline-none hover:text-slate-900 hover:underline
-            focus-visible:ring-2 focus-visible:ring-brand-500/40;
+            focus-visible:ring-2 focus-visible:ring-rental-500/35;
     }
 
     /* Form controls ------------------------------------------------------ */
     .input {
-        @apply block w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900
+        @apply block w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900
             shadow-xs transition outline-none placeholder:text-slate-400
-            focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20
+            focus:border-rental-500 focus:ring-2 focus:ring-rental-500/20
             disabled:cursor-not-allowed disabled:bg-slate-50;
     }
 
@@ -129,31 +166,31 @@
 
     /* Segmented control (list filters) ----------------------------------- */
     .segmented {
-        @apply inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-xs;
+        @apply inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-xs;
     }
 
     .segmented-item {
-        @apply rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:text-slate-900;
+        @apply rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:text-slate-900;
     }
 
     .segmented-item-active {
-        @apply bg-slate-900 text-white hover:text-white;
+        @apply bg-rental-500 text-white hover:text-white;
     }
 
     /* Sidebar navigation -------------------------------------------------- */
     .nav-item {
-        @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition
-            outline-none hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-brand-500/40;
+        @apply flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition
+            outline-none hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-rental-500/35;
     }
 
     .nav-item-active {
-        @apply bg-brand-50 text-brand-700 hover:bg-brand-50 hover:text-brand-700;
+        @apply bg-rental-100 text-rental-700 hover:bg-rental-100 hover:text-rental-700;
     }
 }
 
 /* Laravel's default pagination markup, nudged onto the same palette. */
 @layer components {
     nav[role='navigation'] [aria-current='page'] span {
-        @apply border-brand-500 bg-brand-50 text-brand-700;
+        @apply border-rental-500 bg-rental-50 text-rental-700;
     }
 }
