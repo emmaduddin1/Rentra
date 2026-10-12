@@ -3,6 +3,11 @@
 @props([
     'property',
     'types' => [],
+    'purposes' => [],
+    'categories' => [],
+    'amenities' => [],
+    'areaUnits' => [],
+    'furnishingStatuses' => [],
     'statuses',
     'publications',
     'modes' => [],
@@ -23,6 +28,12 @@
     // FR-PROP-003 - the edit form only asks for the photos still missing.
     $existingImages = $property->exists ? $property->images()->count() : 0;
     $missingImages = max(0, $minImages - $existingImages);
+    $selectedAmenities = collect(old('amenities', $property->exists ? $property->amenities->pluck('id')->all() : []))
+        ->map(fn ($id) => (int) $id)
+        ->all();
+    $categoryOptions = collect($categories)->mapWithKeys(fn ($category) => [
+        $category->id => $category->group->label().' · '.$category->name,
+    ])->all();
 @endphp
 
 <div class="grid gap-6 lg:grid-cols-3">
@@ -57,6 +68,24 @@
                             <x-form.input name="title" :value="old('title', $property->title)" maxlength="255" />
                         </x-form.field>
                     </div>
+
+                    <x-form.field :label="__('Listing purpose')" name="listing_purpose" required>
+                        <x-form.select
+                            name="listing_purpose"
+                            data-listing-purpose
+                            :selected="$property->listing_purpose?->value"
+                            :options="collect($purposes)->mapWithKeys(fn ($purpose) => [$purpose->value => $purpose->label()])->all()"
+                        />
+                    </x-form.field>
+
+                    <x-form.field :label="__('Category')" name="category_id">
+                        <x-form.select
+                            name="category_id"
+                            :placeholder="__('Select category')"
+                            :selected="$property->category_id"
+                            :options="$categoryOptions"
+                        />
+                    </x-form.field>
 
                     {{-- FR-PROP-001 - house, office, or guest house. --}}
                     <x-form.field :label="__('Type')" name="type" required>
@@ -96,6 +125,17 @@
                 </div>
 
                 @unless ($isFloor)
+                    <div class="sm:col-span-2" data-sale-field hidden>
+                        <x-form.field
+                            :label="__('Sale price (:currency)', ['currency' => \App\Support\Money::code()])"
+                            name="sale_price"
+                        >
+                            <x-form.input name="sale_price" type="number" step="0.01" min="0" :value="old('sale_price', $property->sale_price)" />
+                        </x-form.field>
+                    </div>
+                @endunless
+
+                @unless ($isFloor)
                     <x-form.field :label="__('Area')" name="area" required :hint="__('Renters search by this field.')">
                         <x-form.input name="area" :value="old('area', $property->area)" maxlength="255" />
                     </x-form.field>
@@ -111,6 +151,54 @@
                     </div>
                 @endunless
 
+                <x-form.field :label="__('Built area')" name="area_value">
+                    <x-form.input name="area_value" type="number" step="0.01" min="0" :value="old('area_value', $property->area_value)" />
+                </x-form.field>
+
+                <x-form.field :label="__('Area unit')" name="area_unit">
+                    <x-form.select
+                        name="area_unit"
+                        :placeholder="__('Select unit')"
+                        :selected="$property->area_unit?->value"
+                        :options="collect($areaUnits)->mapWithKeys(fn ($unit) => [$unit->value => $unit->label()])->all()"
+                    />
+                </x-form.field>
+
+                <x-form.field :label="__('Bedrooms')" name="bedrooms">
+                    <x-form.input name="bedrooms" type="number" step="1" min="0" :value="old('bedrooms', $property->bedrooms)" />
+                </x-form.field>
+
+                <x-form.field :label="__('Bathrooms')" name="bathrooms">
+                    <x-form.input name="bathrooms" type="number" step="1" min="0" :value="old('bathrooms', $property->bathrooms)" />
+                </x-form.field>
+
+                <x-form.field :label="__('Total rooms')" name="total_rooms">
+                    <x-form.input name="total_rooms" type="number" step="1" min="0" :value="old('total_rooms', $property->total_rooms)" />
+                </x-form.field>
+
+                <x-form.field :label="__('Kitchens')" name="kitchens">
+                    <x-form.input name="kitchens" type="number" step="1" min="0" :value="old('kitchens', $property->kitchens)" />
+                </x-form.field>
+
+                <x-form.field :label="__('Parking spaces')" name="parking_spaces">
+                    <x-form.input name="parking_spaces" type="number" step="1" min="0" :value="old('parking_spaces', $property->parking_spaces)" />
+                </x-form.field>
+
+                @unless ($isFloor)
+                    <x-form.field :label="__('Total floors')" name="total_floors">
+                        <x-form.input name="total_floors" type="number" step="1" min="0" :value="old('total_floors', $property->total_floors)" />
+                    </x-form.field>
+                @endunless
+
+                <x-form.field :label="__('Furnishing')" name="furnishing_status">
+                    <x-form.select
+                        name="furnishing_status"
+                        :placeholder="__('Not specified')"
+                        :selected="$property->furnishing_status?->value"
+                        :options="collect($furnishingStatuses)->mapWithKeys(fn ($status) => [$status->value => $status->label()])->all()"
+                    />
+                </x-form.field>
+
                 <div class="sm:col-span-2">
                     <x-form.field :label="__('Description')" name="description">
                         <x-form.textarea name="description" rows="5" :value="$property->description" />
@@ -118,6 +206,32 @@
                 </div>
             </div>
         </section>
+
+        @if (count($amenities) > 0)
+            <section class="card p-6">
+                <h2 class="text-sm font-semibold text-slate-900">{{ __('Amenities') }}</h2>
+                <p class="mt-1 text-xs text-slate-500">{{ __('Select the facilities that apply to this listing.') }}</p>
+
+                <div class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    @foreach ($amenities as $amenity)
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-rental-300">
+                            <input
+                                type="checkbox"
+                                name="amenities[]"
+                                value="{{ $amenity->id }}"
+                                @checked(in_array($amenity->id, $selectedAmenities, true))
+                                class="rounded border-slate-300 text-rental-600 focus:ring-rental-500"
+                            >
+                            <span>{{ $amenity->name }}</span>
+                        </label>
+                    @endforeach
+                </div>
+
+                @error('amenities')
+                    <p class="mt-2 text-sm text-red-700" role="alert">{{ $message }}</p>
+                @enderror
+            </section>
+        @endif
 
         @unless ($isFloor)
             <section class="card p-6">

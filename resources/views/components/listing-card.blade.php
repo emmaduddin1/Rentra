@@ -22,8 +22,9 @@
             </span>
         @endif
 
-        <span class="absolute top-3 left-3">
-            <x-badge variant="muted" class="bg-white ring-white/60">{{ $listing->type->label() }}</x-badge>
+        <span class="absolute top-3 left-3 flex flex-wrap gap-2">
+            <x-badge variant="muted" class="bg-white ring-white/60">{{ $listing->purposeBadgeLabel() }}</x-badge>
+            <x-badge variant="muted" class="bg-white ring-white/60">{{ $listing->categoryLabel() }}</x-badge>
         </span>
 
         @if ($canSave)
@@ -59,9 +60,19 @@
             <p class="mt-2 line-clamp-2 text-sm text-slate-500">{{ Str::limit($listing->description, 120) }}</p>
         @endif
 
+        @if ($listing->visibleSpecifications())
+            <p class="mt-3 flex flex-wrap gap-x-2 gap-y-1 text-xs font-medium text-slate-500">
+                @foreach (array_slice($listing->visibleSpecifications(), 0, 4) as $spec)
+                    <span>{{ $spec }}</span>
+                @endforeach
+            </p>
+        @endif
+
         <p class="mt-4 pt-1 text-lg font-semibold text-rental-600">
-            <x-money :amount="$listing->rent_amount" />
-            <span class="text-sm font-normal text-slate-500">{{ __('/ month') }}</span>
+            <x-money :amount="$listing->priceAmount()" />
+            @if ($listing->priceSuffix())
+                <span class="text-sm font-normal text-slate-500">{{ $listing->priceSuffix() }}</span>
+            @endif
         </p>
     </div>
 </article>

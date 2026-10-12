@@ -2,6 +2,9 @@
 
 namespace App\Http\Requests\Property;
 
+use App\Enums\AreaUnit;
+use App\Enums\FurnishingStatus;
+use App\Enums\ListingPurpose;
 use App\Enums\PropertyStatus;
 use App\Enums\PropertyType;
 use App\Enums\PublicationStatus;
@@ -33,6 +36,8 @@ class PropertyRequest extends FormRequest
 
         return [
             'type' => ['required', Rule::enum(PropertyType::class)],
+            'category_id' => ['nullable', 'integer', Rule::exists('property_categories', 'id')->where('is_active', true)],
+            'listing_purpose' => ['nullable', Rule::enum(ListingPurpose::class)],
             // FR-PROP-001 - let the whole thing, or split it into floors.
             // Optional: an omitted arrangement leaves an existing listing as it
             // is, and a new one an independent unit, so older API callers and
@@ -42,15 +47,33 @@ class PropertyRequest extends FormRequest
             // BR-013 - a house split into floors has no rent of its own; the
             // action recomputes it from the floors instead.
             'rent_amount' => [
-                Rule::requiredIf(fn () => $this->input('rental_mode') !== RentalMode::ByFloor->value),
+                Rule::requiredIf(fn () => $this->expectsRentAmount()),
+                'nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:999999999999.99',
+            ],
+            'sale_price' => [
+                Rule::requiredIf(fn () => $this->input('listing_purpose', ListingPurpose::Rent->value) === ListingPurpose::Sale->value),
                 'nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:999999999999.99',
             ],
             'area' => ['required', 'string', 'max:255'],
+            'area_value' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:999999999.99'],
+            'area_unit' => ['nullable', Rule::enum(AreaUnit::class), 'required_with:area_value'],
             'city' => ['nullable', 'string', 'max:255'],
             'address' => ['required', 'string', 'max:255'],
+            'bedrooms' => ['nullable', 'integer', 'min:0', 'max:200'],
+            'bathrooms' => ['nullable', 'integer', 'min:0', 'max:200'],
+            'total_rooms' => ['nullable', 'integer', 'min:0', 'max:500'],
+            'kitchens' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'parking_spaces' => ['nullable', 'integer', 'min:0', 'max:500'],
+            'total_floors' => ['nullable', 'integer', 'min:0', 'max:300'],
+            'furnishing_status' => ['nullable', Rule::enum(FurnishingStatus::class)],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'map_address' => ['nullable', 'string', 'max:255'],
             'contact_name' => ['nullable', 'string', 'max:255'],
             'contact_phone' => ['nullable', 'string', 'max:32'],
             'contact_email' => ['nullable', 'email', 'max:255'],
+            'amenities' => ['nullable', 'array'],
+            'amenities.*' => ['integer', Rule::exists('amenities', 'id')->where('is_active', true)],
             ...$this->sharedRules(),
         ];
     }
@@ -68,6 +91,16 @@ class PropertyRequest extends FormRequest
             'floor_number' => ['nullable', 'integer', 'between:-10,200'],
             // BR-012 - two decimal places, never negative, within DECIMAL(14,2).
             'rent_amount' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:999999999999.99'],
+            'area_value' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:999999999.99'],
+            'area_unit' => ['nullable', Rule::enum(AreaUnit::class), 'required_with:area_value'],
+            'bedrooms' => ['nullable', 'integer', 'min:0', 'max:200'],
+            'bathrooms' => ['nullable', 'integer', 'min:0', 'max:200'],
+            'total_rooms' => ['nullable', 'integer', 'min:0', 'max:500'],
+            'kitchens' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'parking_spaces' => ['nullable', 'integer', 'min:0', 'max:500'],
+            'furnishing_status' => ['nullable', Rule::enum(FurnishingStatus::class)],
+            'amenities' => ['nullable', 'array'],
+            'amenities.*' => ['integer', Rule::exists('amenities', 'id')->where('is_active', true)],
         ];
     }
 
@@ -180,11 +213,21 @@ class PropertyRequest extends FormRequest
     public function attributes(): array
     {
         return [
+            'listing_purpose' => __('listing purpose'),
+            'category_id' => __('property category'),
             'rent_amount' => __('rent amount'),
+            'sale_price' => __('sale price'),
             'rental_mode' => __('rental arrangement'),
             'unit_label' => __('floor name'),
             'floor_number' => __('floor number'),
+            'area_value' => __('property area'),
+            'area_unit' => __('area unit'),
+            'total_rooms' => __('total rooms'),
+            'parking_spaces' => __('parking spaces'),
+            'total_floors' => __('total floors'),
+            'furnishing_status' => __('furnishing status'),
             'publication_status' => __('publication'),
+            'amenities.*' => __('amenity'),
             'images.*' => __('image'),
             'videos.*' => __('video'),
         ];
@@ -197,7 +240,8 @@ class PropertyRequest extends FormRequest
      */
     public function propertyData(): array
     {
-        $data = $this->safe()->except(['images', 'videos']);
+        $data = $this->safe()->except(['images', 'videos', 'amenities']);
+        $data['listing_purpose'] ??= ListingPurpose::Rent->value;
 
         // BR-013 - the house's own rent is derived from its floors, so an empty
         // field must not be written as null over a NOT NULL column.
@@ -205,7 +249,21 @@ class PropertyRequest extends FormRequest
             unset($data['rent_amount']);
         }
 
+        if (($data['listing_purpose'] ?? ListingPurpose::Rent->value) === ListingPurpose::Sale->value) {
+            $data['rent_amount'] ??= 0;
+        } else {
+            $data['sale_price'] = null;
+        }
+
         return $data;
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    public function amenityIds(): array
+    {
+        return array_map('intval', $this->validated('amenities', []));
     }
 
     /**
@@ -222,5 +280,11 @@ class PropertyRequest extends FormRequest
     public function uploadedVideos(): array
     {
         return $this->file('videos') ?? [];
+    }
+
+    protected function expectsRentAmount(): bool
+    {
+        return $this->input('listing_purpose', ListingPurpose::Rent->value) !== ListingPurpose::Sale->value
+            && $this->input('rental_mode', RentalMode::Whole->value) !== RentalMode::ByFloor->value;
     }
 }

@@ -66,7 +66,9 @@
                         {{ $application->property->title }}
                     </a>
                     <p class="text-xs text-slate-500">{{ $application->property->area }}</p>
-                    <p class="mt-1 text-sm font-semibold"><x-money :amount="$application->property->rent_amount" /></p>
+                    <p class="mt-1 text-sm font-semibold">
+                        <x-money :amount="$application->property->priceAmount()" />{{ $application->property->priceSuffix() }}
+                    </p>
                 </div>
             </section>
 

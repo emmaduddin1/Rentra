@@ -33,10 +33,11 @@ class UpdateProperty
 
     /**
      * @param  array<string, mixed>  $data
+     * @param  array<int, int>  $amenities
      * @param  array<int, UploadedFile>  $images
      * @param  array<int, UploadedFile>  $videos
      */
-    public function handle(Property $property, array $data, array $images = [], array $videos = []): Property
+    public function handle(Property $property, array $data, array $amenities = [], array $images = [], array $videos = []): Property
     {
         $status = isset($data['status']) ? PropertyStatus::from((string) $data['status']) : null;
         $publication = isset($data['publication_status'])
@@ -51,11 +52,12 @@ class UpdateProperty
             $data = $this->floorData($property, $data);
         }
 
-        return DB::transaction(function () use ($property, $data, $images, $videos, $status, $publication, $mode) {
+        return DB::transaction(function () use ($property, $data, $amenities, $images, $videos, $status, $publication, $mode) {
             $property->loadMissing($property->isFloor() ? 'house' : 'floors');
 
             $property->fill($data);
             $property->save();
+            $property->amenities()->sync($amenities);
 
             // Captured before the delegated actions save again and reset it.
             $inheritedChanged = $property->wasChanged(Property::INHERITED_FROM_HOUSE);

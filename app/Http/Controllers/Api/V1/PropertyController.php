@@ -27,7 +27,7 @@ class PropertyController extends Controller
         $properties = Property::ownedBy($request->user())
             // BR-013 - floors are nested under the house that holds them.
             ->topLevel()
-            ->with(['primaryImage', 'floors'])
+            ->with(['primaryImage', 'category', 'amenities', 'floors.category'])
             ->withCount(['images', 'applications', 'floors'])
             ->latest('id')
             ->paginate($request->integer('per_page') ?: config('rental.pagination.per_page'));
@@ -42,11 +42,12 @@ class PropertyController extends Controller
         $property = $createProperty->handle(
             owner: $request->user(),
             data: $request->propertyData(),
+            amenities: $request->amenityIds(),
             images: $request->uploadedImages(),
             videos: $request->uploadedVideos(),
         );
 
-        return (new PropertyResource($property->load(['images', 'videos'])))
+        return (new PropertyResource($property->load(['images', 'videos', 'category', 'amenities'])))
             ->additional(['message' => __('Property created.')]);
     }
 
@@ -54,7 +55,7 @@ class PropertyController extends Controller
     {
         Gate::authorize('view', $property);
 
-        return new PropertyResource($property->load(['images', 'primaryImage', 'videos', 'floors']));
+        return new PropertyResource($property->load(['images', 'primaryImage', 'videos', 'category', 'amenities', 'floors.category']));
     }
 
     public function update(PropertyRequest $request, Property $property, UpdateProperty $updateProperty): PropertyResource
@@ -64,10 +65,11 @@ class PropertyController extends Controller
         $updateProperty->handle(
             property: $property,
             data: $request->propertyData(),
+            amenities: $request->amenityIds(),
             images: $request->uploadedImages(),
             videos: $request->uploadedVideos(),
         );
 
-        return new PropertyResource($property->fresh()->load(['images', 'videos']));
+        return new PropertyResource($property->fresh()->load(['images', 'videos', 'category', 'amenities']));
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\ListingPurpose;
 use App\Enums\PropertyType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\ListingResource;
@@ -23,17 +24,34 @@ class ListingController extends Controller
         $filters = $request->validate([
             'area' => ['nullable', 'string', 'max:255'],
             'type' => ['nullable', Rule::enum(PropertyType::class)],
+            'category_id' => ['nullable', 'integer', Rule::exists('property_categories', 'id')->where('is_active', true)],
+            'listing_purpose' => ['nullable', Rule::enum(ListingPurpose::class)],
+            'min_price' => ['nullable', 'numeric', 'min:0'],
+            'max_price' => ['nullable', 'numeric', 'min:0', 'gte:min_price'],
             'min_rent' => ['nullable', 'numeric', 'min:0'],
             'max_rent' => ['nullable', 'numeric', 'min:0', 'gte:min_rent'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
+        $filters['listing_purpose'] ??= ListingPurpose::Rent->value;
+        $filters['min_price'] ??= $filters['min_rent'] ?? null;
+        $filters['max_price'] ??= $filters['max_rent'] ?? null;
 
         $listings = Property::publiclyVisible()
-            ->with('primaryImage')
+            ->with(['primaryImage', 'category'])
             ->inArea($filters['area'] ?? null)
+            ->purpose($filters['listing_purpose'] ?? null)
             ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
-            ->when($filters['min_rent'] ?? null, fn ($query, $rent) => $query->where('rent_amount', '>=', $rent))
-            ->when($filters['max_rent'] ?? null, fn ($query, $rent) => $query->where('rent_amount', '<=', $rent))
+            ->when($filters['category_id'] ?? null, fn ($query, $categoryId) => $query->where('category_id', $categoryId))
+            ->when($filters['min_price'] ?? null, fn ($query, $price) => $query->where(
+                ($filters['listing_purpose'] ?? ListingPurpose::Rent->value) === ListingPurpose::Sale->value ? 'sale_price' : 'rent_amount',
+                '>=',
+                $price
+            ))
+            ->when($filters['max_price'] ?? null, fn ($query, $price) => $query->where(
+                ($filters['listing_purpose'] ?? ListingPurpose::Rent->value) === ListingPurpose::Sale->value ? 'sale_price' : 'rent_amount',
+                '<=',
+                $price
+            ))
             ->latest('published_at')
             ->paginate($filters['per_page'] ?? config('rental.listings.per_page'))
             ->withQueryString();
@@ -49,6 +67,6 @@ class ListingController extends Controller
             404,
         );
 
-        return new ListingResource($property->load(['images', 'primaryImage', 'videos']));
+        return new ListingResource($property->load(['images', 'primaryImage', 'videos', 'category', 'amenities']));
     }
 }

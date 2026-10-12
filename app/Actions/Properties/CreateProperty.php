@@ -27,12 +27,13 @@ class CreateProperty
 
     /**
      * @param  array<string, mixed>  $data
+     * @param  array<int, int>  $amenities
      * @param  array<int, UploadedFile>  $images
      * @param  array<int, UploadedFile>  $videos
      */
-    public function handle(User $owner, array $data, array $images = [], array $videos = []): Property
+    public function handle(User $owner, array $data, array $amenities = [], array $images = [], array $videos = []): Property
     {
-        return DB::transaction(function () use ($owner, $data, $images, $videos) {
+        return DB::transaction(function () use ($owner, $data, $amenities, $images, $videos) {
             $property = new Property($data);
             $property->owner_id = $owner->id;
 
@@ -49,6 +50,7 @@ class CreateProperty
                 : null;
 
             $property->save();
+            $property->amenities()->sync($amenities);
 
             if ($images !== []) {
                 $this->images->attach($property, $images);
@@ -64,6 +66,7 @@ class CreateProperty
                 newValues: [
                     'title' => $property->title,
                     'type' => $property->type->value,
+                    'listing_purpose' => $property->listing_purpose->value,
                     'rental_mode' => $property->rental_mode->value,
                     'status' => $property->status->value,
                     'publication_status' => $property->publication_status->value,

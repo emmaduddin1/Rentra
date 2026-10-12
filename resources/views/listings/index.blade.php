@@ -1,10 +1,29 @@
 <x-layouts.app
     :title="__('Listings')"
     :heading="__('Available properties')"
-    :subheading="__('Published houses, offices, and guest houses currently available to rent.')"
+    :subheading="__('Published properties currently available to rent or buy.')"
 >
-    {{-- FR-APP-002 - search by area, with optional type and rent filters. --}}
+    @php
+        $categoryOptions = collect($categories)->mapWithKeys(fn ($category) => [
+            $category->id => $category->group->label().' · '.$category->name,
+        ])->all();
+    @endphp
+
+    <div class="mb-4 segmented">
+        @foreach ($purposes as $purpose)
+            <x-tab-link
+                :href="route('listings.index', array_filter([...request()->except(['page', 'listing_purpose']), 'listing_purpose' => $purpose->value]))"
+                :active="($filters['listing_purpose'] ?? 'rent') === $purpose->value"
+            >
+                {{ $purpose === \App\Enums\ListingPurpose::Sale ? __('Buy') : __('Rent') }}
+            </x-tab-link>
+        @endforeach
+    </div>
+
+    {{-- FR-APP-002 - search by area, with optional category and price filters. --}}
     <form method="GET" action="{{ route('listings.index') }}" class="card p-4">
+        <input type="hidden" name="listing_purpose" value="{{ $filters['listing_purpose'] ?? 'rent' }}">
+
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <div class="lg:col-span-2">
                 <x-form.field :label="__('Area or city')" name="area">
@@ -12,21 +31,21 @@
                 </x-form.field>
             </div>
 
-            <x-form.field :label="__('Type')" name="type">
+            <x-form.field :label="__('Category')" name="category_id">
                 <x-form.select
-                    name="type"
-                    :placeholder="__('Any type')"
-                    :selected="$filters['type'] ?? null"
-                    :options="collect($types)->mapWithKeys(fn ($type) => [$type->value => $type->label()])->all()"
+                    name="category_id"
+                    :placeholder="__('Any category')"
+                    :selected="$filters['category_id'] ?? null"
+                    :options="$categoryOptions"
                 />
             </x-form.field>
 
-            <x-form.field :label="__('Min rent')" name="min_rent">
-                <x-form.input name="min_rent" type="number" min="0" step="0.01" :value="$filters['min_rent'] ?? ''" />
+            <x-form.field :label="__('Min price')" name="min_price">
+                <x-form.input name="min_price" type="number" min="0" step="0.01" :value="$filters['min_price'] ?? ''" />
             </x-form.field>
 
-            <x-form.field :label="__('Max rent')" name="max_rent">
-                <x-form.input name="max_rent" type="number" min="0" step="0.01" :value="$filters['max_rent'] ?? ''" />
+            <x-form.field :label="__('Max price')" name="max_price">
+                <x-form.input name="max_price" type="number" min="0" step="0.01" :value="$filters['max_price'] ?? ''" />
             </x-form.field>
         </div>
 
@@ -49,7 +68,7 @@
         @if ($listings->isEmpty())
             <x-empty-state
                 :title="__('No listings match your search.')"
-                :description="__('Try a different area, or widen the rent range.')"
+                :description="__('Try a different area, category, or price range.')"
             >
                 <a href="{{ route('listings.index') }}" class="btn btn-secondary">
                     {{ __('Show all listings') }}

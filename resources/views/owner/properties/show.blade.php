@@ -33,6 +33,7 @@
 
             <x-badge :variant="$property->status->badge()" dot>{{ $property->status->label() }}</x-badge>
             <x-badge :variant="$property->publication_status->badge()" dot>{{ $property->publication_status->label() }}</x-badge>
+            <x-badge variant="muted">{{ $property->purposeBadgeLabel() }}</x-badge>
 
             @if ($property->isPubliclyVisible())
                 <span class="text-sm text-emerald-700">{{ __('Visible in the public feed') }}</span>
@@ -229,7 +230,7 @@
                                                     {{ $floor->unit_label }}
                                                 </a>
                                             </td>
-                                            <td class="whitespace-nowrap"><x-money :amount="$floor->rent_amount" /></td>
+                                            <td class="whitespace-nowrap"><x-money :amount="$floor->priceAmount()" />{{ $floor->priceSuffix() }}</td>
                                             <td><x-badge :variant="$floor->status->badge()">{{ $floor->status->label() }}</x-badge></td>
                                             <td><x-badge :variant="$floor->publication_status->badge()">{{ $floor->publication_status->label() }}</x-badge></td>
                                             <td class="tabular-nums">{{ $floor->applications_count }}</td>
@@ -275,15 +276,24 @@
 
                 <dl class="mt-4 grid gap-4 sm:grid-cols-2">
                     <div>
-                        <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Type') }}</dt>
-                        <dd class="mt-1 text-sm text-slate-900">{{ $property->type->label() }}</dd>
+                        <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Purpose') }}</dt>
+                        <dd class="mt-1 text-sm text-slate-900">{{ $property->purposeBadgeLabel() }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Category') }}</dt>
+                        <dd class="mt-1 text-sm text-slate-900">
+                            {{ $property->categoryLabel() }}
+                            @if ($property->categoryGroupLabel())
+                                <span class="text-slate-500">· {{ $property->categoryGroupLabel() }}</span>
+                            @endif
+                        </dd>
                     </div>
                     <div>
                         <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">
-                            {{ $isHouse ? __('Combined rent') : __('Monthly rent') }}
+                            {{ $isHouse ? __('Combined rent') : __('Price') }}
                         </dt>
                         <dd class="mt-1 text-sm text-slate-900">
-                            <x-money :amount="$property->rent_amount" />
+                            <x-money :amount="$property->priceAmount()" />{{ $property->priceSuffix() }}
                             @if ($isHouse)
                                 <span class="block text-xs text-slate-500">{{ __('Added up from the floors above.') }}</span>
                             @endif
@@ -304,6 +314,12 @@
                         <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Area') }}</dt>
                         <dd class="mt-1 text-sm text-slate-900">{{ $property->area }}{{ $property->city ? ', '.$property->city : '' }}</dd>
                     </div>
+                    @if ($property->formattedAreaValue())
+                        <div>
+                            <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Size') }}</dt>
+                            <dd class="mt-1 text-sm text-slate-900">{{ $property->formattedAreaValue() }}</dd>
+                        </div>
+                    @endif
                     <div>
                         <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Address') }}</dt>
                         <dd class="mt-1 text-sm text-slate-900">{{ $property->address }}</dd>
@@ -320,6 +336,26 @@
                         <div class="sm:col-span-2">
                             <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Description') }}</dt>
                             <dd class="mt-1 whitespace-pre-line text-sm text-slate-700">{{ $property->description }}</dd>
+                        </div>
+                    @endif
+                    @if ($property->visibleSpecifications())
+                        <div class="sm:col-span-2">
+                            <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Specifications') }}</dt>
+                            <dd class="mt-2 flex flex-wrap gap-2">
+                                @foreach ($property->visibleSpecifications() as $spec)
+                                    <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700">{{ $spec }}</span>
+                                @endforeach
+                            </dd>
+                        </div>
+                    @endif
+                    @if ($property->amenities->isNotEmpty())
+                        <div class="sm:col-span-2">
+                            <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Amenities') }}</dt>
+                            <dd class="mt-2 flex flex-wrap gap-2">
+                                @foreach ($property->amenities as $amenity)
+                                    <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700">{{ $amenity->name }}</span>
+                                @endforeach
+                            </dd>
                         </div>
                     @endif
                 </dl>

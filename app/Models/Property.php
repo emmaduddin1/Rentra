@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\AreaUnit;
+use App\Enums\FurnishingStatus;
+use App\Enums\ListingPurpose;
 use App\Enums\PropertyStatus;
 use App\Enums\PropertyType;
 use App\Enums\PublicationStatus;
@@ -13,14 +16,18 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'owner_id', 'parent_id', 'type', 'rental_mode', 'title', 'unit_label', 'floor_number',
-    'rent_amount', 'area', 'city', 'address', 'description',
-    'contact_name', 'contact_phone', 'contact_email', 'status', 'publication_status', 'published_at',
+    'owner_id', 'parent_id', 'type', 'category_id', 'listing_purpose', 'rental_mode',
+    'title', 'unit_label', 'floor_number', 'total_floors',
+    'rent_amount', 'sale_price', 'area', 'area_value', 'area_unit', 'city', 'address', 'description',
+    'bedrooms', 'bathrooms', 'total_rooms', 'kitchens', 'parking_spaces', 'furnishing_status',
+    'contact_name', 'contact_phone', 'contact_email', 'latitude', 'longitude', 'map_address',
+    'status', 'publication_status', 'published_at',
 ])]
 class Property extends Model
 {
@@ -36,7 +43,8 @@ class Property extends Model
      * @var list<string>
      */
     public const INHERITED_FROM_HOUSE = [
-        'type', 'area', 'city', 'address', 'contact_name', 'contact_phone', 'contact_email',
+        'type', 'category_id', 'listing_purpose', 'area', 'city', 'address', 'contact_name', 'contact_phone', 'contact_email',
+        'latitude', 'longitude', 'map_address',
     ];
 
     /**
@@ -47,6 +55,7 @@ class Property extends Model
      */
     protected $attributes = [
         'rental_mode' => RentalMode::Whole->value,
+        'listing_purpose' => ListingPurpose::Rent->value,
     ];
 
     /** @return array<string, string> */
@@ -54,11 +63,24 @@ class Property extends Model
     {
         return [
             'type' => PropertyType::class,
+            'listing_purpose' => ListingPurpose::class,
             'rental_mode' => RentalMode::class,
             'floor_number' => 'integer',
+            'total_floors' => 'integer',
             'status' => PropertyStatus::class,
             'publication_status' => PublicationStatus::class,
             'rent_amount' => 'decimal:2',
+            'sale_price' => 'decimal:2',
+            'area_value' => 'decimal:2',
+            'area_unit' => AreaUnit::class,
+            'bedrooms' => 'integer',
+            'bathrooms' => 'integer',
+            'total_rooms' => 'integer',
+            'kitchens' => 'integer',
+            'parking_spaces' => 'integer',
+            'furnishing_status' => FurnishingStatus::class,
+            'latitude' => 'decimal:7',
+            'longitude' => 'decimal:7',
             'published_at' => 'datetime',
         ];
     }
@@ -73,6 +95,18 @@ class Property extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /** @return BelongsTo<PropertyCategory, $this> */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(PropertyCategory::class, 'category_id');
+    }
+
+    /** @return BelongsToMany<Amenity, $this> */
+    public function amenities(): BelongsToMany
+    {
+        return $this->belongsToMany(Amenity::class)->ordered()->withTimestamps();
     }
 
     /**
@@ -205,6 +239,93 @@ class Property extends Model
         return $this->owner_id === $user->id;
     }
 
+    public function isForSale(): bool
+    {
+        return $this->listing_purpose === ListingPurpose::Sale;
+    }
+
+    public function isForRent(): bool
+    {
+        return ! $this->isForSale();
+    }
+
+    public function priceAmount(): string
+    {
+        return (string) ($this->isForSale() ? $this->sale_price : $this->rent_amount);
+    }
+
+    public function priceSuffix(): ?string
+    {
+        return $this->isForRent() ? __(' / month') : null;
+    }
+
+    public function purposeBadgeLabel(): string
+    {
+        return ($this->listing_purpose ?? ListingPurpose::Rent)->badgeLabel();
+    }
+
+    public function categoryLabel(): string
+    {
+        return $this->category?->name ?? $this->type->label();
+    }
+
+    public function categoryGroupLabel(): ?string
+    {
+        return $this->category?->group?->label();
+    }
+
+    public function formattedAreaValue(): ?string
+    {
+        if ($this->area_value === null || $this->area_unit === null) {
+            return null;
+        }
+
+        $value = rtrim(rtrim(number_format((float) $this->area_value, 2), '0'), '.');
+
+        return $value.' '.$this->area_unit->shortLabel();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function visibleSpecifications(): array
+    {
+        return collect([
+            'bedrooms' => $this->bedrooms !== null ? trans_choice(':count bed|:count beds', $this->bedrooms, ['count' => $this->bedrooms]) : null,
+            'bathrooms' => $this->bathrooms !== null ? trans_choice(':count bath|:count baths', $this->bathrooms, ['count' => $this->bathrooms]) : null,
+            'total_rooms' => $this->total_rooms !== null ? trans_choice(':count room|:count rooms', $this->total_rooms, ['count' => $this->total_rooms]) : null,
+            'kitchens' => $this->kitchens !== null ? trans_choice(':count kitchen|:count kitchens', $this->kitchens, ['count' => $this->kitchens]) : null,
+            'parking_spaces' => $this->parking_spaces !== null ? trans_choice(':count parking|:count parking spaces', $this->parking_spaces, ['count' => $this->parking_spaces]) : null,
+            'floor_number' => $this->floor_number !== null ? __('Floor :number', ['number' => $this->floor_number]) : null,
+            'total_floors' => $this->total_floors !== null ? trans_choice(':count floor total|:count floors total', $this->total_floors, ['count' => $this->total_floors]) : null,
+            'furnishing_status' => $this->furnishing_status?->label(),
+            'area' => $this->formattedAreaValue(),
+        ])
+            ->filter()
+            ->only($this->relevantSpecificationKeys())
+            ->all();
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function relevantSpecificationKeys(): array
+    {
+        $slug = $this->category?->slug;
+
+        return match ($slug) {
+            'shop', 'warehouse', 'factory', 'showroom' => [
+                'total_rooms', 'parking_spaces', 'floor_number', 'total_floors', 'area',
+            ],
+            'office', 'co-working-space', 'commercial-building' => [
+                'bathrooms', 'total_rooms', 'kitchens', 'parking_spaces', 'floor_number', 'total_floors', 'furnishing_status', 'area',
+            ],
+            default => [
+                'bedrooms', 'bathrooms', 'total_rooms', 'kitchens', 'parking_spaces', 'floor_number', 'total_floors', 'furnishing_status', 'area',
+            ],
+        };
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Scopes
@@ -271,5 +392,15 @@ class Property extends Model
             $query->where('area', 'like', "%{$area}%")
                 ->orWhere('city', 'like', "%{$area}%");
         });
+    }
+
+    /** @param Builder<static> $query */
+    public function scopePurpose(Builder $query, ListingPurpose|string|null $purpose): void
+    {
+        if ($purpose === null || $purpose === '') {
+            return;
+        }
+
+        $query->where('listing_purpose', $purpose instanceof ListingPurpose ? $purpose->value : $purpose);
     }
 }

@@ -19,12 +19,30 @@
             <input type="hidden" name="archived" value="1">
         @endif
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
             <div class="lg:col-span-2">
                 <x-form.field :label="__('Search')" name="q">
                     <x-form.input name="q" :value="$filters['q'] ?? ''" placeholder="{{ __('Title, area, or address') }}" />
                 </x-form.field>
             </div>
+
+            <x-form.field :label="__('Purpose')" name="listing_purpose">
+                <x-form.select
+                    name="listing_purpose"
+                    :placeholder="__('Any')"
+                    :selected="$filters['listing_purpose'] ?? null"
+                    :options="collect($purposes)->mapWithKeys(fn ($purpose) => [$purpose->value => $purpose->label()])->all()"
+                />
+            </x-form.field>
+
+            <x-form.field :label="__('Category')" name="category_id">
+                <x-form.select
+                    name="category_id"
+                    :placeholder="__('Any category')"
+                    :selected="$filters['category_id'] ?? null"
+                    :options="collect($categories)->mapWithKeys(fn ($category) => [$category->id => $category->name])->all()"
+                />
+            </x-form.field>
 
             <x-form.field :label="__('Status')" name="status">
                 <x-form.select
@@ -70,7 +88,7 @@
                         <thead>
                             <tr>
                                 <th scope="col">{{ __('Property') }}</th>
-                                <th scope="col">{{ __('Rent') }}</th>
+                                <th scope="col">{{ __('Price') }}</th>
                                 <th scope="col">{{ __('Status') }}</th>
                                 <th scope="col">{{ __('Publication') }}</th>
                                 <th scope="col">{{ __('Applications') }}</th>
@@ -97,9 +115,12 @@
                                                     {{ $property->title }}
                                                 </a>
                                                 <span class="text-xs text-slate-500">
-                                                    {{ $property->type->label() }} · {{ $property->area }} ·
+                                                    {{ $property->purposeBadgeLabel() }} · {{ $property->categoryLabel() }} · {{ $property->area }} ·
                                                     {{ trans_choice(':count photo|:count photos', $property->images_count, ['count' => $property->images_count]) }}
                                                 </span>
+                                                @if ($property->formattedAreaValue())
+                                                    <span class="mt-0.5 block text-xs text-slate-500">{{ $property->formattedAreaValue() }}</span>
+                                                @endif
                                                 {{-- BR-013 - a house let floor by floor only holds its floors. --}}
                                                 @if ($isHouse)
                                                     <span class="mt-0.5 block text-xs font-medium text-slate-600">
@@ -110,7 +131,7 @@
                                         </div>
                                     </td>
                                     <td class="whitespace-nowrap">
-                                        <x-money :amount="$property->rent_amount" />
+                                        <x-money :amount="$property->priceAmount()" />{{ $property->priceSuffix() }}
                                         @if ($isHouse)
                                             <span class="block text-xs text-slate-500">{{ __('Total of its floors') }}</span>
                                         @endif
@@ -193,7 +214,7 @@
                                                 </span>
                                             </div>
                                         </td>
-                                        <td class="whitespace-nowrap"><x-money :amount="$floor->rent_amount" /></td>
+                                        <td class="whitespace-nowrap"><x-money :amount="$floor->priceAmount()" />{{ $floor->priceSuffix() }}</td>
                                         <td><x-badge :variant="$floor->status->badge()">{{ $floor->status->label() }}</x-badge></td>
                                         <td>
                                             <x-badge :variant="$floor->publication_status->badge()">{{ $floor->publication_status->label() }}</x-badge>

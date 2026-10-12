@@ -101,3 +101,20 @@ if (rentalMode) {
     rentalMode.addEventListener('change', sync);
     sync();
 }
+
+const listingPurpose = document.querySelector('[data-listing-purpose]');
+
+if (listingPurpose) {
+    const rent = document.querySelector('[data-rent-field]');
+    const sale = document.querySelector('[data-sale-field]');
+
+    const sync = () => {
+        const forSale = listingPurpose.value === 'sale';
+
+        rent?.toggleAttribute('hidden', forSale);
+        sale?.toggleAttribute('hidden', !forSale);
+    };
+
+    listingPurpose.addEventListener('change', sync);
+    sync();
+}

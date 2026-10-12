@@ -73,16 +73,28 @@
                         @if ($property->isFloor())
                             <x-badge variant="muted">{{ $property->unit_label }}</x-badge>
                         @endif
-                        <x-badge variant="muted">{{ $property->type->label() }}</x-badge>
+                        <x-badge variant="muted">{{ $property->purposeBadgeLabel() }}</x-badge>
+                        <x-badge variant="muted">{{ $property->categoryLabel() }}</x-badge>
+                        @if ($property->categoryGroupLabel())
+                            <x-badge variant="muted">{{ $property->categoryGroupLabel() }}</x-badge>
+                        @endif
                     </span>
                 </div>
 
                 <p class="mt-4 text-2xl font-semibold text-slate-900">
-                    <x-money :amount="$property->rent_amount" />
-                    <span class="text-base font-normal text-slate-500">{{ __('/ month') }}</span>
+                    <x-money :amount="$property->priceAmount()" />
+                    @if ($property->priceSuffix())
+                        <span class="text-base font-normal text-slate-500">{{ $property->priceSuffix() }}</span>
+                    @endif
                 </p>
 
                 <dl class="mt-6 grid gap-4 sm:grid-cols-2">
+                    @if ($property->formattedAreaValue())
+                        <div>
+                            <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Size') }}</dt>
+                            <dd class="mt-1 text-sm text-slate-900">{{ $property->formattedAreaValue() }}</dd>
+                        </div>
+                    @endif
                     <div>
                         <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Area') }}</dt>
                         <dd class="mt-1 text-sm text-slate-900">{{ $property->area }}</dd>
@@ -104,6 +116,33 @@
                     <div class="mt-6">
                         <h2 class="text-sm font-semibold text-slate-900">{{ __('About this property') }}</h2>
                         <p class="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-700">{{ $property->description }}</p>
+                    </div>
+                @endif
+
+                @if ($property->visibleSpecifications())
+                    <div class="mt-6">
+                        <h2 class="text-sm font-semibold text-slate-900">{{ __('Property details') }}</h2>
+                        <dl class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            @foreach ($property->visibleSpecifications() as $key => $spec)
+                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                                    <dt class="sr-only">{{ str_replace('_', ' ', $key) }}</dt>
+                                    <dd class="text-sm font-medium text-slate-700">{{ $spec }}</dd>
+                                </div>
+                            @endforeach
+                        </dl>
+                    </div>
+                @endif
+
+                @if ($property->amenities->isNotEmpty())
+                    <div class="mt-6">
+                        <h2 class="text-sm font-semibold text-slate-900">{{ __('Amenities') }}</h2>
+                        <ul class="mt-3 flex flex-wrap gap-2">
+                            @foreach ($property->amenities as $amenity)
+                                <li class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700">
+                                    {{ $amenity->name }}
+                                </li>
+                            @endforeach
+                        </ul>
                     </div>
                 @endif
             </div>
@@ -145,7 +184,9 @@
             @if ($user?->isRenter())
                 <div class="card p-6">
                     <div class="flex items-center justify-between gap-3">
-                        <h2 class="text-sm font-semibold text-slate-900">{{ __('Apply for this property') }}</h2>
+                        <h2 class="text-sm font-semibold text-slate-900">
+                            {{ $property->isForSale() ? __('Ask about this property') : __('Apply for this property') }}
+                        </h2>
                         <form method="POST" action="{{ route('renter.favorites.toggle', $property) }}">
                             @csrf
                             <button
@@ -171,7 +212,12 @@
                         <form method="POST" action="{{ route('renter.applications.store', $property) }}" class="mt-4 space-y-4">
                             @csrf
 
-                            <x-form.field :label="__('Message')" name="message" required :hint="__('Tell the owner when you would like to move in.')">
+                            <x-form.field
+                                :label="__('Message')"
+                                name="message"
+                                required
+                                :hint="$property->isForSale() ? __('Tell the owner what you would like to know.') : __('Tell the owner when you would like to move in.')"
+                            >
                                 <x-form.textarea name="message" rows="4" />
                             </x-form.field>
 
@@ -179,7 +225,9 @@
                                 <x-form.input name="contact_phone" :value="old('contact_phone', $user->phone)" />
                             </x-form.field>
 
-                            <x-form.button type="submit" class="w-full">{{ __('Send application') }}</x-form.button>
+                            <x-form.button type="submit" class="w-full">
+                                {{ $property->isForSale() ? __('Send inquiry') : __('Send application') }}
+                            </x-form.button>
                         </form>
                     @endif
                 </div>
@@ -188,7 +236,7 @@
                     <h2 class="text-sm font-semibold text-slate-900">{{ __('Interested?') }}</h2>
                     <p class="mt-2 text-sm text-slate-600">{{ __('Create a renter account to send an inquiry and save listings.') }}</p>
                     <a href="{{ route('register') }}" class="mt-4 btn btn-primary">
-                        {{ __('Register to apply') }}
+                        {{ $property->isForSale() ? __('Register to inquire') : __('Register to apply') }}
                     </a>
                 </div>
             @endif
@@ -208,7 +256,7 @@
                                 </span>
                                 <span class="min-w-0">
                                     <a href="{{ route('listings.show', $floor) }}" class="block truncate text-sm font-medium text-slate-900 hover:underline">{{ $floor->unit_label }}</a>
-                                    <span class="text-xs text-slate-500"><x-money :amount="$floor->rent_amount" /></span>
+                                    <span class="text-xs text-slate-500"><x-money :amount="$floor->priceAmount()" />{{ $floor->priceSuffix() }}</span>
                                 </span>
                             </li>
                         @endforeach
@@ -229,7 +277,7 @@
                                 </span>
                                 <span class="min-w-0">
                                     <a href="{{ route('listings.show', $other) }}" class="block truncate text-sm font-medium text-slate-900 hover:underline">{{ $other->title }}</a>
-                                    <span class="text-xs text-slate-500"><x-money :amount="$other->rent_amount" /></span>
+                                    <span class="text-xs text-slate-500"><x-money :amount="$other->priceAmount()" />{{ $other->priceSuffix() }}</span>
                                 </span>
                             </li>
                         @endforeach

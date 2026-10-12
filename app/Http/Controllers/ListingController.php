@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ListingPurpose;
 use App\Enums\PropertyType;
 use App\Models\Application;
 use App\Models\Property;
+use App\Models\PropertyCategory;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
@@ -24,14 +26,23 @@ class ListingController extends Controller
         $filters = $request->validate([
             'area' => ['nullable', 'string', 'max:255'],
             'type' => ['nullable', Rule::enum(PropertyType::class)],
+            'category_id' => ['nullable', 'integer', Rule::exists('property_categories', 'id')->where('is_active', true)],
+            'listing_purpose' => ['nullable', Rule::enum(ListingPurpose::class)],
+            'min_price' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
+            'max_price' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99', 'gte:min_price'],
             'min_rent' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'max_rent' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99', 'gte:min_rent'],
         ]);
+        $filters['listing_purpose'] ??= ListingPurpose::Rent->value;
+        $filters['min_price'] ??= $filters['min_rent'] ?? null;
+        $filters['max_price'] ??= $filters['max_rent'] ?? null;
 
         return view('listings.index', [
             'listings' => $this->query($filters),
             'filters' => $filters,
             'types' => PropertyType::cases(),
+            'purposes' => ListingPurpose::cases(),
+            'categories' => PropertyCategory::active()->ordered()->get(),
             'favoriteIds' => $this->favoriteIds($request),
         ]);
     }
@@ -46,7 +57,7 @@ class ListingController extends Controller
             404,
         );
 
-        $property->load(['images', 'videos', 'owner', 'house']);
+        $property->load(['images', 'videos', 'owner', 'house', 'category', 'amenities']);
 
         return view('listings.show', [
             'property' => $property,
@@ -59,8 +70,9 @@ class ListingController extends Controller
             'openApplication' => $this->openApplicationFor($request, $property),
             'similar' => Property::publiclyVisible()
                 ->where('id', '!=', $property->id)
+                ->purpose($property->listing_purpose)
                 ->inArea($property->area)
-                ->with('primaryImage')
+                ->with(['primaryImage', 'category'])
                 ->limit(3)
                 ->get(),
         ]);
@@ -74,11 +86,21 @@ class ListingController extends Controller
     {
         return Property::publiclyVisible()
             // NFR-PERF-003 - the card needs the primary image, so load it once.
-            ->with('primaryImage')
+            ->with(['primaryImage', 'category'])
             ->inArea($filters['area'] ?? null)
+            ->purpose($filters['listing_purpose'] ?? null)
             ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
-            ->when($filters['min_rent'] ?? null, fn ($query, $rent) => $query->where('rent_amount', '>=', $rent))
-            ->when($filters['max_rent'] ?? null, fn ($query, $rent) => $query->where('rent_amount', '<=', $rent))
+            ->when($filters['category_id'] ?? null, fn ($query, $categoryId) => $query->where('category_id', $categoryId))
+            ->when($filters['min_price'] ?? null, fn ($query, $price) => $query->where(
+                ($filters['listing_purpose'] ?? ListingPurpose::Rent->value) === ListingPurpose::Sale->value ? 'sale_price' : 'rent_amount',
+                '>=',
+                $price
+            ))
+            ->when($filters['max_price'] ?? null, fn ($query, $price) => $query->where(
+                ($filters['listing_purpose'] ?? ListingPurpose::Rent->value) === ListingPurpose::Sale->value ? 'sale_price' : 'rent_amount',
+                '<=',
+                $price
+            ))
             ->latest('published_at')
             ->paginate(config('rental.listings.per_page'))
             ->withQueryString();

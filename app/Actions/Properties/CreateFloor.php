@@ -32,14 +32,15 @@ class CreateFloor
 
     /**
      * @param  array<string, mixed>  $data
+     * @param  array<int, int>  $amenities
      * @param  array<int, UploadedFile>  $images
      * @param  array<int, UploadedFile>  $videos
      */
-    public function handle(Property $house, array $data, array $images = [], array $videos = [], ?User $actor = null): Property
+    public function handle(Property $house, array $data, array $amenities = [], array $images = [], array $videos = [], ?User $actor = null): Property
     {
         $this->guard($house);
 
-        return DB::transaction(function () use ($house, $data, $images, $videos, $actor) {
+        return DB::transaction(function () use ($house, $data, $amenities, $images, $videos, $actor) {
             $floor = new Property($data);
 
             $floor->owner_id = $house->owner_id;
@@ -58,6 +59,7 @@ class CreateFloor
                 : null;
 
             $floor->save();
+            $floor->amenities()->sync($amenities);
 
             if ($images !== []) {
                 $this->images->attach($floor, $images);

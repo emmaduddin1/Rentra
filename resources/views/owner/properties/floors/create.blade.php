@@ -11,6 +11,9 @@
         <x-property-form
             :property="$floor"
             :house="$house"
+            :amenities="$amenities"
+            :area-units="$areaUnits"
+            :furnishing-statuses="$furnishingStatuses"
             :statuses="$statuses"
             :publications="$publications"
             :max-images="$maxImages"

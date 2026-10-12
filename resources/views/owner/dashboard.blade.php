@@ -95,7 +95,9 @@
                                 <a href="{{ route('owner.properties.show', $property) }}" class="text-sm font-medium text-slate-900 hover:underline">
                                     {{ $property->title }}
                                 </a>
-                                <span class="block truncate text-xs text-slate-500">{{ $property->area }} · <x-money :amount="$property->rent_amount" /></span>
+                                <span class="block truncate text-xs text-slate-500">
+                                    {{ $property->purposeBadgeLabel() }} · {{ $property->area }} · <x-money :amount="$property->priceAmount()" />{{ $property->priceSuffix() }}
+                                </span>
                             </span>
                             <span class="flex flex-wrap justify-end gap-1">
                                 <x-badge :variant="$property->status->badge()">{{ $property->status->label() }}</x-badge>

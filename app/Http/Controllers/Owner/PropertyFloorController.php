@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Owner;
 
 use App\Actions\Properties\CreateFloor;
+use App\Enums\AreaUnit;
+use App\Enums\FurnishingStatus;
 use App\Enums\PropertyStatus;
 use App\Enums\PublicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Property\StoreFloorRequest;
+use App\Models\Amenity;
 use App\Models\Property;
 use App\Services\PropertyImageService;
 use App\Services\PropertyVideoService;
@@ -41,6 +44,9 @@ class PropertyFloorController extends Controller
             ]),
             'statuses' => PropertyStatus::cases(),
             'publications' => PublicationStatus::cases(),
+            'amenities' => Amenity::active()->ordered()->get(),
+            'areaUnits' => AreaUnit::cases(),
+            'furnishingStatuses' => FurnishingStatus::cases(),
             'maxImages' => $this->images->maxPerProperty(),
             'minImages' => $this->images->minPerProperty(),
             'maxVideos' => $this->videos->maxPerProperty(),
@@ -54,6 +60,7 @@ class PropertyFloorController extends Controller
         $floor = $createFloor->handle(
             house: $property,
             data: $request->propertyData(),
+            amenities: $request->amenityIds(),
             images: $request->uploadedImages(),
             videos: $request->uploadedVideos(),
             actor: $request->user(),

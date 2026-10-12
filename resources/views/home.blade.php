@@ -1,7 +1,7 @@
 <x-layouts.app :title="__('Rental listings')">
     @php
-        $typeOptions = collect($categoryCards)
-            ->mapWithKeys(fn ($card) => [$card['type']->value => $card['type']->label()])
+        $categoryOptions = collect($categories)
+            ->mapWithKeys(fn ($category) => [$category->id => $category->group->label().' · '.$category->name])
             ->all();
         $ownerCta = auth()->user()?->isOwner()
             ? route('owner.properties.create')
@@ -46,7 +46,14 @@
         {{-- FR-APP-002 - search by area/city with the same filters as the listing feed supports. --}}
         <form method="GET" action="{{ route('listings.index') }}" class="relative z-10 mx-auto -mt-16 w-[calc(100vw-4rem)] max-w-[calc(100vw-4rem)] min-w-0 rounded-card border border-slate-200 bg-white p-4 shadow-sm sm:mx-8 sm:w-auto sm:max-w-none lg:mx-10">
             <div class="mb-4 inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-                <span class="rounded-lg bg-rental-500 px-5 py-2 text-sm font-bold text-white shadow-xs">{{ __('Rent') }}</span>
+                <label class="cursor-pointer rounded-lg px-5 py-2 text-sm font-bold text-slate-600 has-[:checked]:bg-rental-500 has-[:checked]:text-white has-[:checked]:shadow-xs">
+                    <input type="radio" name="listing_purpose" value="rent" class="sr-only" checked>
+                    {{ __('Rent') }}
+                </label>
+                <label class="cursor-pointer rounded-lg px-5 py-2 text-sm font-bold text-slate-600 has-[:checked]:bg-rental-500 has-[:checked]:text-white has-[:checked]:shadow-xs">
+                    <input type="radio" name="listing_purpose" value="sale" class="sr-only">
+                    {{ __('Buy') }}
+                </label>
             </div>
 
             <div class="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
@@ -56,13 +63,13 @@
                 </div>
 
                 <div class="min-w-0">
-                    <label for="type" class="mb-1 block text-xs font-bold text-slate-500">{{ __('Property type') }}</label>
-                    <x-form.select name="type" :placeholder="__('All types')" :options="$typeOptions" />
+                    <label for="category_id" class="mb-1 block text-xs font-bold text-slate-500">{{ __('Property type') }}</label>
+                    <x-form.select name="category_id" :placeholder="__('All types')" :options="$categoryOptions" />
                 </div>
 
                 <div class="min-w-0">
                     <label for="landing-budget" class="mb-1 block text-xs font-bold text-slate-500">{{ __('Budget') }}</label>
-                    <select id="landing-budget" name="max_rent" class="input">
+                    <select id="landing-budget" name="max_price" class="input">
                         <option value="">{{ __('Any price') }}</option>
                         <option value="50000">{{ __('Up to PKR 50,000') }}</option>
                         <option value="100000">{{ __('Up to PKR 100,000') }}</option>
@@ -72,7 +79,7 @@
 
                 <div class="hidden min-w-0 lg:block">
                     <label for="landing-min-rent" class="mb-1 block text-xs font-bold text-slate-500">{{ __('Minimum') }}</label>
-                    <input id="landing-min-rent" name="min_rent" type="number" min="0" step="0.01" class="input" placeholder="{{ __('No minimum') }}">
+                    <input id="landing-min-rent" name="min_price" type="number" min="0" step="0.01" class="input" placeholder="{{ __('No minimum') }}">
                 </div>
 
                 <div class="flex items-end">
@@ -88,20 +95,20 @@
     <section class="mt-8 grid gap-3 sm:grid-cols-3">
         @foreach ($categoryCards as $card)
             @php
-                $icon = match ($card['type']->value) {
+                $icon = match ($card['category']->slug) {
                     'office' => 'building',
-                    'guest_house' => 'key',
+                    'guest-house' => 'key',
                     default => 'home',
                 };
             @endphp
             <a
-                href="{{ route('listings.index', ['type' => $card['type']->value]) }}"
+                href="{{ route('listings.index', ['category_id' => $card['category']->id]) }}"
                 class="group rounded-card border border-slate-200 bg-brand-100 p-5 text-center transition hover:border-brand-200 hover:bg-brand-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rental-500/35"
             >
                 <span class="mx-auto flex size-11 items-center justify-center rounded-xl bg-white text-brand-700 shadow-xs">
                     <x-icon :name="$icon" class="size-6" />
                 </span>
-                <span class="mt-3 block text-sm font-extrabold text-slate-900">{{ $card['type']->label() }}</span>
+                <span class="mt-3 block text-sm font-extrabold text-slate-900">{{ $card['category']->name }}</span>
                 <span class="mt-1 block text-xs font-medium text-slate-500">
                     {{ trans_choice(':count available|:count available', $card['count'], ['count' => $card['count']]) }}
                 </span>
@@ -149,14 +156,16 @@
                                 </span>
                             @endif
                             <span class="absolute top-3 left-3 rounded-full bg-rental-600 px-3 py-1 text-xs font-extrabold text-white shadow-sm">
-                                {{ __('For Rent') }}
+                                {{ $listing->purposeBadgeLabel() }}
                             </span>
                         </div>
 
                         <div class="flex flex-1 flex-col p-4">
                             <p class="text-xl font-black tracking-tight text-rental-600">
-                                <x-money :amount="$listing->rent_amount" />
-                                <span class="text-sm font-bold text-slate-500">{{ __('/ month') }}</span>
+                                <x-money :amount="$listing->priceAmount()" />
+                                @if ($listing->priceSuffix())
+                                    <span class="text-sm font-bold text-slate-500">{{ $listing->priceSuffix() }}</span>
+                                @endif
                             </p>
                             <h3 class="mt-2 text-base font-extrabold text-slate-900">
                                 <a href="{{ route('listings.show', $listing) }}" class="outline-none before:absolute before:inset-0 focus-visible:underline">
@@ -168,7 +177,11 @@
                                 {{ $listing->area }}{{ $listing->city ? ', '.$listing->city : '' }}
                             </p>
                             <p class="mt-3 text-sm text-slate-500">
-                                {{ $listing->type->label() }}
+                                {{ $listing->categoryLabel() }}
+                                @if ($listing->formattedAreaValue())
+                                    <span class="text-slate-300">·</span>
+                                    {{ $listing->formattedAreaValue() }}
+                                @endif
                                 @if ($listing->description)
                                     <span class="text-slate-300">·</span>
                                     {{ Str::limit($listing->description, 72) }}

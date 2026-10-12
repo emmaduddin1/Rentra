@@ -11,6 +11,11 @@
         <x-property-form
             :property="$property"
             :types="$types"
+            :purposes="$purposes"
+            :categories="$categories"
+            :amenities="$amenities"
+            :area-units="$areaUnits"
+            :furnishing-statuses="$furnishingStatuses"
             :statuses="$statuses"
             :publications="$publications"
             :modes="$modes"

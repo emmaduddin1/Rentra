@@ -6,13 +6,18 @@ use App\Actions\Properties\ArchiveProperty;
 use App\Actions\Properties\CreateProperty;
 use App\Actions\Properties\RestoreProperty;
 use App\Actions\Properties\UpdateProperty;
+use App\Enums\AreaUnit;
+use App\Enums\FurnishingStatus;
+use App\Enums\ListingPurpose;
 use App\Enums\PropertyStatus;
 use App\Enums\PropertyType;
 use App\Enums\PublicationStatus;
 use App\Enums\RentalMode;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Property\PropertyRequest;
+use App\Models\Amenity;
 use App\Models\Property;
+use App\Models\PropertyCategory;
 use App\Services\PropertyImageService;
 use App\Services\PropertyVideoService;
 use Illuminate\Http\RedirectResponse;
@@ -42,6 +47,8 @@ class PropertyController extends Controller
             'q' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', Rule::enum(PropertyStatus::class)],
             'publication_status' => ['nullable', Rule::enum(PublicationStatus::class)],
+            'listing_purpose' => ['nullable', Rule::enum(ListingPurpose::class)],
+            'category_id' => ['nullable', 'integer', Rule::exists('property_categories', 'id')->where('is_active', true)],
             'archived' => ['nullable', 'boolean'],
         ]);
 
@@ -52,9 +59,11 @@ class PropertyController extends Controller
             ->topLevel()
             ->when($archived, fn ($query) => $query->onlyTrashed())
             ->with([
+                'category',
                 'primaryImage',
                 'floors' => fn ($query) => $query
                     ->when($archived, fn ($floors) => $floors->onlyTrashed())
+                    ->with(['category'])
                     ->withCount('applications'),
             ])
             // NFR-PERF-003 - counts come from the database, not from N+1 loads.
@@ -69,6 +78,8 @@ class PropertyController extends Controller
                 $filters['publication_status'] ?? null,
                 fn ($query, $publication) => $query->where('publication_status', $publication)
             )
+            ->when($filters['listing_purpose'] ?? null, fn ($query, $purpose) => $query->where('listing_purpose', $purpose))
+            ->when($filters['category_id'] ?? null, fn ($query, $categoryId) => $query->where('category_id', $categoryId))
             ->latest('id')
             ->paginate(config('rental.pagination.per_page'))
             ->withQueryString();
@@ -79,6 +90,8 @@ class PropertyController extends Controller
             'archived' => $archived,
             'statuses' => PropertyStatus::cases(),
             'publications' => PublicationStatus::cases(),
+            'purposes' => ListingPurpose::cases(),
+            'categories' => PropertyCategory::active()->ordered()->get(),
         ]);
     }
 
@@ -92,6 +105,11 @@ class PropertyController extends Controller
                 'publication_status' => PublicationStatus::Draft,
             ]),
             'types' => PropertyType::cases(),
+            'purposes' => ListingPurpose::cases(),
+            'categories' => PropertyCategory::active()->ordered()->get(),
+            'amenities' => Amenity::active()->ordered()->get(),
+            'areaUnits' => AreaUnit::cases(),
+            'furnishingStatuses' => FurnishingStatus::cases(),
             'statuses' => PropertyStatus::cases(),
             'publications' => PublicationStatus::cases(),
             'modes' => RentalMode::cases(),
@@ -108,6 +126,7 @@ class PropertyController extends Controller
         $property = $createProperty->handle(
             owner: $request->user(),
             data: $request->propertyData(),
+            amenities: $request->amenityIds(),
             images: $request->uploadedImages(),
             videos: $request->uploadedVideos(),
         );
@@ -123,10 +142,12 @@ class PropertyController extends Controller
 
         $property->load([
             'images',
+            'category',
+            'amenities',
             'applications.renter',
             // BR-013 - a house shows its floors, a floor shows its house.
             'videos',
-            'floors' => fn ($query) => $query->withCount('applications'),
+            'floors' => fn ($query) => $query->with(['category', 'amenities'])->withCount('applications'),
             'house',
         ]);
 
@@ -146,11 +167,16 @@ class PropertyController extends Controller
     {
         Gate::authorize('update', $property);
 
-        $property->load(['images', 'house']);
+        $property->load(['images', 'house', 'amenities']);
 
         return view('owner.properties.edit', [
             'property' => $property,
             'types' => PropertyType::cases(),
+            'purposes' => ListingPurpose::cases(),
+            'categories' => PropertyCategory::active()->ordered()->get(),
+            'amenities' => Amenity::active()->ordered()->get(),
+            'areaUnits' => AreaUnit::cases(),
+            'furnishingStatuses' => FurnishingStatus::cases(),
             'statuses' => PropertyStatus::cases(),
             'publications' => PublicationStatus::cases(),
             'modes' => RentalMode::cases(),
@@ -169,6 +195,7 @@ class PropertyController extends Controller
         $updateProperty->handle(
             property: $property,
             data: $request->propertyData(),
+            amenities: $request->amenityIds(),
             images: $request->uploadedImages(),
             videos: $request->uploadedVideos(),
         );
