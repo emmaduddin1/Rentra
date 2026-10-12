@@ -30,6 +30,48 @@ class AuthApiTest extends TestCase
     }
 
     #[Test]
+    public function a_renter_registers_over_the_api_and_receives_a_token(): void
+    {
+        $response = $this->postJson(route('api.v1.register'), [
+            'role' => 'renter',
+            'name' => 'Mobile Renter',
+            'email' => 'mobile-renter@example.com',
+            'password' => 'correct-horse-battery',
+            'password_confirmation' => 'correct-horse-battery',
+            'device_name' => 'pixel-8',
+        ])->assertCreated();
+
+        $this->assertNotEmpty($response->json('token'));
+        $this->assertSame('Mobile Renter', $response->json('user.name'));
+        $this->assertSame('renter', $response->json('user.role'));
+        $this->assertArrayNotHasKey('password', $response->json('user'));
+
+        $this->assertDatabaseHas('users', [
+            'name' => 'Mobile Renter',
+            'email' => 'mobile-renter@example.com',
+            'role' => 'renter',
+            'status' => 'active',
+        ]);
+        $this->assertDatabaseHas('personal_access_tokens', [
+            'name' => 'pixel-8',
+        ]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'user.registered']);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'api.token_issued']);
+    }
+
+    #[Test]
+    public function api_registration_requires_contact_password_confirmation_and_device_name(): void
+    {
+        $this->postJson(route('api.v1.register'), [
+            'role' => 'renter',
+            'name' => 'Mobile Renter',
+            'password' => 'correct-horse-battery',
+            'password_confirmation' => 'wrong-password',
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors(['email', 'phone', 'password', 'device_name']);
+    }
+
+    #[Test]
     public function a_renter_logs_in_with_an_email_and_receives_a_token(): void
     {
         $renter = User::factory()->renter()->create([

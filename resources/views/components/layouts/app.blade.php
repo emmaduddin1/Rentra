@@ -1,4 +1,7 @@
 @props(['title' => null, 'heading' => null, 'subheading' => null, 'actions' => null, 'back' => null])
+@php
+    $versionedAsset = fn (string $path): string => asset($path).(file_exists(public_path($path)) ? '?v='.filemtime(public_path($path)) : '');
+@endphp
 
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -7,11 +10,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ? $title.' · Tenantism' : 'Tenantism' }}</title>
-    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('icons/favicon-32.png') }}">
-    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('icons/favicon-16.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
-    <link rel="manifest" href="{{ asset('site.webmanifest') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ $versionedAsset('favicon.svg') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ $versionedAsset('icons/favicon-32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ $versionedAsset('icons/favicon-16.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ $versionedAsset('apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ $versionedAsset('site.webmanifest') }}">
     <meta name="theme-color" content="#1A273A">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -65,10 +68,11 @@
 
     <div
         id="page-transition-loader"
-        class="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-slate-50/90 opacity-0 transition-opacity duration-200 motion-reduce:transition-none"
+        class="pointer-events-none fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-card border border-slate-200 bg-white p-4 opacity-0 shadow-md transition-opacity duration-200 motion-reduce:transition-none"
         aria-hidden="true"
+        role="status"
     >
-        <x-brand.loader class="size-16" />
+        <x-brand.loader class="h-[30vmin] w-[30vmin] min-h-32 min-w-32 max-h-72 max-w-72" />
     </div>
 </body>
 </html>

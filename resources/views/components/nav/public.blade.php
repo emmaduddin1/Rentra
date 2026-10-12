@@ -1,8 +1,8 @@
 {{-- Signed-out visitors get one bar with one job: browse, or sign in. --}}
 <header class="sticky top-0 z-20 border-b border-slate-200 bg-white">
-    <div class="mx-auto flex h-16 w-full max-w-6xl items-center gap-4 px-4 sm:px-6 lg:px-8">
+    <div class="mx-auto flex h-[4.5rem] w-[calc(100vw-2rem)] max-w-7xl items-center gap-4 sm:w-[calc(100vw-3rem)] lg:w-[calc(100vw-4rem)]">
         <a href="{{ route('home') }}" class="shrink-0" aria-label="{{ __('Tenantism home') }}">
-            <x-brand.logo class="h-9 max-w-40 sm:max-w-44" />
+            <x-brand.logo class="h-10 w-[10.5rem] sm:h-11 sm:w-48" />
         </a>
 
         <a

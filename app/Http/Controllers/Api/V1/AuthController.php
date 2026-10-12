@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Auth\RegisterUser;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\V1\UserResource;
 use App\Models\User;
 use App\Services\AuditLogger;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -24,6 +27,25 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     public function __construct(private readonly AuditLogger $auditLogger) {}
+
+    public function register(RegisterRequest $request, RegisterUser $registerUser): JsonResponse
+    {
+        $validated = $request->validated();
+        $deviceName = $validated['device_name'];
+
+        $user = $registerUser->handle($validated);
+
+        event(new Registered($user));
+
+        $token = $user->createToken($deviceName, [$user->role->value]);
+
+        $this->auditLogger->record(action: 'api.token_issued', subject: $user, actor: $user);
+
+        return response()->json([
+            'token' => $token->plainTextToken,
+            'user' => new UserResource($user),
+        ], 201);
+    }
 
     public function login(Request $request): JsonResponse
     {

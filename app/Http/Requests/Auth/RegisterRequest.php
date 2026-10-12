@@ -28,6 +28,7 @@ class RegisterRequest extends FormRequest
             'email' => ['nullable', 'required_without:phone', 'string', 'email', 'max:255', Rule::unique('users', 'email')],
             'phone' => ['nullable', 'required_without:email', 'string', 'max:32', Rule::unique('users', 'phone')],
             'password' => ['required', 'confirmed', Password::defaults()],
+            'device_name' => [$this->is('api/*') ? 'required' : 'nullable', 'string', 'max:255'],
         ];
     }
 

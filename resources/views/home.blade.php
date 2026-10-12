@@ -8,7 +8,7 @@
             : (auth()->check() ? route('dashboard') : route('register'));
     @endphp
 
-    <section class="overflow-hidden rounded-card border border-slate-200 bg-white shadow-xs">
+    <section class="relative left-1/2 w-[calc(100vw-2rem)] max-w-7xl -translate-x-1/2 overflow-hidden rounded-card border border-slate-200 bg-white shadow-xs sm:w-[calc(100vw-3rem)] lg:w-[calc(100vw-4rem)]">
         <div class="relative min-h-[25rem] overflow-hidden bg-brand-700">
             @if ($heroListing?->primaryImage)
                 <img

@@ -27,6 +27,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->middleware('throttle:10,1')
         ->name('login');
 
+    Route::post('register', [V1\AuthController::class, 'register'])
+        ->middleware('throttle:10,1')
+        ->name('register');
+
     Route::post('password/forgot', [V1\AuthController::class, 'forgotPassword'])
         ->middleware('throttle:6,1')
         ->name('password.forgot');
