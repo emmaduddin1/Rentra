@@ -7,6 +7,7 @@ use App\Actions\Tenancies\AssignRenter;
 use App\Actions\Tenancies\EndTenancy;
 use App\Actions\Tenancies\UpdateTenancy;
 use App\Enums\PropertyStatus;
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenancy\EndTenancyRequest;
 use App\Http\Requests\Tenancy\StoreTenancyRequest;
@@ -19,6 +20,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 
 /**
  * SRS 9.3 - GET/POST /api/v1/tenancies, PATCH /api/v1/tenancies/{id}.
@@ -73,7 +75,7 @@ class TenancyController extends Controller
             if ($request->createsNewRenter()) {
                 [$renter, $temporaryPassword] = $createRenterAccount->handle($owner, $request->newRenterData());
             } else {
-                $renter = User::findOrFail($request->validated('renter_id'));
+                $renter = $this->resolveExistingRenter($request);
             }
 
             return [
@@ -85,6 +87,31 @@ class TenancyController extends Controller
         return (new TenancyResource($tenancy->load(['property', 'renter'])))
             // NFR-SEC-008 - returned once for hand-over, never stored or logged.
             ->additional(array_filter(['temporary_password' => $temporaryPassword]));
+    }
+
+    private function resolveExistingRenter(StoreTenancyRequest $request): User
+    {
+        $renterId = $request->validated('renter_id');
+        if ($renterId) {
+            return User::findOrFail($renterId);
+        }
+
+        $identifier = trim((string) $request->validated('renter_identifier'));
+        $renter = User::role(UserRole::Renter)
+            ->active()
+            ->where(function ($query) use ($identifier) {
+                $query->whereRaw('LOWER(email) = ?', [strtolower($identifier)])
+                    ->orWhere('phone', $identifier);
+            })
+            ->first();
+
+        if (! $renter) {
+            throw ValidationException::withMessages([
+                'renter_identifier' => __('No active renter account was found for that email or phone.'),
+            ]);
+        }
+
+        return $renter;
     }
 
     public function update(UpdateTenancyRequest $request, Tenancy $tenancy, UpdateTenancy $updateTenancy): TenancyResource

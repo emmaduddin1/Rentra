@@ -53,6 +53,7 @@
     { "key": "tenancy_id", "value": "1", "type": "string" },
     { "key": "monthly_record_id", "value": "1", "type": "string" },
     { "key": "application_id", "value": "1", "type": "string" },
+    { "key": "conversation_id", "value": "1", "type": "string" },
     { "key": "maintenance_id", "value": "1", "type": "string" }
   ],
   "item": [
@@ -949,6 +950,102 @@
               "path": ["api", "v1", "maintenance-requests", "{{maintenance_id}}", "status"]
             },
             "description": "FR-MNT-003. Owner only - a renter answers `403`.\n\nTransitions are enforced: `pending` -> `in_progress`, `completed` or `cancelled`; `in_progress` -> `completed` or `cancelled`; a completed or cancelled request moves nowhere. An illegal jump answers `422`. The optional `comment` is added to the timeline alongside the change."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Conversations",
+      "description": "Tenantism messaging API. Conversations are created from accepted/reviewed applications and are visible only to the owner and renter on that application.",
+      "item": [
+        {
+          "name": "List conversations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "",
+                  "const first = pm.response.json().data[0];",
+                  "if (first) {",
+                  "    pm.collectionVariables.set('conversation_id', first.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/conversations?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "conversations"],
+              "query": [{ "key": "per_page", "value": "15", "description": "1-50" }]
+            },
+            "description": "Role-aware inbox for the signed-in user. Includes the related property, application, participants, latest message, and `unread_messages_count` for badge UI."
+          }
+        },
+        {
+          "name": "View a conversation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('conversation_id', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/conversations/{{conversation_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "conversations", "{{conversation_id}}"]
+            },
+            "description": "Returns the conversation with its message thread. Messages from the other participant are marked as read when this endpoint is opened."
+          }
+        },
+        {
+          "name": "Send a message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 or 200 with message data', function () {",
+                  "    pm.expect([200, 201]).to.include(pm.response.code);",
+                  "    pm.expect(pm.response.json().data.body).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"Hi, is this property available for a viewing this week?\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/conversations/{{conversation_id}}/messages",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "conversations", "{{conversation_id}}", "messages"]
+            },
+            "description": "Sends a message as the signed-in participant. `body` is required and may be up to 5000 characters. Pending or rejected applications do not allow messaging."
           }
         }
       ]

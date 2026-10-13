@@ -252,6 +252,19 @@ class ApiWorkflowTest extends TestCase
         $tenancy = Tenancy::findOrFail($created->json('data.id'));
         $this->assertSame('occupied', $property->fresh()->status->value);
 
+        $identifierProperty = Property::factory()->for($owner, 'owner')->create();
+        $identifierRenter = User::factory()->renter()->create(['email' => 'linked@example.test']);
+
+        $linked = $this->postJson(route('api.v1.tenancies.store'), [
+            'property_id' => $identifierProperty->id,
+            'renter_mode' => 'existing',
+            'renter_identifier' => 'linked@example.test',
+            'start_date' => now()->startOfMonth()->toDateString(),
+            'agreed_rent' => '71000.00',
+        ])->assertCreated();
+
+        $this->assertSame($identifierRenter->id, $linked->json('data.renter.id'));
+
         // BR-002 - a second active tenancy is refused.
         $this->postJson(route('api.v1.tenancies.store'), [
             'property_id' => $property->id,

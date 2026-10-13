@@ -1,0 +1,1088 @@
+{
+  "info": {
+    "_postman_id": "8f2c1d64-5b3a-4e77-9a10-3c6b2e0f7a41",
+    "name": "Rentra API v1",
+    "description": "Rentra rental-management REST API (SRS 9.3), the interface the Flutter clients consume.\n\n## Getting started\n\n1. Pick the **Rentra - Local** environment (or set `base_url` on the collection).\n2. Run **Auth > Login (owner)** or **Auth > Login (renter)**. The response token is saved automatically into `owner_token` / `renter_token`, and into `token`, which every other request uses.\n3. Switch roles at any time with **Auth > Use owner token** / **Use renter token**.\n\nEvery request except the public feed and the auth endpoints sends `Authorization: Bearer {{token}}` through collection-level auth.\n\n## Roles\n\nThere are two: **owner** and **renter**. A renter browses listings, applies, and becomes the tenant once an owner accepts; the same account then submits the monthly rent and bills. Endpoints are scoped by role and by ownership (BR-010), so a request for someone else's record answers 403, never someone else's data.\n\n## Conventions\n\n- All responses are JSON. Send `Accept: application/json`, which this collection does for you.\n- Validation failures answer `422` with `{ \"message\", \"errors\": { field: [\"...\"] } }`.\n- Authorisation failures answer `403`; a missing or revoked token answers `401`.\n- Lists are paginated: `data`, `links`, `meta.current_page`, `meta.per_page`, `meta.total`. Most accept `per_page` (1-50).\n- Money is a decimal **string** with two places (`\"50000.00\"`), never a float.\n- `PATCH /tenancies/{id}` and `PATCH /properties/{id}` **replace** the record rather than merging: send the whole payload, not just the changed field.\n- File uploads are `multipart/form-data`; everything else is JSON.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Nothing to do per request - the token is set by the login requests.",
+          "if (!pm.collectionVariables.get('base_url')) {",
+          "    pm.collectionVariables.set('base_url', 'http://rentra.test');",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Applies to every request in the collection.",
+          "pm.test('responds with JSON', function () {",
+          "    pm.expect(pm.response.headers.get('Content-Type') || '').to.include('json');",
+          "});",
+          "",
+          "if (pm.response.code === 422) {",
+          "    pm.test('a 422 names the fields at fault', function () {",
+          "        pm.expect(pm.response.json()).to.have.property('errors');",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "http://rentra.test", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "owner_token", "value": "", "type": "string" },
+    { "key": "renter_token", "value": "", "type": "string" },
+    { "key": "owner_email", "value": "owner@example.com", "type": "string" },
+    { "key": "renter_email", "value": "renter@example.com", "type": "string" },
+    { "key": "password", "value": "password", "type": "string" },
+    { "key": "property_id", "value": "1", "type": "string" },
+    { "key": "tenancy_id", "value": "1", "type": "string" },
+    { "key": "monthly_record_id", "value": "1", "type": "string" },
+    { "key": "application_id", "value": "1", "type": "string" },
+    { "key": "conversation_id", "value": "1", "type": "string" },
+    { "key": "maintenance_id", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "description": "SRS 9.3 / FR-AUTH-001 to FR-AUTH-006. Sanctum personal access tokens. The token's abilities are the account's role, so a token can never outrank its owner.",
+      "item": [
+        {
+          "name": "Login (owner)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 with a token', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().token).to.be.a('string').and.not.empty;",
+                  "});",
+                  "",
+                  "pm.test('the account is an owner', function () {",
+                  "    pm.expect(pm.response.json().user.role).to.eql('owner');",
+                  "});",
+                  "",
+                  "const token = pm.response.json().token;",
+                  "pm.collectionVariables.set('owner_token', token);",
+                  "pm.collectionVariables.set('token', token);",
+                  "console.log('Signed in as owner; {{token}} now holds the owner token.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"{{owner_email}}\",\n  \"password\": \"{{password}}\",\n  \"device_name\": \"postman\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/v1/login", "host": ["{{base_url}}"], "path": ["api", "v1", "login"] },
+            "description": "`identifier` is the registered **email or phone** - either works. `device_name` names the token so it can be revoked on its own later.\n\nReturns `{ token, user }`. Five wrong attempts lock that identifier out for a while (NFR-SEC-006), and a suspended account is never issued a token (FR-AUTH-006)."
+          }
+        },
+        {
+          "name": "Login (renter)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 with a token', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().token).to.be.a('string').and.not.empty;",
+                  "});",
+                  "",
+                  "pm.test('the account is a renter', function () {",
+                  "    pm.expect(pm.response.json().user.role).to.eql('renter');",
+                  "});",
+                  "",
+                  "const token = pm.response.json().token;",
+                  "pm.collectionVariables.set('renter_token', token);",
+                  "pm.collectionVariables.set('token', token);",
+                  "console.log('Signed in as renter; {{token}} now holds the renter token.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"{{renter_email}}\",\n  \"password\": \"{{password}}\",\n  \"device_name\": \"postman\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/v1/login", "host": ["{{base_url}}"], "path": ["api", "v1", "login"] },
+            "description": "Same endpoint as the owner login. A renter token can reach the listing feed, applications, their own tenancies and monthly records, and maintenance."
+          }
+        },
+        {
+          "name": "Use owner token",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('token', pm.collectionVariables.get('owner_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('now acting as the owner', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().data.role).to.eql('owner');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/me", "host": ["{{base_url}}"], "path": ["api", "v1", "me"] },
+            "description": "Convenience switch: points `{{token}}` at the stored owner token, then confirms it by calling `/me`. Run **Login (owner)** at least once first."
+          }
+        },
+        {
+          "name": "Use renter token",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('token', pm.collectionVariables.get('renter_token'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('now acting as the renter', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().data.role).to.eql('renter');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/me", "host": ["{{base_url}}"], "path": ["api", "v1", "me"] },
+            "description": "Convenience switch: points `{{token}}` at the stored renter token, then confirms it by calling `/me`. Run **Login (renter)** at least once first."
+          }
+        },
+        {
+          "name": "Me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('no password field ever leaves the server', function () {",
+                  "    pm.expect(pm.response.json().data).to.not.have.property('password');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/me", "host": ["{{base_url}}"], "path": ["api", "v1", "me"] },
+            "description": "The account behind the current token: `id`, `name`, `email`, `phone`, `role`, `status`, `profile_image_url`.\n\nAnswers `403` the moment the account is suspended, even for a token issued beforehand."
+          }
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "console.log('That token is now revoked; log in again before other requests.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/logout", "host": ["{{base_url}}"], "path": ["api", "v1", "logout"] },
+            "description": "Revokes **only the token used for this call**. Other devices signed in on the same account keep working."
+          }
+        },
+        {
+          "name": "Forgot password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{renter_email}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/v1/password/forgot", "host": ["{{base_url}}"], "path": ["api", "v1", "password", "forgot"] },
+            "description": "FR-AUTH-003. Emails a reset link; the reset itself is completed on the web. An unknown address answers `422` rather than pretending to send."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Listings (public)",
+      "description": "SRS 5.5 / FR-APP-001 to FR-APP-004. Open to guests - no token needed. Only published **and** available listings appear (BR-001); a house let floor by floor stays out of the feed and its floors appear instead (BR-013).",
+      "item": [
+        {
+          "name": "Browse listings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "",
+                  "const first = pm.response.json().data[0];",
+                  "if (first) {",
+                  "    pm.collectionVariables.set('property_id', first.id);",
+                  "    console.log('property_id set to ' + first.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/listings?area=&type=&min_rent=&max_rent=&per_page=12",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "listings"],
+              "query": [
+                { "key": "area", "value": "", "description": "Partial area match, e.g. Gulberg" },
+                { "key": "type", "value": "", "description": "house | office | guest_house" },
+                { "key": "min_rent", "value": "", "description": "Decimal string" },
+                { "key": "max_rent", "value": "", "description": "Decimal string; must be >= min_rent" },
+                { "key": "per_page", "value": "12", "description": "1-50" }
+              ]
+            },
+            "description": "The public feed, rate limited to 120 requests a minute. Saves the first result's id into `{{property_id}}` for the requests below.\n\nThe address and full contact details are withheld from guests; sign in to see them (`contact_requires_login` says which you are getting)."
+          }
+        },
+        {
+          "name": "View a listing",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/listings/{{property_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "listings", "{{property_id}}"]
+            },
+            "description": "Full detail with gallery and videos. A draft, inactive, or occupied listing answers `404` - its existence is not disclosed (SRS 12)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Applications",
+      "description": "SRS FR-APP-005/006. A renter applies for a published listing; the owner of that listing responds. Withdrawal belongs to the renter and is done on the web.",
+      "item": [
+        {
+          "name": "List applications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/applications?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "applications"],
+              "query": [{ "key": "per_page", "value": "15", "description": "1-50" }]
+            },
+            "description": "Role-aware (BR-010): a **renter** sees the applications they sent, an **owner** sees the ones sent about their own listings. Nobody sees anything else.\n\nThe owner's rows carry the `renter` object so you know who is asking."
+          }
+        },
+        {
+          "name": "Apply for a listing (renter)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('application_id', pm.response.json().data.id);",
+                  "}",
+                  "",
+                  "pm.test('201, or 422 if an inquiry is already open', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"I would like to view this property this weekend if possible.\",\n  \"contact_phone\": \"+923004445566\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/listings/{{property_id}}/applications",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "listings", "{{property_id}}", "applications"]
+            },
+            "description": "Renter only. `message` is required, 10-2000 characters. `contact_phone` is optional and defaults to the profile number.\n\nA **second open inquiry** for the same property answers `422` rather than creating a duplicate the owner has to reconcile. An owner applying, or applying to an unpublished listing, answers `403`. Rate limited to 10 a minute."
+          }
+        },
+        {
+          "name": "Respond to an application (owner)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"accepted\",\n  \"owner_note\": \"Happy to go ahead. Let us arrange the paperwork.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/applications/{{application_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "applications", "{{application_id}}"]
+            },
+            "description": "Owner of the listed property only. `status` is one of `pending`, `reviewed`, `accepted`, `rejected` - **not** `withdrawn`, which only the renter can set.\n\n`owner_note` is shown to the renter. Accepting does not create the tenancy; do that with **Tenancies > Assign a renter**."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Properties (owner)",
+      "description": "SRS FR-PROP-001 to FR-PROP-005. Owner only - the whole group answers `403` for a renter, before any policy runs.",
+      "item": [
+        {
+          "name": "List my properties",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "",
+                  "const first = pm.response.json().data[0];",
+                  "if (first) {",
+                  "    pm.collectionVariables.set('property_id', first.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/properties?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "properties"],
+              "query": [{ "key": "per_page", "value": "15", "description": "1-50" }]
+            },
+            "description": "Your own portfolio, newest first. Houses let floor by floor appear once, with their floors nested under them (BR-013)."
+          }
+        },
+        {
+          "name": "Create a property",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('property_id', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title", "value": "Two bed upper portion", "type": "text" },
+                { "key": "type", "value": "house", "type": "text", "description": "house | office | guest_house" },
+                { "key": "rental_mode", "value": "whole", "type": "text", "description": "whole | by_floor (optional)" },
+                { "key": "rent_amount", "value": "55000.00", "type": "text" },
+                { "key": "area", "value": "Gulberg", "type": "text" },
+                { "key": "city", "value": "Lahore", "type": "text" },
+                { "key": "address", "value": "12 Main Boulevard", "type": "text" },
+                { "key": "description", "value": "Bright upper portion with a separate entrance.", "type": "text" },
+                { "key": "status", "value": "available", "type": "text", "description": "available | occupied | inactive" },
+                { "key": "publication_status", "value": "draft", "type": "text", "description": "draft | published" },
+                { "key": "contact_name", "value": "Demo Owner", "type": "text" },
+                { "key": "contact_phone", "value": "+923001112233", "type": "text" },
+                { "key": "contact_email", "value": "owner@example.com", "type": "text" },
+                { "key": "images[]", "type": "file", "src": [], "description": "REQUIRED: at least 3 photos (jpeg/jpg/png/webp, 4 MB each)" },
+                { "key": "videos[]", "type": "file", "src": [], "description": "Optional walkthrough clips (mp4/mov/webm)" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/api/v1/properties", "host": ["{{base_url}}"], "path": ["api", "v1", "properties"] },
+            "description": "**multipart/form-data**, because of the photos.\n\nFR-PROP-003: a listing needs **at least 3 photos** and holds at most 12. Attach files to the `images[]` rows before sending - Postman shows a file picker there.\n\nSet `rental_mode` to `by_floor` to make this a container house: it then carries no rent of its own and never reaches the feed; you add and publish each floor separately (BR-013)."
+          }
+        },
+        {
+          "name": "View a property",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/properties/{{property_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "properties", "{{property_id}}"]
+            },
+            "description": "Your own property with gallery, videos, and floors. Another owner's property answers `403`; an archived one answers `404` (BR-009)."
+          }
+        },
+        {
+          "name": "Update a property",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title", "value": "Two bed upper portion - renovated", "type": "text" },
+                { "key": "type", "value": "house", "type": "text" },
+                { "key": "rent_amount", "value": "60000.00", "type": "text" },
+                { "key": "area", "value": "Gulberg", "type": "text" },
+                { "key": "address", "value": "12 Main Boulevard", "type": "text" },
+                { "key": "description", "value": "Now with a fitted kitchen.", "type": "text" },
+                { "key": "status", "value": "available", "type": "text" },
+                { "key": "publication_status", "value": "published", "type": "text" },
+                { "key": "images[]", "type": "file", "src": [], "description": "Only needed while the listing is short of 3 photos" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/properties/{{property_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "properties", "{{property_id}}"]
+            },
+            "description": "**This replaces the listing rather than patching it.** `type`, `title`, `area`, `address`, `rent_amount`, `status` and `publication_status` are required on every call; sending one field answers `422`.\n\nThe photo minimum counts what the listing **already holds**, so a text-only edit does not make you re-upload the gallery. You only attach `images[]` while the listing is still short of 3.\n\nSetting `publication_status` to `published` while `status` is `available` is what puts it in the public feed (BR-001)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tenancies",
+      "description": "SRS FR-TEN-001 to FR-TEN-005. Reading is role-aware; every write is owner only.",
+      "item": [
+        {
+          "name": "List tenancies",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "",
+                  "const first = pm.response.json().data[0];",
+                  "if (first) {",
+                  "    pm.collectionVariables.set('tenancy_id', first.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenancies?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tenancies"],
+              "query": [{ "key": "per_page", "value": "15", "description": "1-50" }]
+            },
+            "description": "An **owner** sees the tenancies on their properties; a **renter** sees their own, current and past (BR-010). A renter may hold more than one."
+          }
+        },
+        {
+          "name": "Assign a renter (owner)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('tenancy_id', body.data.id);",
+                  "",
+                  "    if (body.temporary_password) {",
+                  "        console.log('Temporary password (shown once, never stored): ' + body.temporary_password);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"property_id\": {{property_id}},\n  \"renter_mode\": \"existing\",\n  \"renter_id\": 2,\n\n  \"start_date\": \"2026-09-01\",\n  \"end_date\": null,\n  \"agreed_rent\": \"55000.00\",\n  \"deposit\": \"110000.00\",\n  \"billing_day\": 5,\n  \"notes\": \"Handover done, keys given.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/v1/tenancies", "host": ["{{base_url}}"], "path": ["api", "v1", "tenancies"] },
+            "description": "FR-TEN-001. Two ways to name the renter:\n\n- `\"renter_mode\": \"existing\"` with `renter_id` - link an account that already exists.\n- `\"renter_mode\": \"new\"` with `renter_name` and `renter_email` and/or `renter_phone` - the account is created for them, and a **temporary password is returned once** in `temporary_password` (NFR-SEC-008: never stored, never logged, so capture it now).\n\nA property already under an active tenancy answers `403` (BR-002). Assigning marks the property occupied, which takes it out of the public feed."
+          }
+        },
+        {
+          "name": "View a tenancy",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenancies/{{tenancy_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tenancies", "{{tenancy_id}}"]
+            },
+            "description": "Readable by the owner of the property and by the renter on it. Anyone else answers `403`."
+          }
+        },
+        {
+          "name": "Update the terms (owner)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start_date\": \"2026-09-01\",\n  \"end_date\": null,\n  \"agreed_rent\": \"58000.00\",\n  \"deposit\": \"110000.00\",\n  \"billing_day\": 7,\n  \"notes\": \"Rent revised at the annual review.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenancies/{{tenancy_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tenancies", "{{tenancy_id}}"]
+            },
+            "description": "FR-TEN-002. **This replaces the terms rather than patching them**: `start_date` and `agreed_rent` are required on every call, so send the whole block.\n\nThe property and the renter are deliberately not editable - changing them would rewrite tenancy history (FR-TEN-004). A renter calling this answers `403`."
+          }
+        },
+        {
+          "name": "End a tenancy (owner)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"end_date\": \"2027-08-31\",\n  \"property_status\": \"available\",\n  \"reason\": \"Tenant moved out at the end of the agreement.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/tenancies/{{tenancy_id}}/end",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "tenancies", "{{tenancy_id}}", "end"]
+            },
+            "description": "FR-TEN-005. Frees the property and keeps the whole history - the tenancy and its monthly records stay readable.\n\n`property_status` is where the property lands: `available` or `inactive`. It may **not** be `occupied`, since the tenancy is over."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Monthly records",
+      "description": "SRS FR-MON-001 to FR-MON-009. The heart of the system: the renter declares what they paid for the month and attaches a receipt for each charge; the owner checks the receipts and approves, which freezes the record.\n\n**The order matters:** create -> attach a receipt for every charge -> submit. Submitting with an unevidenced charge answers `422`, and once submitted the renter can change nothing until the owner approves or returns it (BR-004).",
+      "item": [
+        {
+          "name": "List monthly records",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "",
+                  "const first = pm.response.json().data[0];",
+                  "if (first) {",
+                  "    pm.collectionVariables.set('monthly_record_id', first.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/monthly-records?status=&tenancy_id=&year=&per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "monthly-records"],
+              "query": [
+                { "key": "status", "value": "", "description": "draft | pending | approved | rejected" },
+                { "key": "tenancy_id", "value": "", "description": "Narrow to one tenancy" },
+                { "key": "year", "value": "", "description": "e.g. 2026" },
+                { "key": "per_page", "value": "15", "description": "1-50" }
+              ]
+            },
+            "description": "Scoped by role before any filter is applied (BR-010): an owner sees the submissions across their portfolio - this is the approval queue - and a renter sees their own months.\n\nEach row carries `proofs_count`, so a client can flag a thin submission before opening it."
+          }
+        },
+        {
+          "name": "1. Open the month (renter)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('monthly_record_id', pm.response.json().data.id);",
+                  "    console.log('monthly_record_id set - now attach a receipt for every charge.');",
+                  "}",
+                  "",
+                  "pm.test('201, or 422 if this month already exists', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenancy_id\": {{tenancy_id}},\n  \"period_month\": \"2026-08\",\n\n  \"rent_amount\": \"55000.00\",\n  \"electricity_amount\": \"4200.50\",\n  \"gas_amount\": \"1100.00\",\n  \"water_amount\": \"0.00\",\n  \"internet_amount\": \"3500.00\",\n  \"maintenance_amount\": \"0.00\",\n  \"other_amount\": \"0.00\",\n\n  \"notes\": \"Internet bill was higher this month because of the upgrade.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/v1/monthly-records", "host": ["{{base_url}}"], "path": ["api", "v1", "monthly-records"] },
+            "description": "Renter only, and only on **their own active tenancy**.\n\n`period_month` is `YYYY-MM` and is normalised to the first of the month. One record per tenancy per month (BR-003) - a repeat answers `422`.\n\nEvery amount is optional and defaults to zero. `total_amount` is derived by the server (BR-012); do not send it. The record starts as a **draft**."
+          }
+        },
+        {
+          "name": "2. Attach a receipt (renter)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "category", "value": "rent", "type": "text", "description": "rent | electricity | gas | water | internet | maintenance | other" },
+                { "key": "files[]", "type": "file", "src": [], "description": "jpeg/jpg/png/webp/pdf, up to 8 MB, at most 5 per category" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/monthly-records/{{monthly_record_id}}/proofs",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "monthly-records", "{{monthly_record_id}}", "proofs"]
+            },
+            "description": "**multipart/form-data.** FR-MON-003. Repeat this once per charged category - a photo of the bill or the payment receipt.\n\nProofs are stored on a **private** disk (NFR-SEC-007). They are never a public URL: the response hands back a `download_url` that runs the policy first, so only the renter who uploaded it and the owner of that property can open it.\n\nWorks only while the record is a draft or has been returned. A submitted or frozen record answers `403` (BR-004)."
+          }
+        },
+        {
+          "name": "3. Submit for approval (renter)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 422) {",
+                  "    const errors = pm.response.json().errors;",
+                  "    if (errors && errors.files) {",
+                  "        console.log('Blocked: ' + errors.files[0]);",
+                  "    }",
+                  "}",
+                  "",
+                  "pm.test('200, or 422 while a charge has no receipt', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/monthly-records/{{monthly_record_id}}/submit",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "monthly-records", "{{monthly_record_id}}", "submit"]
+            },
+            "description": "FR-MON-005. Moves the record to **pending** and notifies the owner.\n\nTwo things stop it:\n- an empty record (nothing charged) answers `422` on `rent_amount`;\n- **any charge without a receipt** answers `422` on `files`, naming the categories - the owner must be able to verify what they are approving.\n\nAfter this the renter can change nothing: no amounts, no new receipts, no deletions (BR-004)."
+          }
+        },
+        {
+          "name": "View a monthly record",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/monthly-records/{{monthly_record_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "monthly-records", "{{monthly_record_id}}"]
+            },
+            "description": "Both parties see the same thing: every amount, and the proofs grouped by category with an authorised `download_url` each."
+          }
+        },
+        {
+          "name": "Edit a draft (renter)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rent_amount\": \"55000.00\",\n  \"electricity_amount\": \"4800.00\",\n  \"gas_amount\": \"1100.00\",\n  \"water_amount\": \"0.00\",\n  \"internet_amount\": \"3500.00\",\n  \"maintenance_amount\": \"0.00\",\n  \"other_amount\": \"0.00\",\n  \"notes\": \"Corrected the electricity figure.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/monthly-records/{{monthly_record_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "monthly-records", "{{monthly_record_id}}"]
+            },
+            "description": "Only while the record is a **draft** or has been **returned** by the owner. A pending or frozen record answers `403` (BR-004 / BR-006).\n\nAny category left out is written back as zero, so send the full set. The total is recalculated server side."
+          }
+        },
+        {
+          "name": "Approve and freeze (owner)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/monthly-records/{{monthly_record_id}}/approve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "monthly-records", "{{monthly_record_id}}", "approve"]
+            },
+            "description": "FR-MON-006/008. \"Everything checks out and the money was received.\" The record becomes **approved and frozen**: neither side edits it again without a reopen.\n\nOnly the owner of the property, and only while the record is pending."
+          }
+        },
+        {
+          "name": "Return for changes (owner)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rejection_reason\": \"The electricity bill photo is unreadable - please attach a clearer one.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/monthly-records/{{monthly_record_id}}/reject",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "monthly-records", "{{monthly_record_id}}", "reject"]
+            },
+            "description": "FR-MON-007. Hands the month back to the renter with a reason they will see (5-1000 characters), and makes it editable again so they can fix it and resubmit.\n\nThis is the way out of a submission that is missing or unclear - the lock is about the review window, not a one-way door."
+          }
+        },
+        {
+          "name": "Reopen a frozen record (owner)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reopen_reason\": \"Approved in error - the gas bill belonged to the previous month.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/monthly-records/{{monthly_record_id}}/reopen",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "monthly-records", "{{monthly_record_id}}", "reopen"]
+            },
+            "description": "FR-MON-009. Unfreezes an approved record and returns it to pending. Needs a reason and is written to the audit log, because it undoes a decision that was already final."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Maintenance",
+      "description": "SRS FR-MNT-001 to FR-MNT-004. The renter raises an issue; both parties share one timeline; only the owner moves the status.",
+      "item": [
+        {
+          "name": "List maintenance requests",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "",
+                  "const first = pm.response.json().data[0];",
+                  "if (first) {",
+                  "    pm.collectionVariables.set('maintenance_id', first.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/maintenance-requests?status=&per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "maintenance-requests"],
+              "query": [
+                { "key": "status", "value": "", "description": "pending | in_progress | completed | cancelled" },
+                { "key": "per_page", "value": "15", "description": "1-50" }
+              ]
+            },
+            "description": "Role-aware: an owner sees the issues raised against their properties, a renter sees their own."
+          }
+        },
+        {
+          "name": "Raise a request (renter)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('maintenance_id', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "tenancy_id", "value": "{{tenancy_id}}", "type": "text" },
+                { "key": "title", "value": "Kitchen tap is leaking", "type": "text" },
+                { "key": "description", "value": "The cold tap drips constantly and the cupboard below is getting damp.", "type": "text", "description": "10-5000 characters" },
+                { "key": "priority", "value": "high", "type": "text", "description": "low | medium | high | urgent" },
+                { "key": "attachments[]", "type": "file", "src": [], "description": "Optional, up to 6 photos or PDFs" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/api/v1/maintenance-requests", "host": ["{{base_url}}"], "path": ["api", "v1", "maintenance-requests"] },
+            "description": "**multipart/form-data**, because issue photos can be attached.\n\nFR-MNT-001/002. Attachments can show the inside of a home, so they live on the private disk and are served through an authorised download route like the proofs. The request opens as **pending**."
+          }
+        },
+        {
+          "name": "View a request",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/maintenance-requests/{{maintenance_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "maintenance-requests", "{{maintenance_id}}"]
+            },
+            "description": "Carries the attachments and the full `timeline` of status changes and comments.\n\n`allowed_transitions` lists exactly which statuses this request may move to next, so a client can render only the legal buttons (SRS 12)."
+          }
+        },
+        {
+          "name": "Comment (either party)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comment\": \"A plumber is booked for Thursday morning.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/maintenance-requests/{{maintenance_id}}/comments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "maintenance-requests", "{{maintenance_id}}", "comments"]
+            },
+            "description": "FR-MNT-004. Both the owner and the renter write to the same timeline. A comment is **not** a status change - the request stays where it is.\n\nAnyone not party to the tenancy answers `403`."
+          }
+        },
+        {
+          "name": "Move the status (owner)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\",\n  \"comment\": \"Plumber attending on Thursday.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/maintenance-requests/{{maintenance_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "maintenance-requests", "{{maintenance_id}}", "status"]
+            },
+            "description": "FR-MNT-003. Owner only - a renter answers `403`.\n\nTransitions are enforced: `pending` -> `in_progress`, `completed` or `cancelled`; `in_progress` -> `completed` or `cancelled`; a completed or cancelled request moves nowhere. An illegal jump answers `422`. The optional `comment` is added to the timeline alongside the change."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Conversations",
+      "description": "Tenantism messaging API. Conversations are created from accepted/reviewed applications and are visible only to the owner and renter on that application.",
+      "item": [
+        {
+          "name": "List conversations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "",
+                  "const first = pm.response.json().data[0];",
+                  "if (first) {",
+                  "    pm.collectionVariables.set('conversation_id', first.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/conversations?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "conversations"],
+              "query": [{ "key": "per_page", "value": "15", "description": "1-50" }]
+            },
+            "description": "Role-aware inbox for the signed-in user. Includes the related property, application, participants, latest message, and `unread_messages_count` for badge UI."
+          }
+        },
+        {
+          "name": "View a conversation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('conversation_id', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/conversations/{{conversation_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "conversations", "{{conversation_id}}"]
+            },
+            "description": "Returns the conversation with its message thread. Messages from the other participant are marked as read when this endpoint is opened."
+          }
+        },
+        {
+          "name": "Send a message",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 or 200 with message data', function () {",
+                  "    pm.expect([200, 201]).to.include(pm.response.code);",
+                  "    pm.expect(pm.response.json().data.body).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"Hi, is this property available for a viewing this week?\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/conversations/{{conversation_id}}/messages",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "conversations", "{{conversation_id}}", "messages"]
+            },
+            "description": "Sends a message as the signed-in participant. `body` is required and may be up to 5000 characters. Pending or rejected applications do not allow messaging."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "description": "SRS FR-NOT-001/003. In-app notifications for both roles.",
+      "item": [
+        {
+          "name": "List notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications?per_page=15",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "notifications"],
+              "query": [{ "key": "per_page", "value": "15", "description": "1-50" }]
+            },
+            "description": "Newest first, for the account behind the token. `meta.unread_count` drives the badge.\n\nTypes you will see: `application.submitted`, `application.status_changed`, `monthly_record.submitted`, `monthly_record.approved`, `monthly_record.rejected`, `tenancy.assigned`, and the maintenance ones. Each carries an `action_url` to open."
+          }
+        },
+        {
+          "name": "Mark as read",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": []\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/api/v1/notifications/read", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "read"] },
+            "description": "An **empty or omitted** `ids` marks everything read. Pass specific ids to mark just those.\n\nEach id is authorised on its own, so a stray id belonging to another account answers `403` rather than being quietly skipped.\n\nReturns the new `unread_count`."
+          }
+        }
+      ]
+    }
+  ]
+}

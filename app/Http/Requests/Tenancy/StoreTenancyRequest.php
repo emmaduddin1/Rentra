@@ -4,6 +4,7 @@ namespace App\Http\Requests\Tenancy;
 
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -16,6 +17,29 @@ use Illuminate\Validation\Validator;
  */
 class StoreTenancyRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if ($this->input('renter_mode') !== 'existing'
+            || filled($this->input('renter_id'))
+            || blank($this->input('renter_identifier'))) {
+            return;
+        }
+
+        $identifier = trim((string) $this->input('renter_identifier'));
+
+        $renter = User::role(UserRole::Renter)
+            ->active()
+            ->where(function ($query) use ($identifier) {
+                $query->whereRaw('LOWER(email) = ?', [strtolower($identifier)])
+                    ->orWhere('phone', $identifier);
+            })
+            ->first();
+
+        if ($renter) {
+            $this->merge(['renter_id' => $renter->id]);
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -34,12 +58,19 @@ class StoreTenancyRequest extends FormRequest
 
             'renter_id' => [
                 'exclude_unless:renter_mode,existing',
-                'required_if:renter_mode,existing',
+                'required_without:renter_identifier',
                 'nullable',
                 Rule::exists('users', 'id')
                     ->where('role', UserRole::Renter->value)
                     ->where('status', UserStatus::Active->value)
                     ->whereNull('deleted_at'),
+            ],
+            'renter_identifier' => [
+                'exclude_unless:renter_mode,existing',
+                'required_without:renter_id',
+                'nullable',
+                'string',
+                'max:255',
             ],
 
             'renter_name' => ['exclude_unless:renter_mode,new', 'required', 'string', 'max:255'],
@@ -91,6 +122,7 @@ class StoreTenancyRequest extends FormRequest
         return [
             'property_id' => __('property'),
             'renter_id' => __('renter'),
+            'renter_identifier' => __('renter email or phone'),
             'renter_name' => __('renter name'),
             'renter_email' => __('renter email'),
             'renter_phone' => __('renter phone'),
