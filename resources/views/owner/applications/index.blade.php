@@ -65,9 +65,16 @@
                                     <td class="whitespace-nowrap text-slate-600">{{ $application->submitted_at->format('d M Y') }}</td>
                                     <td><x-badge :variant="$application->status->badge()">{{ $application->status->label() }}</x-badge></td>
                                     <td class="text-right">
-                                        <a href="{{ route('owner.applications.show', $application) }}" class="btn btn-secondary btn-sm">
-                                            {{ __('Review') }}
-                                        </a>
+                                        <div class="inline-flex flex-wrap justify-end gap-2">
+                                            @if ($application->conversation)
+                                                <a href="{{ route('conversations.show', $application->conversation) }}" class="btn btn-secondary btn-sm">
+                                                    {{ __('Messages') }}
+                                                </a>
+                                            @endif
+                                            <a href="{{ route('owner.applications.show', $application) }}" class="btn btn-secondary btn-sm">
+                                                {{ __('Review') }}
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach

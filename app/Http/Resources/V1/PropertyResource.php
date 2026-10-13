@@ -58,6 +58,7 @@ class PropertyResource extends JsonResource
                 'id' => $amenity->id,
                 'name' => $amenity->name,
                 'slug' => $amenity->slug,
+                'icon_identifier' => $amenity->icon_identifier,
             ])->values()),
             'status' => $this->status->value,
             'publication_status' => $this->publication_status->value,

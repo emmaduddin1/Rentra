@@ -49,6 +49,19 @@
                         @endif
                     </div>
                 @endif
+
+                @if ($application->conversation)
+                    <div class="mt-5 border-t border-slate-100 pt-4">
+                        <a href="{{ route('conversations.show', $application->conversation) }}" class="btn btn-secondary">
+                            <x-icon name="message" class="btn-icon" />
+                            {{ $application->conversation->is_locked ? __('View messages') : __('Message renter') }}
+                        </a>
+                    </div>
+                @elseif (! $application->canMessage())
+                    <p class="mt-5 rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                        {{ __('Messages open after this application is reviewed or accepted, and stay closed for pending or rejected applications.') }}
+                    </p>
+                @endif
             </section>
         </div>
 
@@ -67,7 +80,7 @@
                     </a>
                     <p class="text-xs text-slate-500">{{ $application->property->area }}</p>
                     <p class="mt-1 text-sm font-semibold">
-                        <x-money :amount="$application->property->priceAmount()" />{{ $application->property->priceSuffix() }}
+                        <x-property-price :property="$application->property" />
                     </p>
                 </div>
             </section>

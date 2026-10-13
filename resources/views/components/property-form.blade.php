@@ -222,6 +222,7 @@
                                 @checked(in_array($amenity->id, $selectedAmenities, true))
                                 class="rounded border-slate-300 text-rental-600 focus:ring-rental-500"
                             >
+                            <x-icon :name="$amenity->icon_identifier" class="size-4 text-rental-600" />
                             <span>{{ $amenity->name }}</span>
                         </label>
                     @endforeach

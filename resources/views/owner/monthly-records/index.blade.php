@@ -11,7 +11,7 @@
         <div class="segmented">
             @foreach ($tabs as $value => $label)
                 <x-tab-link
-                    :href="route('owner.monthly-records.index', array_merge($filters, ['status' => $value === 'all' ? null : $value]))"
+                    :href="route('owner.monthly-records.index', array_merge($filters, ['status' => $value]))"
                     :active="$activeStatus === $value"
                     :count="$value === \App\Enums\MonthlyRecordStatus::Pending->value && $pendingCount > 0 ? $pendingCount : null"
                 >{{ $label }}</x-tab-link>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ListingPurpose;
+use App\Enums\AreaUnit;
 use App\Enums\PropertyType;
 use App\Models\Application;
 use App\Models\Property;
@@ -30,6 +31,9 @@ class ListingController extends Controller
             'listing_purpose' => ['nullable', Rule::enum(ListingPurpose::class)],
             'min_price' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'max_price' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99', 'gte:min_price'],
+            'min_area' => ['nullable', 'numeric', 'min:0', 'max:999999999.99'],
+            'max_area' => ['nullable', 'numeric', 'min:0', 'max:999999999.99', 'gte:min_area'],
+            'area_unit' => ['nullable', Rule::enum(AreaUnit::class)],
             'min_rent' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'max_rent' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99', 'gte:min_rent'],
         ]);
@@ -43,6 +47,7 @@ class ListingController extends Controller
             'types' => PropertyType::cases(),
             'purposes' => ListingPurpose::cases(),
             'categories' => PropertyCategory::active()->ordered()->get(),
+            'areaUnits' => AreaUnit::cases(),
             'favoriteIds' => $this->favoriteIds($request),
         ]);
     }
@@ -91,6 +96,9 @@ class ListingController extends Controller
             ->purpose($filters['listing_purpose'] ?? null)
             ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
             ->when($filters['category_id'] ?? null, fn ($query, $categoryId) => $query->where('category_id', $categoryId))
+            ->when($filters['area_unit'] ?? null, fn ($query, $unit) => $query->where('area_unit', $unit))
+            ->when($filters['min_area'] ?? null, fn ($query, $area) => $query->where('area_value', '>=', $area))
+            ->when($filters['max_area'] ?? null, fn ($query, $area) => $query->where('area_value', '<=', $area))
             ->when($filters['min_price'] ?? null, fn ($query, $price) => $query->where(
                 ($filters['listing_purpose'] ?? ListingPurpose::Rent->value) === ListingPurpose::Sale->value ? 'sale_price' : 'rent_amount',
                 '>=',

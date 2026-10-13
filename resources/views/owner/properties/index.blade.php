@@ -131,7 +131,7 @@
                                         </div>
                                     </td>
                                     <td class="whitespace-nowrap">
-                                        <x-money :amount="$property->priceAmount()" />{{ $property->priceSuffix() }}
+                                        <x-property-price :property="$property" />
                                         @if ($isHouse)
                                             <span class="block text-xs text-slate-500">{{ __('Total of its floors') }}</span>
                                         @endif
@@ -214,7 +214,7 @@
                                                 </span>
                                             </div>
                                         </td>
-                                        <td class="whitespace-nowrap"><x-money :amount="$floor->priceAmount()" />{{ $floor->priceSuffix() }}</td>
+                                        <td class="whitespace-nowrap"><x-property-price :property="$floor" /></td>
                                         <td><x-badge :variant="$floor->status->badge()">{{ $floor->status->label() }}</x-badge></td>
                                         <td>
                                             <x-badge :variant="$floor->publication_status->badge()">{{ $floor->publication_status->label() }}</x-badge>

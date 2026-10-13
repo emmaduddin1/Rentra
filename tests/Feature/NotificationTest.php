@@ -111,6 +111,22 @@ class NotificationTest extends TestCase
     }
 
     #[Test]
+    public function the_header_notification_count_endpoint_returns_unread_total(): void
+    {
+        $user = User::factory()->renter()->create();
+        $read = $this->notify($user, key: 'read-count');
+        $read->markAsRead();
+
+        $this->notify($user, key: 'unread-count-a');
+        $this->notify($user, key: 'unread-count-b');
+
+        $this->actingAs($user)
+            ->getJson(route('notifications.count'))
+            ->assertOk()
+            ->assertJsonPath('unread_count', 2);
+    }
+
+    #[Test]
     public function guests_cannot_reach_the_notification_list(): void
     {
         $this->get(route('notifications.index'))->assertRedirect(route('login'));

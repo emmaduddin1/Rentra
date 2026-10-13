@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['name', 'slug', 'is_active', 'sort_order'])]
+#[Fillable(['name', 'slug', 'icon_identifier', 'is_active', 'sort_order'])]
 class Amenity extends Model
 {
     public $timestamps = false;

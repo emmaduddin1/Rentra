@@ -25,6 +25,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('slug')->unique();
+            $table->string('icon_identifier')->default('check');
             $table->boolean('is_active')->default(true);
             $table->unsignedSmallInteger('sort_order')->default(0)->index();
         });
@@ -54,6 +55,7 @@ return new class extends Migration
                 ['slug' => $amenity['slug']],
                 [
                     'name' => $amenity['name'],
+                    'icon_identifier' => $amenity['icon_identifier'] ?? 'check',
                     'is_active' => true,
                     'sort_order' => $amenity['sort_order'],
                 ],

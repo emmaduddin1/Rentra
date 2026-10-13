@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'property_id', 'renter_id', 'message', 'contact_phone', 'status',
@@ -45,6 +46,17 @@ class Application extends Model
     public function responder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'responded_by');
+    }
+
+    /** @return HasOne<Conversation, $this> */
+    public function conversation(): HasOne
+    {
+        return $this->hasOne(Conversation::class);
+    }
+
+    public function canMessage(): bool
+    {
+        return $this->status->allowsMessaging();
     }
 
     /**

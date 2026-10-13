@@ -8,5 +8,5 @@
 <img
     src="{{ asset($path).$version }}"
     alt="{{ $label }}"
-    {{ $attributes->class('block h-auto w-auto') }}
+    {{ $attributes->class('block shrink-0') }}
 >

@@ -34,4 +34,9 @@ enum ApplicationStatus: string
             self::Withdrawn => 'muted',
         };
     }
+
+    public function allowsMessaging(): bool
+    {
+        return ! in_array($this, [self::Pending, self::Rejected], true);
+    }
 }

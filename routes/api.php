@@ -56,8 +56,16 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             ->name('applications.store');
         Route::patch('applications/{application}', [V1\ApplicationController::class, 'update'])->name('applications.update');
 
+        Route::get('conversations', [V1\ConversationController::class, 'index'])->name('conversations.index');
+        Route::get('conversations/{conversation}', [V1\ConversationController::class, 'show'])->name('conversations.show');
+        Route::post('conversations/{conversation}/messages', [V1\ConversationController::class, 'store'])
+            ->middleware('throttle:30,1')
+            ->name('conversations.messages.store');
+
         // FR-PROP-001 to FR-PROP-005 - owner only.
         Route::middleware('role:owner')->group(function () {
+            Route::get('renters', [V1\RenterController::class, 'index'])->name('renters.index');
+
             Route::get('properties', [V1\PropertyController::class, 'index'])->name('properties.index');
             Route::post('properties', [V1\PropertyController::class, 'store'])->name('properties.store');
             Route::get('properties/{property}', [V1\PropertyController::class, 'show'])->name('properties.show');

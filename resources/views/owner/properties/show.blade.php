@@ -230,7 +230,7 @@
                                                     {{ $floor->unit_label }}
                                                 </a>
                                             </td>
-                                            <td class="whitespace-nowrap"><x-money :amount="$floor->priceAmount()" />{{ $floor->priceSuffix() }}</td>
+                                            <td class="whitespace-nowrap"><x-property-price :property="$floor" /></td>
                                             <td><x-badge :variant="$floor->status->badge()">{{ $floor->status->label() }}</x-badge></td>
                                             <td><x-badge :variant="$floor->publication_status->badge()">{{ $floor->publication_status->label() }}</x-badge></td>
                                             <td class="tabular-nums">{{ $floor->applications_count }}</td>
@@ -293,7 +293,7 @@
                             {{ $isHouse ? __('Combined rent') : __('Price') }}
                         </dt>
                         <dd class="mt-1 text-sm text-slate-900">
-                            <x-money :amount="$property->priceAmount()" />{{ $property->priceSuffix() }}
+                            <x-property-price :property="$property" />
                             @if ($isHouse)
                                 <span class="block text-xs text-slate-500">{{ __('Added up from the floors above.') }}</span>
                             @endif
@@ -353,7 +353,10 @@
                             <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">{{ __('Amenities') }}</dt>
                             <dd class="mt-2 flex flex-wrap gap-2">
                                 @foreach ($property->amenities as $amenity)
-                                    <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700">{{ $amenity->name }}</span>
+                                    <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700">
+                                        <x-icon :name="$amenity->icon_identifier" class="size-3.5 text-rental-600" />
+                                        {{ $amenity->name }}
+                                    </span>
                                 @endforeach
                             </dd>
                         </div>

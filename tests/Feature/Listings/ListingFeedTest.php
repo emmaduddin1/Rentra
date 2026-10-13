@@ -2,8 +2,12 @@
 
 namespace Tests\Feature\Listings;
 
+use App\Enums\AreaUnit;
+use App\Enums\ListingPurpose;
 use App\Enums\PropertyType;
+use App\Models\Amenity;
 use App\Models\Property;
+use App\Models\PropertyCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -93,6 +97,80 @@ class ListingFeedTest extends TestCase
             ->assertSee('85,000.00')
             ->assertSee('House')
             ->assertSee('A short description');
+    }
+
+    #[Test]
+    public function rent_and_sale_listings_use_their_own_price_labels(): void
+    {
+        $rent = Property::factory()->published()->create([
+            'title' => 'Rental house',
+            'listing_purpose' => ListingPurpose::Rent,
+            'rent_amount' => 85000,
+        ]);
+        $sale = Property::factory()->published()->create([
+            'title' => 'Sale apartment',
+            'listing_purpose' => ListingPurpose::Sale,
+            'rent_amount' => 0,
+            'sale_price' => 25000000,
+        ]);
+
+        $this->get(route('listings.index', ['listing_purpose' => ListingPurpose::Rent->value]))
+            ->assertOk()
+            ->assertSee($rent->title)
+            ->assertSee('85,000.00')
+            ->assertSee('/ month')
+            ->assertDontSee($sale->title);
+
+        $this->get(route('listings.index', ['listing_purpose' => ListingPurpose::Sale->value]))
+            ->assertOk()
+            ->assertSee($sale->title)
+            ->assertSee('25,000,000.00')
+            ->assertDontSee('/ month')
+            ->assertDontSee($rent->title);
+    }
+
+    #[Test]
+    public function listings_filter_by_category_and_structured_size(): void
+    {
+        $house = PropertyCategory::where('slug', 'house')->firstOrFail();
+        $office = PropertyCategory::where('slug', 'office')->firstOrFail();
+
+        Property::factory()->published()->create([
+            'title' => 'Compact office',
+            'category_id' => $office->id,
+            'area_value' => 800,
+            'area_unit' => AreaUnit::SquareFeet,
+        ]);
+        Property::factory()->published()->create([
+            'title' => 'Large house',
+            'category_id' => $house->id,
+            'area_value' => 500,
+            'area_unit' => AreaUnit::SquareYards,
+        ]);
+
+        $this->get(route('listings.index', [
+            'category_id' => $office->id,
+            'min_area' => 700,
+            'max_area' => 900,
+            'area_unit' => AreaUnit::SquareFeet->value,
+        ]))
+            ->assertOk()
+            ->assertSee('Compact office')
+            ->assertSee('800 sq ft')
+            ->assertDontSee('Large house');
+    }
+
+    #[Test]
+    public function the_detail_page_shows_amenities_with_icons(): void
+    {
+        $listing = Property::factory()->published()->create(['title' => 'Amenity rich']);
+        $amenity = Amenity::where('slug', 'parking')->firstOrFail();
+        $listing->amenities()->sync([$amenity->id]);
+
+        $this->get(route('listings.show', $listing))
+            ->assertOk()
+            ->assertSee('Parking')
+            ->assertSee('Amenities');
     }
 
     #[Test]

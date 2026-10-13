@@ -82,10 +82,7 @@
                 </div>
 
                 <p class="mt-4 text-2xl font-semibold text-slate-900">
-                    <x-money :amount="$property->priceAmount()" />
-                    @if ($property->priceSuffix())
-                        <span class="text-base font-normal text-slate-500">{{ $property->priceSuffix() }}</span>
-                    @endif
+                    <x-property-price :property="$property" />
                 </p>
 
                 <dl class="mt-6 grid gap-4 sm:grid-cols-2">
@@ -119,26 +116,18 @@
                     </div>
                 @endif
 
-                @if ($property->visibleSpecifications())
-                    <div class="mt-6">
-                        <h2 class="text-sm font-semibold text-slate-900">{{ __('Property details') }}</h2>
-                        <dl class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                            @foreach ($property->visibleSpecifications() as $key => $spec)
-                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                                    <dt class="sr-only">{{ str_replace('_', ' ', $key) }}</dt>
-                                    <dd class="text-sm font-medium text-slate-700">{{ $spec }}</dd>
-                                </div>
-                            @endforeach
-                        </dl>
-                    </div>
-                @endif
+                <div class="mt-6">
+                    <h2 class="text-sm font-semibold text-slate-900">{{ __('Property details') }}</h2>
+                    <x-property-spec-tags :property="$property" class="mt-3" />
+                </div>
 
                 @if ($property->amenities->isNotEmpty())
                     <div class="mt-6">
                         <h2 class="text-sm font-semibold text-slate-900">{{ __('Amenities') }}</h2>
                         <ul class="mt-3 flex flex-wrap gap-2">
                             @foreach ($property->amenities as $amenity)
-                                <li class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700">
+                                <li class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700">
+                                    <x-icon :name="$amenity->icon_identifier" class="size-4 text-rental-600" />
                                     {{ $amenity->name }}
                                 </li>
                             @endforeach
@@ -256,7 +245,7 @@
                                 </span>
                                 <span class="min-w-0">
                                     <a href="{{ route('listings.show', $floor) }}" class="block truncate text-sm font-medium text-slate-900 hover:underline">{{ $floor->unit_label }}</a>
-                                    <span class="text-xs text-slate-500"><x-money :amount="$floor->priceAmount()" />{{ $floor->priceSuffix() }}</span>
+                                    <span class="text-xs text-slate-500"><x-property-price :property="$floor" /></span>
                                 </span>
                             </li>
                         @endforeach
@@ -277,7 +266,7 @@
                                 </span>
                                 <span class="min-w-0">
                                     <a href="{{ route('listings.show', $other) }}" class="block truncate text-sm font-medium text-slate-900 hover:underline">{{ $other->title }}</a>
-                                    <span class="text-xs text-slate-500"><x-money :amount="$other->priceAmount()" />{{ $other->priceSuffix() }}</span>
+                                    <span class="text-xs text-slate-500"><x-property-price :property="$other" /></span>
                                 </span>
                             </li>
                         @endforeach

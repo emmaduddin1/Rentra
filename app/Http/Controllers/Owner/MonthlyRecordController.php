@@ -30,7 +30,10 @@ class MonthlyRecordController extends Controller
         $owner = $request->user();
 
         $filters = $request->validate([
-            'status' => ['nullable', Rule::enum(MonthlyRecordStatus::class)],
+            'status' => ['nullable', Rule::in([
+                'all',
+                ...array_map(fn (MonthlyRecordStatus $status) => $status->value, MonthlyRecordStatus::cases()),
+            ])],
             'property_id' => ['nullable', 'integer'],
             'year' => ['nullable', 'integer', 'min:2000', 'max:2100'],
         ]);

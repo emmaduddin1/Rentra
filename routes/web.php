@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ListingController;
@@ -83,8 +84,16 @@ Route::middleware('auth')->group(function () {
 
     // FR-NOT-001/003 - in-app notifications for every role.
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('notifications/count', [NotificationController::class, 'count'])->name('notifications.count');
     Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+
+    Route::get('messages', [ConversationController::class, 'index'])->name('conversations.index');
+    Route::get('messages/{conversation}/updates', [ConversationController::class, 'messages'])->name('conversations.messages.index');
+    Route::get('messages/{conversation}', [ConversationController::class, 'show'])->name('conversations.show');
+    Route::post('messages/{conversation}', [ConversationController::class, 'store'])
+        ->middleware('throttle:30,1')
+        ->name('conversations.messages.store');
 
     Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('profile', [ProfileController::class, 'update'])->name('profile.update');

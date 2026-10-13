@@ -1,7 +1,7 @@
 <x-layouts.app :title="__('Profile')" :heading="__('Profile')" :subheading="__('Update your account details and password.')">
     <div class="grid gap-6 lg:grid-cols-2">
         {{-- FR-AUTH-005 --}}
-        <section class="card p-6">
+        <section id="password" class="card p-6 scroll-mt-24">
             <h2 class="text-sm font-semibold text-slate-900">{{ __('Account details') }}</h2>
 
             <form method="POST" action="{{ route('profile.update') }}" enctype="multipart/form-data" class="mt-4 space-y-4">

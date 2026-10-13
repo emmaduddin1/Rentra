@@ -2,10 +2,14 @@
 
 namespace Tests\Feature\Owner;
 
+use App\Enums\AreaUnit;
+use App\Enums\ListingPurpose;
 use App\Enums\PropertyStatus;
 use App\Enums\PropertyType;
 use App\Enums\PublicationStatus;
+use App\Models\Amenity;
 use App\Models\Property;
+use App\Models\PropertyCategory;
 use App\Models\PropertyImage;
 use App\Models\Tenancy;
 use App\Models\User;
@@ -94,6 +98,38 @@ class PropertyManagementTest extends TestCase
         $this->assertFalse($property->images->last()->is_primary);
 
         Storage::disk('public')->assertExists($property->images->first()->file_path);
+    }
+
+    #[Test]
+    public function an_owner_creates_a_sale_listing_with_category_specs_size_and_amenities(): void
+    {
+        $owner = User::factory()->owner()->create();
+        $category = PropertyCategory::where('slug', 'flat-apartment')->firstOrFail();
+        $amenity = Amenity::where('slug', 'parking')->firstOrFail();
+
+        $this->actingAs($owner)
+            ->post(route('owner.properties.store'), $this->validPayload([
+                'listing_purpose' => ListingPurpose::Sale->value,
+                'category_id' => $category->id,
+                'rent_amount' => null,
+                'sale_price' => '25000000.00',
+                'area_value' => '1200',
+                'area_unit' => AreaUnit::SquareFeet->value,
+                'bedrooms' => 2,
+                'bathrooms' => 2,
+                'amenities' => [$amenity->id],
+            ]))
+            ->assertRedirect();
+
+        $property = Property::firstOrFail();
+
+        $this->assertSame(ListingPurpose::Sale, $property->listing_purpose);
+        $this->assertSame('25000000.00', $property->sale_price);
+        $this->assertSame('0.00', $property->rent_amount);
+        $this->assertSame($category->id, $property->category_id);
+        $this->assertSame('1200.00', $property->area_value);
+        $this->assertSame(2, $property->bedrooms);
+        $this->assertTrue($property->amenities()->whereKey($amenity->id)->exists());
     }
 
     #[Test]

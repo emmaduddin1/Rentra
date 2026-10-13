@@ -162,10 +162,7 @@
 
                         <div class="flex flex-1 flex-col p-4">
                             <p class="text-xl font-black tracking-tight text-rental-600">
-                                <x-money :amount="$listing->priceAmount()" />
-                                @if ($listing->priceSuffix())
-                                    <span class="text-sm font-bold text-slate-500">{{ $listing->priceSuffix() }}</span>
-                                @endif
+                                <x-property-price :property="$listing" />
                             </p>
                             <h3 class="mt-2 text-base font-extrabold text-slate-900">
                                 <a href="{{ route('listings.show', $listing) }}" class="outline-none before:absolute before:inset-0 focus-visible:underline">

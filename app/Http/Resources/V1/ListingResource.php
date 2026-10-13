@@ -56,6 +56,7 @@ class ListingResource extends JsonResource
                 'id' => $amenity->id,
                 'name' => $amenity->name,
                 'slug' => $amenity->slug,
+                'icon_identifier' => $amenity->icon_identifier,
             ])->values()),
             'description' => $this->description,
             'published_at' => $this->published_at?->toIso8601String(),

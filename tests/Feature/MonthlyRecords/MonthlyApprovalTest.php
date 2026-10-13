@@ -186,6 +186,23 @@ class MonthlyApprovalTest extends TestCase
     }
 
     #[Test]
+    public function the_owner_can_switch_the_approval_queue_to_all_statuses(): void
+    {
+        $pending = MonthlyRecord::factory()->pending()->create();
+        $approved = MonthlyRecord::factory()
+            ->approved()
+            ->for($pending->tenancy, 'tenancy')
+            ->create(['period_month' => now()->subMonth()->startOfMonth()]);
+
+        $this->actingAs($pending->tenancy->property->owner)
+            ->get(route('owner.monthly-records.index', ['status' => 'all']))
+            ->assertOk()
+            ->assertSee($pending->tenancy->renter->name)
+            ->assertSee($pending->period_month->format('M Y'))
+            ->assertSee($approved->period_month->format('M Y'));
+    }
+
+    #[Test]
     public function approving_twice_is_idempotent(): void
     {
         // SRS 12 - "Approval actions must be idempotent or reject invalid state

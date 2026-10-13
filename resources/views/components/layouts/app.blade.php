@@ -35,11 +35,11 @@
             aria-hidden="true"
         ></label>
 
-        <div class="flex min-h-dvh flex-col lg:pl-64">
-            <x-nav.topbar />
+        <div class="flex min-h-dvh flex-col transition-[padding] duration-200 lg:pl-64" data-app-shell>
+            <x-nav.authenticated-app-bar :heading="$heading" :subheading="$subheading" :back="$back" />
 
             <main id="main" class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
-                <x-page-header :heading="$heading" :subheading="$subheading" :back="$back" :actions="$actions" />
+                <x-page-header :actions="$actions" />
 
                 <x-flash />
 

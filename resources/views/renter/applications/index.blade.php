@@ -47,6 +47,17 @@
                                 </p>
                             @endif
 
+                            @if ($application->conversation)
+                                <div class="mt-3">
+                                    <a href="{{ route('conversations.show', $application->conversation) }}" class="btn btn-secondary btn-sm">
+                                        <x-icon name="message" class="btn-icon" />
+                                        {{ $application->conversation->is_locked ? __('View messages') : __('Message owner') }}
+                                    </a>
+                                </div>
+                            @elseif (! $application->canMessage())
+                                <p class="mt-3 text-xs text-slate-500">{{ __('Messages open after the owner reviews your application.') }}</p>
+                            @endif
+
                             @if ($application->status === \App\Enums\ApplicationStatus::Pending)
                                 <form method="POST" action="{{ route('renter.applications.destroy', $application) }}" class="mt-3">
                                     @csrf

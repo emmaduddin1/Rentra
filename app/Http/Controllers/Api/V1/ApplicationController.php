@@ -31,7 +31,7 @@ class ApplicationController extends Controller
             // sees their own, and nobody sees anything else.
             ->when($user->isOwner(), fn ($query) => $query->forOwner($user))
             ->when($user->isRenter(), fn ($query) => $query->forRenter($user))
-            ->with(['property.primaryImage', 'renter'])
+            ->with(['conversation', 'property.primaryImage', 'renter'])
             ->latest('submitted_at')
             ->paginate($request->integer('per_page') ?: config('rental.pagination.per_page'));
 
@@ -42,7 +42,7 @@ class ApplicationController extends Controller
     {
         Gate::authorize('view', $application);
 
-        return new ApplicationResource($application->load(['property.primaryImage', 'renter']));
+        return new ApplicationResource($application->load(['conversation', 'property.primaryImage', 'renter']));
     }
 
     public function store(
@@ -59,7 +59,7 @@ class ApplicationController extends Controller
             data: $request->validated(),
         );
 
-        return new ApplicationResource($application->load('property'));
+        return new ApplicationResource($application->load(['conversation', 'property']));
     }
 
     /**
@@ -79,6 +79,6 @@ class ApplicationController extends Controller
             note: $request->validated('owner_note'),
         );
 
-        return new ApplicationResource($application->fresh()->load(['property', 'renter']));
+        return new ApplicationResource($application->fresh()->load(['conversation', 'property', 'renter']));
     }
 }

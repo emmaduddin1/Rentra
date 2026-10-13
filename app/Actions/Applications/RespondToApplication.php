@@ -2,6 +2,7 @@
 
 namespace App\Actions\Applications;
 
+use App\Actions\Messaging\EnsureApplicationConversation;
 use App\Enums\ApplicationStatus;
 use App\Models\Application;
 use App\Models\User;
@@ -19,6 +20,7 @@ class RespondToApplication
     public function __construct(
         private readonly Notifier $notifier,
         private readonly AuditLogger $auditLogger,
+        private readonly EnsureApplicationConversation $ensureApplicationConversation,
     ) {}
 
     public function handle(Application $application, User $owner, ApplicationStatus $status, ?string $note = null): Application
@@ -45,6 +47,8 @@ class RespondToApplication
                 'responded_by' => $owner->id,
                 'responded_at' => now(),
             ])->save();
+
+            $this->ensureApplicationConversation->handle($application);
 
             $this->notifier->send(
                 recipient: $application->renter,

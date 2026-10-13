@@ -7,6 +7,7 @@
         $categoryOptions = collect($categories)->mapWithKeys(fn ($category) => [
             $category->id => $category->group->label().' · '.$category->name,
         ])->all();
+        $areaUnitOptions = collect($areaUnits)->mapWithKeys(fn ($unit) => [$unit->value => $unit->label()])->all();
     @endphp
 
     <div class="mb-4 segmented">
@@ -46,6 +47,23 @@
 
             <x-form.field :label="__('Max price')" name="max_price">
                 <x-form.input name="max_price" type="number" min="0" step="0.01" :value="$filters['max_price'] ?? ''" />
+            </x-form.field>
+
+            <x-form.field :label="__('Min size')" name="min_area">
+                <x-form.input name="min_area" type="number" min="0" step="0.01" :value="$filters['min_area'] ?? ''" />
+            </x-form.field>
+
+            <x-form.field :label="__('Max size')" name="max_area">
+                <x-form.input name="max_area" type="number" min="0" step="0.01" :value="$filters['max_area'] ?? ''" />
+            </x-form.field>
+
+            <x-form.field :label="__('Size unit')" name="area_unit">
+                <x-form.select
+                    name="area_unit"
+                    :placeholder="__('Any unit')"
+                    :selected="$filters['area_unit'] ?? null"
+                    :options="$areaUnitOptions"
+                />
             </x-form.field>
         </div>
 

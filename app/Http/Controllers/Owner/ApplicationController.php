@@ -29,7 +29,7 @@ class ApplicationController extends Controller
         ]);
 
         $applications = Application::forOwner($request->user())
-            ->with(['property', 'renter'])
+            ->with(['conversation', 'property', 'renter'])
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when(
                 $filters['property_id'] ?? null,
@@ -51,7 +51,7 @@ class ApplicationController extends Controller
     {
         Gate::authorize('view', $application);
 
-        $application->load(['property.primaryImage', 'renter', 'responder']);
+        $application->load(['conversation', 'property.primaryImage', 'renter', 'responder']);
 
         return view('owner.applications.show', [
             'application' => $application,

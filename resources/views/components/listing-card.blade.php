@@ -60,19 +60,10 @@
             <p class="mt-2 line-clamp-2 text-sm text-slate-500">{{ Str::limit($listing->description, 120) }}</p>
         @endif
 
-        @if ($listing->visibleSpecifications())
-            <p class="mt-3 flex flex-wrap gap-x-2 gap-y-1 text-xs font-medium text-slate-500">
-                @foreach (array_slice($listing->visibleSpecifications(), 0, 4) as $spec)
-                    <span>{{ $spec }}</span>
-                @endforeach
-            </p>
-        @endif
+        <x-property-spec-tags :property="$listing" :limit="4" class="mt-3" />
 
-        <p class="mt-4 pt-1 text-lg font-semibold text-rental-600">
-            <x-money :amount="$listing->priceAmount()" />
-            @if ($listing->priceSuffix())
-                <span class="text-sm font-normal text-slate-500">{{ $listing->priceSuffix() }}</span>
-            @endif
+        <p class="mt-4 pt-1 text-rental-600">
+            <x-property-price :property="$listing" size="lg" />
         </p>
     </div>
 </article>

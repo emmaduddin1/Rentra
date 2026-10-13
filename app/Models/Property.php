@@ -10,6 +10,7 @@ use App\Enums\PropertyType;
 use App\Enums\PublicationStatus;
 use App\Enums\RentalMode;
 use App\Enums\TenancyStatus;
+use App\Support\PropertyPrice;
 use Database\Factories\PropertyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -251,12 +252,17 @@ class Property extends Model
 
     public function priceAmount(): string
     {
-        return (string) ($this->isForSale() ? $this->sale_price : $this->rent_amount);
+        return PropertyPrice::for($this)->amount;
     }
 
     public function priceSuffix(): ?string
     {
-        return $this->isForRent() ? __(' / month') : null;
+        return PropertyPrice::for($this)->suffix;
+    }
+
+    public function price(): PropertyPrice
+    {
+        return PropertyPrice::for($this);
     }
 
     public function purposeBadgeLabel(): string

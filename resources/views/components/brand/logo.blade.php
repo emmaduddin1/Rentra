@@ -15,5 +15,5 @@
 <img
     src="{{ $source }}"
     alt="{{ $label }}"
-    {{ $attributes->class('block h-auto w-auto') }}
+    {{ $attributes->class('block shrink-0') }}
 >

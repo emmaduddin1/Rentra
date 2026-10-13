@@ -31,17 +31,33 @@ class PhaseOneDefaults
     }
 
     /**
-     * @return list<array{name: string, slug: string, sort_order: int}>
+     * @return list<array{name: string, slug: string, icon_identifier: string, sort_order: int}>
      */
     public static function amenities(): array
     {
-        return collect([
-            'Electricity', 'Gas', 'Water', 'Parking', 'Security', 'CCTV', 'Lift', 'Generator',
-            'Solar', 'Air conditioning', 'Furnished', 'Internet', 'Gym', 'Swimming pool',
-            'Garden', 'Servant quarter',
-        ])->values()->map(fn (string $name, int $index) => [
+        $icons = [
+            'Electricity' => 'bolt',
+            'Gas' => 'flame',
+            'Water' => 'droplet',
+            'Parking' => 'car',
+            'Security' => 'shield',
+            'CCTV' => 'camera',
+            'Lift' => 'arrow-up-down',
+            'Generator' => 'zap',
+            'Solar' => 'sun',
+            'Air conditioning' => 'snowflake',
+            'Furnished' => 'sofa',
+            'Internet' => 'wifi',
+            'Gym' => 'dumbbell',
+            'Swimming pool' => 'waves',
+            'Garden' => 'leaf',
+            'Servant quarter' => 'home',
+        ];
+
+        return collect(array_keys($icons))->values()->map(fn (string $name, int $index) => [
             'name' => $name,
             'slug' => str($name)->slug()->toString(),
+            'icon_identifier' => $icons[$name],
             'sort_order' => ($index + 1) * 10,
         ])->all();
     }

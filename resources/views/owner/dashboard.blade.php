@@ -96,7 +96,7 @@
                                     {{ $property->title }}
                                 </a>
                                 <span class="block truncate text-xs text-slate-500">
-                                    {{ $property->purposeBadgeLabel() }} · {{ $property->area }} · <x-money :amount="$property->priceAmount()" />{{ $property->priceSuffix() }}
+                                    {{ $property->purposeBadgeLabel() }} · {{ $property->area }} · <x-property-price :property="$property" />
                                 </span>
                             </span>
                             <span class="flex flex-wrap justify-end gap-1">
