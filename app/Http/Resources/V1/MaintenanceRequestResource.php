@@ -26,6 +26,16 @@ class MaintenanceRequestResource extends JsonResource
             'status' => $this->status->value,
             'status_label' => $this->status->label(),
             'is_open' => $this->isOpen(),
+            'amount' => (string) $this->amount,
+            'paid_by' => $this->paid_by?->value,
+            'paid_by_label' => $this->paid_by?->label(),
+            'responsible_party' => $this->responsible_party?->value,
+            'reimbursement_required' => $this->reimbursement_required,
+            'reimbursement_recipient' => $this->reimbursement_recipient,
+            'reimbursement_amount' => (string) $this->reimbursement_amount,
+            'reimbursement_status' => $this->reimbursement_status->value,
+            'reimbursement_status_label' => $this->reimbursement_status->label(),
+            'expense_notes' => $this->expense_notes,
             // SRS 12 - the client can render only the transitions that are legal.
             'allowed_transitions' => array_map(
                 fn ($status) => $status->value,
@@ -38,7 +48,7 @@ class MaintenanceRequestResource extends JsonResource
                 'id' => $attachment->id,
                 'original_name' => $attachment->original_name,
                 'mime_type' => $attachment->mime_type,
-                'download_url' => route('maintenance-attachments.download', $attachment),
+                'download_url' => route($request->is('api/*') ? 'api.v1.maintenance-attachments.download' : 'maintenance-attachments.download', $attachment),
             ])),
             'timeline' => $this->whenLoaded('statusHistory', fn () => $this->statusHistory->map(fn ($entry) => [
                 'id' => $entry->id,

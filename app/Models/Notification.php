@@ -24,6 +24,8 @@ class Notification extends Model
         return [
             'data_json' => 'array',
             'read_at' => 'datetime',
+            'push_pending' => 'boolean',
+            'push_queued_at' => 'datetime',
         ];
     }
 

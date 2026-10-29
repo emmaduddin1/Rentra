@@ -13,7 +13,7 @@
     </div>
 @endif
 
-@if ($errors->any())
+@if (isset($errors) && $errors->any())
     {{-- SRS 12 - a form-wide summary, with the per-field messages still inline. --}}
     <div role="alert" class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
         <p class="flex items-center gap-2 font-medium">

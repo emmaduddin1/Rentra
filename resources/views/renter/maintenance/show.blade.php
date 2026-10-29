@@ -59,6 +59,10 @@
                 <h2 class="text-sm font-semibold text-slate-900">{{ __('Details') }}</h2>
 
                 <dl class="mt-3 space-y-2 text-sm">
+                    <div class="flex justify-between gap-2"><dt class="text-slate-500">{{ __('Maintenance expense') }}</dt><dd><x-money :amount="$request->amount" /></dd></div>
+                    <div class="flex justify-between gap-2"><dt class="text-slate-500">{{ __('Paid by') }}</dt><dd>{{ $request->paid_by?->label() ?? __('Not recorded') }}</dd></div>
+                    <div class="flex justify-between gap-2"><dt class="text-slate-500">{{ __('Responsible party') }}</dt><dd>{{ $request->responsible_party?->label() ?? __('Not decided') }}</dd></div>
+                    <div class="flex justify-between gap-2"><dt class="text-slate-500">{{ __('Reimbursement') }}</dt><dd>{{ $request->reimbursement_required ? ucfirst((string) $request->reimbursement_recipient).' · '.\App\Support\Money::format($request->reimbursement_amount) : __('Not required') }}</dd></div>
                     <div class="flex justify-between gap-2">
                         <dt class="text-slate-500">{{ __('Status') }}</dt>
                         <dd><x-badge :variant="$request->status->badge()">{{ $request->status->label() }}</x-badge></dd>

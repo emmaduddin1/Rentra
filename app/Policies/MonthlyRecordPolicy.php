@@ -27,7 +27,10 @@ class MonthlyRecordPolicy
      */
     public function create(User $user, Tenancy $tenancy): bool
     {
-        return $user->isRenter() && $tenancy->isRentedBy($user) && $tenancy->isActive();
+        return $tenancy->isAvailableInMarketplace()
+            && $user->isRenter()
+            && $tenancy->isRentedBy($user)
+            && $tenancy->isActive();
     }
 
     /**
@@ -73,13 +76,22 @@ class MonthlyRecordPolicy
         return $this->view($user, $record);
     }
 
+    public function recordPayment(User $user, MonthlyRecord $record): bool
+    {
+        return $this->isOwnerOfRecord($user, $record);
+    }
+
     protected function isOwnerOfRecord(User $user, MonthlyRecord $record): bool
     {
-        return $user->isOwner() && $record->tenancy?->ownerId() === $user->id;
+        return $record->tenancy?->isAvailableInMarketplace() === true
+            && $user->isOwner()
+            && $record->tenancy->ownerId() === $user->id;
     }
 
     protected function isRenterOfRecord(User $user, MonthlyRecord $record): bool
     {
-        return $user->isRenter() && $record->tenancy?->renter_id === $user->id;
+        return $record->tenancy?->isAvailableInMarketplace() === true
+            && $user->isRenter()
+            && $record->tenancy->renter_id === $user->id;
     }
 }

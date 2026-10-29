@@ -8,6 +8,7 @@ use App\Enums\PropertyType;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\ListingResource;
 use App\Models\Property;
+use App\Support\Features;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\Rule;
@@ -36,7 +37,9 @@ class ListingController extends Controller
             'max_rent' => ['nullable', 'numeric', 'min:0', 'gte:min_rent'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
-        $filters['listing_purpose'] ??= ListingPurpose::Rent->value;
+        $filters['listing_purpose'] = Features::propertySales()
+            ? ($filters['listing_purpose'] ?? ListingPurpose::Rent->value)
+            : ListingPurpose::Rent->value;
         $filters['min_price'] ??= $filters['min_rent'] ?? null;
         $filters['max_price'] ??= $filters['max_rent'] ?? null;
 
@@ -68,6 +71,8 @@ class ListingController extends Controller
 
     public function show(Request $request, Property $property): ListingResource
     {
+        abort_unless($property->isAvailableInMarketplace(), 404);
+
         // SRS 12 - a hidden listing does not exist for anyone but its owner.
         abort_unless(
             $property->isPubliclyVisible() || $request->user()?->id === $property->owner_id,

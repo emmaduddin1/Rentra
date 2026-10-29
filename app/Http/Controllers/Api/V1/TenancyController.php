@@ -2,19 +2,27 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Properties\PublishProperty;
 use App\Actions\Renters\CreateRenterAccount;
 use App\Actions\Tenancies\AssignRenter;
 use App\Actions\Tenancies\EndTenancy;
+use App\Actions\Tenancies\RequestTenancyTermination;
+use App\Actions\Tenancies\RespondToInvitation;
+use App\Actions\Tenancies\RespondToTermination;
 use App\Actions\Tenancies\UpdateTenancy;
 use App\Enums\PropertyStatus;
+use App\Enums\TenancyStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenancy\EndTenancyRequest;
+use App\Http\Requests\Tenancy\RequestTerminationRequest;
+use App\Http\Requests\Tenancy\RespondTerminationRequest;
 use App\Http\Requests\Tenancy\StoreTenancyRequest;
 use App\Http\Requests\Tenancy\UpdateTenancyRequest;
 use App\Http\Resources\V1\TenancyResource;
 use App\Models\Property;
 use App\Models\Tenancy;
+use App\Models\TenancyTerminationRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -51,7 +59,37 @@ class TenancyController extends Controller
     {
         Gate::authorize('view', $tenancy);
 
-        return new TenancyResource($tenancy->load(['property', 'renter']));
+        return new TenancyResource($tenancy->load(['property', 'renter', 'statusHistory.changer', 'terminationRequests.requester', 'terminationRequests.responder']));
+    }
+
+    public function active(Request $request): AnonymousResourceCollection
+    {
+        Gate::authorize('viewAny', Tenancy::class);
+
+        return TenancyResource::collection($this->roleScoped($request)->active()->with(['property', 'renter'])->paginate($request->integer('per_page') ?: 15));
+    }
+
+    public function invitations(Request $request): AnonymousResourceCollection
+    {
+        Gate::authorize('viewAny', Tenancy::class);
+
+        return TenancyResource::collection($this->roleScoped($request)->where('status', TenancyStatus::Invited->value)->with(['property', 'renter'])->latest()->paginate($request->integer('per_page') ?: 15));
+    }
+
+    public function history(Request $request): AnonymousResourceCollection
+    {
+        Gate::authorize('viewAny', Tenancy::class);
+
+        return TenancyResource::collection($this->roleScoped($request)->whereIn('status', collect(TenancyStatus::cases())->filter(fn ($status) => $status->isHistorical())->map->value)->with(['property', 'renter'])->latest()->paginate($request->integer('per_page') ?: 15));
+    }
+
+    private function roleScoped(Request $request)
+    {
+        $user = $request->user();
+
+        return Tenancy::query()
+            ->when($user->isOwner(), fn ($query) => $query->forOwner($user))
+            ->when($user->isRenter(), fn ($query) => $query->forRenter($user));
     }
 
     /**
@@ -63,7 +101,9 @@ class TenancyController extends Controller
         CreateRenterAccount $createRenterAccount,
     ): TenancyResource {
         $owner = $request->user();
-        $property = Property::ownedBy($owner)->findOrFail($request->validated('property_id'));
+        $property = Property::ownedBy($owner)
+            ->availableInMarketplace()
+            ->findOrFail($request->validated('property_id'));
 
         Gate::authorize('assignRenter', $property);
 
@@ -123,21 +163,62 @@ class TenancyController extends Controller
         return new TenancyResource($tenancy->fresh()->load(['property', 'renter']));
     }
 
-    /**
-     * FR-TEN-005.
-     */
-    public function end(EndTenancyRequest $request, Tenancy $tenancy, EndTenancy $endTenancy): TenancyResource
+    public function accept(Request $request, Tenancy $tenancy, RespondToInvitation $action): TenancyResource
     {
+        Gate::authorize('acceptInvitation', $tenancy);
+
+        return new TenancyResource($action->accept($tenancy, $request->user())->load(['property', 'renter', 'statusHistory.changer']));
+    }
+
+    public function reject(Request $request, Tenancy $tenancy, RespondToInvitation $action): TenancyResource
+    {
+        Gate::authorize('rejectInvitation', $tenancy);
+        $reason = $request->validate(['reason' => ['nullable', 'string', 'max:1000']])['reason'] ?? null;
+
+        return new TenancyResource($action->reject($tenancy, $request->user(), $reason)->load(['property', 'renter', 'statusHistory.changer']));
+    }
+
+    public function withdraw(Request $request, Tenancy $tenancy, RespondToInvitation $action): TenancyResource
+    {
+        Gate::authorize('withdrawInvitation', $tenancy);
+        $reason = $request->validate(['reason' => ['nullable', 'string', 'max:1000']])['reason'] ?? null;
+
+        return new TenancyResource($action->withdraw($tenancy, $request->user(), $reason)->load(['property', 'renter', 'statusHistory.changer']));
+    }
+
+    public function end(
+        EndTenancyRequest $request,
+        Tenancy $tenancy,
+        EndTenancy $endTenancy,
+        PublishProperty $publishProperty,
+    ): TenancyResource {
         Gate::authorize('end', $tenancy);
 
         $endTenancy->handle(
-            tenancy: $tenancy,
-            owner: $request->user(),
-            endDate: $request->validated('end_date'),
-            propertyStatus: PropertyStatus::from($request->validated('property_status')),
-            reason: $request->validated('reason'),
+            $tenancy,
+            $request->user(),
+            today(),
+            PropertyStatus::Available,
+            $request->validated('reason'),
         );
+        $publishProperty->handle($tenancy->property->fresh(), $request->validated('next_step') === 'publish');
 
-        return new TenancyResource($tenancy->fresh()->load(['property', 'renter']));
+        return new TenancyResource($tenancy->fresh()->load(['property', 'renter', 'statusHistory.changer']));
+    }
+
+    public function requestTermination(RequestTerminationRequest $request, Tenancy $tenancy, RequestTenancyTermination $action): TenancyResource
+    {
+        Gate::authorize('requestTermination', $tenancy);
+        $action->handle($tenancy, $request->user(), $request->validated());
+
+        return new TenancyResource($tenancy->fresh()->load(['property', 'renter', 'terminationRequests.requester']));
+    }
+
+    public function respondTermination(RespondTerminationRequest $request, TenancyTerminationRequest $termination, RespondToTermination $action): TenancyResource
+    {
+        Gate::authorize('respondTermination', [Tenancy::class, $termination]);
+        $action->handle($termination, $request->user(), $request->validated());
+
+        return new TenancyResource($termination->tenancy->fresh()->load(['property', 'renter', 'terminationRequests.requester', 'terminationRequests.responder']));
     }
 }

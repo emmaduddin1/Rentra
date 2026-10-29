@@ -23,6 +23,7 @@ class FavoriteController extends Controller
         return view('renter.favorites.index', [
             'listings' => $request->user()
                 ->favoriteProperties()
+                ->availableInMarketplace()
                 ->with('primaryImage')
                 ->orderByDesc('favorites.created_at')
                 ->paginate(config('rental.listings.per_page')),
@@ -31,6 +32,8 @@ class FavoriteController extends Controller
 
     public function toggle(Request $request, Property $property, ToggleFavorite $toggleFavorite): RedirectResponse
     {
+        abort_unless($property->isAvailableInMarketplace(), 404);
+
         $renter = $request->user();
 
         $existing = Favorite::query()

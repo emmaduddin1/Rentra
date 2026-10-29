@@ -103,6 +103,8 @@ class PropertyManagementTest extends TestCase
     #[Test]
     public function an_owner_creates_a_sale_listing_with_category_specs_size_and_amenities(): void
     {
+        config(['features.property_sales' => true]);
+
         $owner = User::factory()->owner()->create();
         $category = PropertyCategory::where('slug', 'flat-apartment')->firstOrFail();
         $amenity = Amenity::where('slug', 'parking')->firstOrFail();

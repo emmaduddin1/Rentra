@@ -26,14 +26,16 @@
                 </x-form.field>
             </div>
 
-            <x-form.field :label="__('Purpose')" name="listing_purpose">
-                <x-form.select
-                    name="listing_purpose"
-                    :placeholder="__('Any')"
-                    :selected="$filters['listing_purpose'] ?? null"
-                    :options="collect($purposes)->mapWithKeys(fn ($purpose) => [$purpose->value => $purpose->label()])->all()"
-                />
-            </x-form.field>
+            @if ($salesEnabled)
+                <x-form.field :label="__('Purpose')" name="listing_purpose">
+                    <x-form.select
+                        name="listing_purpose"
+                        :placeholder="__('Any')"
+                        :selected="$filters['listing_purpose'] ?? null"
+                        :options="collect($purposes)->mapWithKeys(fn ($purpose) => [$purpose->value => $purpose->label()])->all()"
+                    />
+                </x-form.field>
+            @endif
 
             <x-form.field :label="__('Category')" name="category_id">
                 <x-form.select
@@ -88,7 +90,7 @@
                         <thead>
                             <tr>
                                 <th scope="col">{{ __('Property') }}</th>
-                                <th scope="col">{{ __('Price') }}</th>
+                                <th scope="col">{{ $salesEnabled ? __('Price') : __('Monthly rent') }}</th>
                                 <th scope="col">{{ __('Status') }}</th>
                                 <th scope="col">{{ __('Publication') }}</th>
                                 <th scope="col">{{ __('Applications') }}</th>

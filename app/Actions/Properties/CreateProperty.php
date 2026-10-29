@@ -2,12 +2,14 @@
 
 namespace App\Actions\Properties;
 
+use App\Enums\ListingPurpose;
 use App\Enums\PublicationStatus;
 use App\Models\Property;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\PropertyImageService;
 use App\Services\PropertyVideoService;
+use App\Support\Features;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
@@ -33,6 +35,11 @@ class CreateProperty
      */
     public function handle(User $owner, array $data, array $amenities = [], array $images = [], array $videos = []): Property
     {
+        if (! Features::propertySales()) {
+            $data['listing_purpose'] = ListingPurpose::Rent->value;
+            $data['sale_price'] = null;
+        }
+
         return DB::transaction(function () use ($owner, $data, $amenities, $images, $videos) {
             $property = new Property($data);
             $property->owner_id = $owner->id;

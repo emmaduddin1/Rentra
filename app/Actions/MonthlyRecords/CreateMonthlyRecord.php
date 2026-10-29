@@ -56,8 +56,9 @@ class CreateMonthlyRecord
                 $record->tenancy_id = $tenancy->id;
                 $record->period_month = $periodMonth;
                 $record->status = MonthlyRecordStatus::Draft;
-                // BR-012 - the total is derived, never posted by the client.
-                $record->total_amount = $record->calculateTotal();
+                $record->fill($tenancy->utilityArrangementsFor($periodMonth));
+                $record->validateUtilityAmounts();
+                $record->syncFinancials();
                 $record->save();
 
                 $this->auditLogger->record(

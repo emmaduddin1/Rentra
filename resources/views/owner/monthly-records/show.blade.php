@@ -76,6 +76,25 @@
                 </div>
             </section>
 
+            <section class="card p-6">
+                <h2 class="text-sm font-semibold text-slate-900">{{ __('Payment status') }}</h2>
+                <p class="mt-2 text-sm font-semibold text-slate-900">{{ $record->payment_status->label() }}</p>
+                <form method="POST" action="{{ route('owner.monthly-records.payments.store', $record) }}" class="mt-4 space-y-3">
+                    @csrf
+                    <x-form.field :label="__('Amount received')" name="amount" required><x-form.input name="amount" type="number" step="0.01" min="0.01" /></x-form.field>
+                    <x-form.field :label="__('Received on')" name="received_on" required><x-form.input name="received_on" type="date" :value="now()->toDateString()" /></x-form.field>
+                    <x-form.field :label="__('Reference')" name="reference"><x-form.input name="reference" /></x-form.field>
+                    <x-form.button type="submit" class="w-full">{{ __('Record payment') }}</x-form.button>
+                </form>
+                @if ($record->payments->isNotEmpty())
+                    <ul class="mt-4 space-y-2 text-xs text-slate-600">
+                        @foreach ($record->payments as $payment)
+                            <li>{{ $payment->received_on->format('d M Y') }} · <x-money :amount="$payment->amount" /> @if($payment->reference) · {{ $payment->reference }} @endif</li>
+                        @endforeach
+                    </ul>
+                @endif
+            </section>
+
             @can('approve', $record)
                 {{-- FR-MON-006/007 - approve, or reject with a reason. --}}
                 <section class="card p-6">

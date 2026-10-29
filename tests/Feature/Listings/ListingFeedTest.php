@@ -102,6 +102,8 @@ class ListingFeedTest extends TestCase
     #[Test]
     public function rent_and_sale_listings_use_their_own_price_labels(): void
     {
+        config(['features.property_sales' => true]);
+
         $rent = Property::factory()->published()->create([
             'title' => 'Rental house',
             'listing_purpose' => ListingPurpose::Rent,

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Enums\PropertyStatus;
 use App\Enums\TenancyStatus;
 use App\Models\Property;
 use App\Models\Tenancy;
@@ -62,7 +63,7 @@ class TenancyApiTest extends TestCase
         // NFR-MNT-004 - a stable, versioned payload.
         $tenancy = Tenancy::factory()->create();
 
-        Sanctum::actingAs($tenancy->renter);
+        Sanctum::actingAs($tenancy->property->owner);
 
         $this->getJson(route('api.v1.tenancies.index'))
             ->assertOk()
@@ -180,17 +181,36 @@ class TenancyApiTest extends TestCase
         // FR-TEN-004 - the record survives the tenancy.
         $tenancy = Tenancy::factory()->create();
 
-        Sanctum::actingAs($tenancy->property->owner);
+        Sanctum::actingAs($tenancy->renter);
 
-        $this->patchJson(route('api.v1.tenancies.end', $tenancy), [
-            'end_date' => now()->toDateString(),
-            'property_status' => 'available',
+        $this->postJson(route('api.v1.tenancies.termination.request', $tenancy), [
+            'proposed_end_date' => now()->toDateString(),
             'reason' => 'Tenant moved out.',
+            'confirmed' => true,
         ])->assertOk();
+        $termination = $tenancy->terminationRequests()->firstOrFail();
+        Sanctum::actingAs($tenancy->property->owner);
+        $this->postJson(route('api.v1.tenancies.termination.respond', $termination), ['decision' => 'accept'])->assertOk();
 
         $this->getJson(route('api.v1.tenancies.show', $tenancy))
             ->assertOk()
             ->assertJsonPath('data.status', TenancyStatus::Ended->value)
             ->assertJsonPath('data.end_reason', 'Tenant moved out.');
+    }
+
+    #[Test]
+    public function owner_can_end_a_tenancy_and_choose_the_next_property_step_over_the_api(): void
+    {
+        $tenancy = Tenancy::factory()->create();
+        Sanctum::actingAs($tenancy->property->owner);
+
+        $this->postJson(route('api.v1.tenancies.end', $tenancy), [
+            'reason' => 'Contract completed.',
+            'next_step' => 'assign',
+            'confirmed' => true,
+        ])->assertOk()
+            ->assertJsonPath('data.status', TenancyStatus::Ended->value)
+            ->assertJsonPath('data.property.status', PropertyStatus::Available->value)
+            ->assertJsonPath('data.property.publication_status', 'draft');
     }
 }

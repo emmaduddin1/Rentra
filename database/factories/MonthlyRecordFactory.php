@@ -3,6 +3,8 @@
 namespace Database\Factories;
 
 use App\Enums\MonthlyRecordStatus;
+use App\Enums\PaymentStatus;
+use App\Enums\UtilityPaymentArrangement;
 use App\Models\MonthlyRecord;
 use App\Models\Tenancy;
 use App\Models\User;
@@ -34,7 +36,17 @@ class MonthlyRecordFactory extends Factory
             'internet_amount' => 0,
             'maintenance_amount' => 0,
             'other_amount' => 0,
-            'total_amount' => $rent + $electricity + $gas,
+            'total_amount' => $rent,
+            'total_receivable' => $rent,
+            'total_received' => 0,
+            'outstanding_receivable' => $rent,
+            'direct_utility_bills' => $electricity + $gas,
+            'payment_status' => PaymentStatus::Unpaid,
+            'electricity_arrangement' => UtilityPaymentArrangement::ProviderDirect,
+            'gas_arrangement' => UtilityPaymentArrangement::ProviderDirect,
+            'water_arrangement' => UtilityPaymentArrangement::ProviderDirect,
+            'internet_arrangement' => UtilityPaymentArrangement::ProviderDirect,
+            'other_utility_arrangement' => UtilityPaymentArrangement::ProviderDirect,
             'status' => MonthlyRecordStatus::Draft,
         ];
     }

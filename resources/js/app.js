@@ -1,10 +1,9 @@
+import './notifications.js';
 // The navigation drawer works with CSS alone; this only adds the polish a
 // keyboard user expects - Escape closes it, and the page never scrolls behind.
 const toggle = document.getElementById('nav-toggle');
 const pageLoader = document.getElementById('page-transition-loader');
 const sidebarCollapse = document.querySelector('[data-sidebar-collapse]');
-const notificationCountLink = document.querySelector('[data-notification-count-url]');
-const notificationCount = document.querySelector('[data-notification-count]');
 
 const showPageLoader = () => {
     if (!pageLoader) {
@@ -105,42 +104,6 @@ if (sidebarCollapse) {
     sync();
 }
 
-if (notificationCountLink && notificationCount) {
-    const setNotificationCount = (count) => {
-        const safeCount = Number.isFinite(count) ? Math.max(0, count) : 0;
-
-        notificationCount.textContent = safeCount > 99 ? '99+' : String(safeCount);
-        notificationCount.classList.toggle('hidden', safeCount < 1);
-    };
-
-    const refreshNotificationCount = async () => {
-        try {
-            const response = await fetch(notificationCountLink.dataset.notificationCountUrl, {
-                headers: { Accept: 'application/json' },
-                credentials: 'same-origin',
-            });
-
-            if (!response.ok) {
-                return;
-            }
-
-            const data = await response.json();
-            setNotificationCount(Number(data.unread_count));
-        } catch {
-            // The server-rendered count remains in place if polling fails.
-        }
-    };
-
-    window.addEventListener('focus', refreshNotificationCount);
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) {
-            refreshNotificationCount();
-        }
-    });
-
-    refreshNotificationCount();
-    window.setInterval(refreshNotificationCount, 30000);
-}
 
 const liveMessages = document.querySelector('[data-live-messages]');
 const liveMessageForm = document.querySelector('[data-live-message-form]');
@@ -228,6 +191,7 @@ if (liveMessages) {
         }
     };
 
+    window.addEventListener('tenantism:notification', refreshMessages);
     window.addEventListener('focus', refreshMessages);
     document.addEventListener('visibilitychange', refreshMessages);
     window.requestAnimationFrame(scrollMessagesToBottom);
@@ -321,4 +285,280 @@ if (listingPurpose) {
 
     listingPurpose.addEventListener('change', sync);
     sync();
+}
+
+// First-login product tour. Every step is anchored to a real control, and the
+// completion flag is stored on the account so it follows the user across devices.
+const productTour = document.querySelector('[data-product-tour]');
+
+if (productTour) {
+    const role = productTour.dataset.role;
+    const highlight = productTour.querySelector('[data-tour-highlight]');
+    const panel = productTour.querySelector('[data-tour-panel]');
+    const title = productTour.querySelector('[data-tour-title]');
+    const description = productTour.querySelector('[data-tour-description]');
+    const progress = productTour.querySelector('[data-tour-progress]');
+    const back = productTour.querySelector('[data-tour-back]');
+    const next = productTour.querySelector('[data-tour-next]');
+    const skip = productTour.querySelector('[data-tour-skip]');
+    const manualTriggers = document.querySelectorAll('[data-start-product-tour]');
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const commonEnd = [
+        {
+            selector: '[data-tour="notifications"]',
+            title: 'Stay informed',
+            description: 'New invitations, applications, payments, maintenance updates, and contract changes appear here.',
+        },
+        {
+            selector: '[data-tour="profile-menu"]',
+            title: 'Your account and help',
+            description: 'Open your profile, settings, this product tour, support, or log out from this menu.',
+        },
+    ];
+    const steps = role === 'owner' ? [
+        {
+            selector: '[data-tour="brand"]',
+            title: 'Welcome to Tenantism',
+            description: 'The Tenantism logo always takes you back to your owner dashboard.',
+        },
+        {
+            selector: '[data-tour="owner-add-property"]',
+            title: 'Add your first property',
+            description: 'Click here to create a property, add its details and images, and prepare it for publishing.',
+        },
+        {
+            selector: '[data-tour="nav-properties"]',
+            title: 'Manage your portfolio',
+            description: 'View drafts, published listings, available properties, and occupied properties in one place.',
+        },
+        {
+            selector: '[data-tour="owner-assign-renter"]',
+            title: 'Invite a renter',
+            description: 'Send a tenancy invitation to an existing renter or create a renter account. A property becomes occupied only after acceptance.',
+        },
+        {
+            selector: '[data-tour="nav-approvals"]',
+            title: 'Review monthly submissions',
+            description: 'Approve rent and utility submissions and keep the financial record accurate.',
+        },
+        {
+            selector: '[data-tour="nav-messages"]',
+            title: 'Talk with renters',
+            description: 'Open application conversations and respond to renter messages here.',
+        },
+        ...commonEnd,
+    ] : [
+        {
+            selector: '[data-tour="brand"]',
+            title: 'Welcome to Tenantism',
+            description: 'The Tenantism logo always takes you back to your renter dashboard.',
+        },
+        {
+            selector: '[data-tour="nav-browse"]',
+            title: 'Find a property',
+            description: 'Browse published properties and filter by location, type, purpose, and budget.',
+        },
+        {
+            selector: '[data-tour="nav-applications"]',
+            title: 'Track your applications',
+            description: 'See every application and its latest owner response from this screen.',
+        },
+        {
+            selector: '[data-tour="nav-tenancy"]',
+            title: 'Review your tenancy',
+            description: 'Accept or reject invitations, view your active contract, request cancellation, and see tenancy history.',
+        },
+        {
+            selector: '[data-tour="nav-monthly"]',
+            title: 'Submit monthly records',
+            description: 'Record rent and utilities and attach payment evidence for owner review.',
+        },
+        {
+            selector: '[data-tour="nav-maintenance"]',
+            title: 'Request maintenance',
+            description: 'Report a repair, add evidence, and follow its progress.',
+        },
+        {
+            selector: '[data-tour="nav-messages"]',
+            title: 'Message an owner',
+            description: 'Continue your property application conversations without leaving Tenantism.',
+        },
+        ...commonEnd,
+    ];
+    let currentStep = 0;
+    let active = false;
+    let restoreCollapsed = false;
+
+    const candidatesFor = (selector) => Array.from(document.querySelectorAll(selector));
+    const visibleCandidate = (selector) => candidatesFor(selector).find((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+
+        return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+    });
+
+    const complete = async () => {
+        try {
+            await fetch(productTour.dataset.completeUrl, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrf,
+                },
+                credentials: 'same-origin',
+            });
+        } catch {
+            // Completion can be retried on a future login if the network is down.
+        }
+    };
+
+    const close = (markComplete = true) => {
+        active = false;
+        productTour.classList.add('hidden');
+        productTour.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('overflow-hidden');
+
+        if (restoreCollapsed) {
+            document.body.classList.add('sidebar-collapsed');
+        }
+
+        if (window.innerWidth < 1024 && toggle?.checked) {
+            toggle.checked = false;
+            toggle.dispatchEvent(new Event('change'));
+        }
+
+        if (markComplete) {
+            complete();
+        }
+    };
+
+    const position = () => {
+        if (!active) {
+            return;
+        }
+
+        const step = steps[currentStep];
+        const target = visibleCandidate(step.selector);
+
+        if (!target) {
+            if (currentStep < steps.length - 1) {
+                currentStep += 1;
+                position();
+            } else {
+                close();
+            }
+            return;
+        }
+
+        target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        const rect = target.getBoundingClientRect();
+        const padding = 6;
+        highlight.style.top = `${Math.max(4, rect.top - padding)}px`;
+        highlight.style.left = `${Math.max(4, rect.left - padding)}px`;
+        highlight.style.width = `${Math.min(window.innerWidth - 8, rect.width + padding * 2)}px`;
+        highlight.style.height = `${Math.min(window.innerHeight - 8, rect.height + padding * 2)}px`;
+
+        title.textContent = step.title;
+        description.textContent = step.description;
+        progress.textContent = `Step ${currentStep + 1} of ${steps.length}`;
+        back.disabled = currentStep === 0;
+        next.textContent = currentStep === steps.length - 1 ? 'Finish' : 'Next';
+
+        const panelRect = panel.getBoundingClientRect();
+        const below = rect.bottom + 16;
+        const top = below + panelRect.height <= window.innerHeight - 16
+            ? below
+            : Math.max(16, rect.top - panelRect.height - 16);
+        const left = Math.min(
+            window.innerWidth - panelRect.width - 16,
+            Math.max(16, rect.left + rect.width / 2 - panelRect.width / 2),
+        );
+        panel.style.top = `${top}px`;
+        panel.style.left = `${left}px`;
+        next.focus({ preventScroll: true });
+    };
+
+    const render = () => {
+        const step = steps[currentStep];
+        const target = candidatesFor(step.selector)[0];
+        const targetsSidebar = target?.closest('[data-sidebar]');
+
+        if (targetsSidebar && window.innerWidth < 1024 && toggle && !toggle.checked) {
+            toggle.checked = true;
+            toggle.dispatchEvent(new Event('change'));
+            window.setTimeout(position, 220);
+            return;
+        }
+
+        if (!targetsSidebar && window.innerWidth < 1024 && toggle?.checked) {
+            toggle.checked = false;
+            toggle.dispatchEvent(new Event('change'));
+            window.setTimeout(position, 220);
+            return;
+        }
+
+        position();
+    };
+
+    const start = () => {
+        if (active) {
+            return;
+        }
+
+        active = true;
+        currentStep = 0;
+        restoreCollapsed = document.body.classList.contains('sidebar-collapsed');
+        document.body.classList.remove('sidebar-collapsed');
+        document.body.classList.add('overflow-hidden');
+        productTour.classList.remove('hidden');
+        productTour.setAttribute('aria-hidden', 'false');
+        document.querySelectorAll('details[open]').forEach((details) => details.removeAttribute('open'));
+        window.setTimeout(render, 80);
+    };
+
+    manualTriggers.forEach((trigger) => trigger.addEventListener('click', () => {
+        const dashboard = new URL(productTour.dataset.dashboardUrl, window.location.href);
+        const current = new URL(window.location.href);
+
+        if (dashboard.pathname !== current.pathname) {
+            window.sessionStorage.setItem('tenantism.startProductTour', 'true');
+            window.location.assign(dashboard.href);
+            return;
+        }
+
+        start();
+    }));
+
+    back.addEventListener('click', () => {
+        if (currentStep > 0) {
+            currentStep -= 1;
+            render();
+        }
+    });
+    next.addEventListener('click', () => {
+        if (currentStep === steps.length - 1) {
+            close();
+            return;
+        }
+
+        currentStep += 1;
+        render();
+    });
+    skip.addEventListener('click', () => close());
+    window.addEventListener('resize', position);
+    document.addEventListener('keydown', (event) => {
+        if (active && event.key === 'Escape') {
+            close();
+        }
+    });
+
+    const manuallyRequested = window.sessionStorage.getItem('tenantism.startProductTour') === 'true';
+    if (manuallyRequested) {
+        window.sessionStorage.removeItem('tenantism.startProductTour');
+    }
+
+    if (productTour.dataset.autoStart === 'true' || manuallyRequested) {
+        window.setTimeout(start, 400);
+    }
 }

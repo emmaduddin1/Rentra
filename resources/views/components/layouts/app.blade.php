@@ -16,6 +16,9 @@
     <link rel="apple-touch-icon" sizes="180x180" href="{{ $versionedAsset('apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ $versionedAsset('site.webmanifest') }}">
     <meta name="theme-color" content="#1A273A">
+    @if (request()->routeIs('home'))
+        <link rel="preload" as="image" type="image/webp" href="{{ $versionedAsset('images/tenantism-hero.webp') }}" fetchpriority="high">
+    @endif
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-dvh bg-slate-50 text-slate-900 antialiased">
@@ -64,6 +67,11 @@
         <footer class="mx-auto w-full max-w-6xl px-4 py-8 text-xs text-slate-400 sm:px-6 lg:px-8">
             &copy; {{ now()->year }} Tenantism
         </footer>
+    @endauth
+
+    @auth
+        <x-product-tour />
+        <x-web-notifications />
     @endauth
 
     <div

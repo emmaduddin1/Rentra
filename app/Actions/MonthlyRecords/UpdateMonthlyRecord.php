@@ -32,8 +32,8 @@ class UpdateMonthlyRecord
 
         return DB::transaction(function () use ($record, $data) {
             $record->fill($data);
-            // BR-012 - recomputed from the category amounts on every write.
-            $record->total_amount = $record->calculateTotal();
+            $record->validateUtilityAmounts();
+            $record->syncFinancials();
             $record->save();
 
             if ($record->wasChanged()) {

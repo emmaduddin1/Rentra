@@ -20,6 +20,7 @@ use App\Models\Property;
 use App\Models\PropertyCategory;
 use App\Services\PropertyImageService;
 use App\Services\PropertyVideoService;
+use App\Support\Features;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -53,8 +54,14 @@ class PropertyController extends Controller
         ]);
 
         $archived = (bool) ($filters['archived'] ?? false);
+        $salesEnabled = Features::propertySales();
+
+        if (! $salesEnabled) {
+            $filters['listing_purpose'] = ListingPurpose::Rent->value;
+        }
 
         $properties = Property::ownedBy($request->user())
+            ->availableInMarketplace()
             // BR-013 - floors are listed under the house that holds them.
             ->topLevel()
             ->when($archived, fn ($query) => $query->onlyTrashed())
@@ -90,7 +97,8 @@ class PropertyController extends Controller
             'archived' => $archived,
             'statuses' => PropertyStatus::cases(),
             'publications' => PublicationStatus::cases(),
-            'purposes' => ListingPurpose::cases(),
+            'purposes' => $salesEnabled ? ListingPurpose::cases() : [ListingPurpose::Rent],
+            'salesEnabled' => $salesEnabled,
             'categories' => PropertyCategory::active()->ordered()->get(),
         ]);
     }
@@ -105,7 +113,8 @@ class PropertyController extends Controller
                 'publication_status' => PublicationStatus::Draft,
             ]),
             'types' => PropertyType::cases(),
-            'purposes' => ListingPurpose::cases(),
+            'purposes' => Features::propertySales() ? ListingPurpose::cases() : [ListingPurpose::Rent],
+            'salesEnabled' => Features::propertySales(),
             'categories' => PropertyCategory::active()->ordered()->get(),
             'amenities' => Amenity::active()->ordered()->get(),
             'areaUnits' => AreaUnit::cases(),
@@ -138,6 +147,8 @@ class PropertyController extends Controller
 
     public function show(Property $property): View
     {
+        abort_unless($property->isAvailableInMarketplace(), 404);
+
         Gate::authorize('view', $property);
 
         $property->load([
@@ -165,6 +176,8 @@ class PropertyController extends Controller
 
     public function edit(Property $property): View
     {
+        abort_unless($property->isAvailableInMarketplace(), 404);
+
         Gate::authorize('update', $property);
 
         $property->load(['images', 'house', 'amenities']);
@@ -172,7 +185,8 @@ class PropertyController extends Controller
         return view('owner.properties.edit', [
             'property' => $property,
             'types' => PropertyType::cases(),
-            'purposes' => ListingPurpose::cases(),
+            'purposes' => Features::propertySales() ? ListingPurpose::cases() : [ListingPurpose::Rent],
+            'salesEnabled' => Features::propertySales(),
             'categories' => PropertyCategory::active()->ordered()->get(),
             'amenities' => Amenity::active()->ordered()->get(),
             'areaUnits' => AreaUnit::cases(),
@@ -190,6 +204,8 @@ class PropertyController extends Controller
 
     public function update(PropertyRequest $request, Property $property, UpdateProperty $updateProperty): RedirectResponse
     {
+        abort_unless($property->isAvailableInMarketplace(), 404);
+
         Gate::authorize('update', $property);
 
         $updateProperty->handle(
@@ -210,6 +226,8 @@ class PropertyController extends Controller
      */
     public function destroy(Property $property, ArchiveProperty $archiveProperty): RedirectResponse
     {
+        abort_unless($property->isAvailableInMarketplace(), 404);
+
         Gate::authorize('archive', $property);
 
         $archiveProperty->handle($property);
@@ -228,6 +246,8 @@ class PropertyController extends Controller
 
     public function restore(Property $property, RestoreProperty $restoreProperty): RedirectResponse
     {
+        abort_unless($property->isAvailableInMarketplace(), 404);
+
         Gate::authorize('archive', $property);
 
         $restoreProperty->handle($property);

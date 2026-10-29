@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "production": "tenantism-88cfc",
+    "staging": "tenantism-staging"
+  },
+  "targets": {},
+  "etags": {}
+}

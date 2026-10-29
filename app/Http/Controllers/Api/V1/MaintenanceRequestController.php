@@ -9,10 +9,12 @@ use App\Enums\MaintenanceStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Maintenance\StoreMaintenanceCommentRequest;
 use App\Http\Requests\Maintenance\StoreMaintenanceRequestRequest;
+use App\Http\Requests\Maintenance\UpdateMaintenanceFinancialsRequest;
 use App\Http\Requests\Maintenance\UpdateMaintenanceStatusRequest;
 use App\Http\Resources\V1\MaintenanceRequestResource;
 use App\Models\MaintenanceRequest;
 use App\Models\Tenancy;
+use App\Services\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
@@ -94,6 +96,21 @@ class MaintenanceRequestController extends Controller
 
         return new MaintenanceRequestResource(
             $maintenance->fresh()->load(['tenancy.property', 'statusHistory.changer'])
+        );
+    }
+
+    public function updateFinancials(
+        UpdateMaintenanceFinancialsRequest $request,
+        MaintenanceRequest $maintenance,
+        AuditLogger $auditLogger,
+    ): MaintenanceRequestResource {
+        Gate::authorize('updateFinancials', $maintenance);
+
+        $maintenance->fill($request->financialData())->save();
+        $auditLogger->recordChanges('maintenance.financials_updated', $maintenance);
+
+        return new MaintenanceRequestResource(
+            $maintenance->fresh()->load(['tenancy.property', 'attachments', 'statusHistory.changer'])
         );
     }
 

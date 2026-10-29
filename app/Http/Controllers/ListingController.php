@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ListingPurpose;
 use App\Enums\AreaUnit;
+use App\Enums\ListingPurpose;
 use App\Enums\PropertyType;
 use App\Models\Application;
 use App\Models\Property;
 use App\Models\PropertyCategory;
+use App\Support\Features;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
@@ -37,7 +38,10 @@ class ListingController extends Controller
             'min_rent' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'max_rent' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99', 'gte:min_rent'],
         ]);
-        $filters['listing_purpose'] ??= ListingPurpose::Rent->value;
+        $salesEnabled = Features::propertySales();
+        $filters['listing_purpose'] = $salesEnabled
+            ? ($filters['listing_purpose'] ?? ListingPurpose::Rent->value)
+            : ListingPurpose::Rent->value;
         $filters['min_price'] ??= $filters['min_rent'] ?? null;
         $filters['max_price'] ??= $filters['max_rent'] ?? null;
 
@@ -45,7 +49,8 @@ class ListingController extends Controller
             'listings' => $this->query($filters),
             'filters' => $filters,
             'types' => PropertyType::cases(),
-            'purposes' => ListingPurpose::cases(),
+            'purposes' => $salesEnabled ? ListingPurpose::cases() : [ListingPurpose::Rent],
+            'salesEnabled' => $salesEnabled,
             'categories' => PropertyCategory::active()->ordered()->get(),
             'areaUnits' => AreaUnit::cases(),
             'favoriteIds' => $this->favoriteIds($request),
@@ -54,6 +59,8 @@ class ListingController extends Controller
 
     public function show(Request $request, Property $property): View
     {
+        abort_unless($property->isAvailableInMarketplace(), 404);
+
         // FR-APP-001 - anything not publicly visible simply does not exist here.
         // The owner keeps a preview of their own listing (SRS 12: no existence
         // is disclosed to anyone else).

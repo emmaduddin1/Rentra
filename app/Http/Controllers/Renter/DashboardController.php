@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Renter;
 
 use App\Enums\ApplicationStatus;
+use App\Enums\TenancyStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Application;
 use App\Models\Favorite;
@@ -11,6 +12,7 @@ use App\Models\MonthlyRecord;
 use App\Models\Property;
 use App\Models\Tenancy;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -24,7 +26,7 @@ class DashboardController extends Controller
     {
         $renter = $request->user();
 
-        // FR-TEN-003 / 5.2 - a renter may hold more than one tenancy.
+        // A renter may have one active tenancy plus invitations and history.
         $tenancies = Tenancy::forRenter($renter)
             ->with('property:id,title,area,address,rent_amount,status')
             ->orderByDesc('status')
@@ -36,6 +38,9 @@ class DashboardController extends Controller
         return view('renter.dashboard', [
             'tenancies' => $tenancies,
             'activeTenancy' => $activeTenancy,
+            'invitations' => $tenancies->where('status', TenancyStatus::Invited),
+            'hasTenancyConflict' => DB::table('tenancy_conflicts')->where('conflict_type', 'renter')
+                ->where('conflict_key', $renter->id)->whereNull('resolved_at')->exists(),
             'currentRecord' => $activeTenancy
                 ? MonthlyRecord::where('tenancy_id', $activeTenancy->id)->forPeriod(now())->first()
                 : null,
@@ -44,13 +49,17 @@ class DashboardController extends Controller
             // FR-APP-001/005/007 - the search side of the same portal. A renter
             // keeps looking at other owners' listings while renting.
             'stats' => [
-                'applications' => Application::forRenter($renter)->count(),
+                'applications' => Application::forRenter($renter)->availableInMarketplace()->count(),
                 'pending_applications' => Application::forRenter($renter)
+                    ->availableInMarketplace()
                     ->where('status', ApplicationStatus::Pending->value)
                     ->count(),
-                'favorites' => Favorite::where('renter_id', $renter->id)->count(),
+                'favorites' => Favorite::where('renter_id', $renter->id)
+                    ->whereHas('property', fn ($property) => $property->availableInMarketplace())
+                    ->count(),
             ],
             'recentApplications' => Application::forRenter($renter)
+                ->availableInMarketplace()
                 ->with('property')
                 ->latest('submitted_at')
                 ->limit(5)
@@ -60,7 +69,10 @@ class DashboardController extends Controller
                 ->latest('published_at')
                 ->limit(6)
                 ->get(),
-            'favoriteIds' => $renter->favorites()->pluck('property_id')->all(),
+            'favoriteIds' => $renter->favorites()
+                ->whereHas('property', fn ($property) => $property->availableInMarketplace())
+                ->pluck('property_id')
+                ->all(),
         ]);
     }
 }

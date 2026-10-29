@@ -20,7 +20,8 @@ class ApplicationPolicy
 
     public function view(User $user, Application $application): bool
     {
-        return $this->isRenterOf($user, $application) || $this->isOwnerOf($user, $application);
+        return $application->property?->isAvailableInMarketplace() === true
+            && ($this->isRenterOf($user, $application) || $this->isOwnerOf($user, $application));
     }
 
     /**
@@ -36,12 +37,14 @@ class ApplicationPolicy
 
     public function updateStatus(User $user, Application $application): bool
     {
-        return $this->isOwnerOf($user, $application);
+        return $application->property?->isAvailableInMarketplace() === true
+            && $this->isOwnerOf($user, $application);
     }
 
     public function withdraw(User $user, Application $application): bool
     {
-        return $this->isRenterOf($user, $application)
+        return $application->property?->isAvailableInMarketplace() === true
+            && $this->isRenterOf($user, $application)
             && $application->status === ApplicationStatus::Pending;
     }
 

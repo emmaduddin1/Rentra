@@ -26,6 +26,10 @@
         </span>
     </div>
 
+    @if ($tenancy->isInvitationPending())
+        <section class="mb-6 card p-6"><h2 class="text-sm font-semibold">{{ __('Invitation pending') }}</h2><p class="mt-2 text-sm text-slate-600">{{ __('The property remains available until the renter accepts. Expires :date.', ['date' => $tenancy->invitation_expires_at?->format('d M Y')]) }}</p><form method="POST" action="{{ route('tenancies.withdraw', $tenancy) }}" class="mt-4" onsubmit="return confirm('{{ __('Withdraw this invitation?') }}')">@csrf<x-form.button type="submit" variant="danger">{{ __('Withdraw invitation') }}</x-form.button></form></section>
+    @endif
+
     <div class="grid gap-6 lg:grid-cols-3">
         <div class="space-y-6 lg:col-span-2">
             <section class="card p-6">
@@ -125,38 +129,71 @@
                 <p class="mt-2"><x-badge :variant="$tenancy->property->status->badge()">{{ $tenancy->property->status->label() }}</x-badge></p>
             </section>
 
-            {{-- FR-TEN-005 - ending frees the property; history is kept. --}}
+            {{-- The renter requests cancellation; the owner alone ends the contract. --}}
             @if ($tenancy->isActive())
                 <section class="card p-6">
-                    <h2 class="text-sm font-semibold text-slate-900">{{ __('End tenancy') }}</h2>
-                    <p class="mt-2 text-xs text-slate-500">
-                        {{ __('The renter keeps read-only access to their history, and the property becomes free again.') }}
-                    </p>
-
-                    <form method="POST" action="{{ route('owner.tenancies.end', $tenancy) }}" class="mt-4 space-y-4">
-                        @csrf
-                        @method('PATCH')
-
-                        <x-form.field :label="__('End date')" name="end_date" required>
-                            <x-form.input name="end_date" type="date" :value="old('end_date', now()->toDateString())" />
-                        </x-form.field>
-
-                        <x-form.field :label="__('Property becomes')" name="property_status" required>
-                            <x-form.select
-                                name="property_status"
-                                :selected="old('property_status', 'available')"
-                                :options="collect($propertyStatuses)->mapWithKeys(fn ($s) => [$s->value => $s->label()])->all()"
-                            />
-                        </x-form.field>
-
-                        <x-form.field :label="__('Reason')" name="reason">
-                            <x-form.textarea name="reason" rows="3" />
-                        </x-form.field>
-
-                        <x-form.button type="submit" variant="danger" class="w-full">{{ __('End tenancy') }}</x-form.button>
-                    </form>
+                    <h2 class="text-sm font-semibold text-slate-900">{{ __('End contract') }}</h2>
+                    <p class="mt-2 text-xs text-slate-500">{{ __('Ending preserves all payment and maintenance history and makes the property available.') }}</p>
+                    <x-form.button type="button" variant="danger" class="mt-4 w-full" onclick="document.getElementById('end-contract-dialog').showModal()">{{ __('End renter contract') }}</x-form.button>
                 </section>
             @endif
+
+            @if ($tenancy->ended_at && in_array($tenancy->status, [\App\Enums\TenancyStatus::Ended, \App\Enums\TenancyStatus::Cancelled], true))
+                <section class="card border-rental-200 p-6">
+                    <h2 class="text-sm font-semibold text-slate-900">{{ __('Property available') }}</h2>
+                    <p class="mt-2 text-xs text-slate-500">{{ __('Choose what you want to do with this property next.') }}</p>
+                    <div class="mt-4 grid gap-2">
+                        @if ($tenancy->property->publication_status !== \App\Enums\PublicationStatus::Published)
+                            <form method="POST" action="{{ route('owner.properties.publish', $tenancy->property) }}">@csrf<x-form.button type="submit" class="w-full">{{ __('Publish property again') }}</x-form.button></form>
+                        @endif
+                        <x-form.button :href="route('owner.tenancies.create', ['property_id' => $tenancy->property_id])" variant="secondary" class="w-full">{{ __('Assign another renter') }}</x-form.button>
+                    </div>
+                </section>
+            @endif
+
+            @foreach ($tenancy->terminationRequests->filter(fn($item) => in_array($item->status, [\App\Enums\TerminationRequestStatus::Pending, \App\Enums\TerminationRequestStatus::Countered], true)) as $termination)
+                @if ($termination->requested_by !== auth()->id())<section class="card p-6"><h2 class="text-sm font-semibold">{{ __('Renter cancellation request') }}</h2><p class="mt-2 text-sm">{{ $termination->reason }}</p><p class="mt-1 text-xs text-slate-500">{{ __('Requested end date: :date', ['date' => ($termination->counter_end_date ?? $termination->proposed_end_date)->format('d M Y')]) }}</p><form method="POST" action="{{ route('tenancies.termination.respond', $termination) }}" class="mt-4 space-y-3">@csrf<x-form.field :label="__('Owner decision')" name="decision"><x-form.select name="decision" :options="['accept' => __('Approve requested date'), 'counter' => __('End on another date'), 'dispute' => __('Decline request')]" /></x-form.field><x-form.field :label="__('Alternative final date')" name="counter_end_date"><x-form.input name="counter_end_date" type="date" /></x-form.field><x-form.field :label="__('Response notes')" name="response_notes"><x-form.textarea name="response_notes" rows="2" /></x-form.field><x-form.button type="submit" class="w-full">{{ __('Save owner decision') }}</x-form.button></form></section>@endif
+            @endforeach
         </aside>
     </div>
+
+    @if ($tenancy->isActive())
+        <dialog id="end-contract-dialog" class="m-auto w-[calc(100%-2rem)] max-w-xl rounded-card border border-slate-200 bg-white p-0 text-slate-900 shadow-xl backdrop:bg-slate-950/60">
+            <form method="POST" action="{{ route('tenancies.end', $tenancy) }}" class="p-6 sm:p-8">
+                @csrf
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-extrabold">{{ __('End renter contract?') }}</h2>
+                        <p class="mt-2 text-sm text-slate-600">{{ __('The tenancy ends today. Existing financial and maintenance records will remain available.') }}</p>
+                    </div>
+                    <button type="button" class="btn btn-ghost -mr-2" onclick="this.closest('dialog').close()" aria-label="{{ __('Close') }}"><x-icon name="close" class="size-5" /></button>
+                </div>
+
+                <div class="mt-6 space-y-5">
+                    <x-form.field :label="__('Reason for ending contract')" name="reason" required><x-form.textarea name="reason" rows="3" required /></x-form.field>
+                    <fieldset>
+                        <legend class="text-sm font-semibold text-slate-900">{{ __('What should happen next?') }}</legend>
+                        <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                            <label class="cursor-pointer rounded-card border border-slate-200 p-4 has-[:checked]:border-primary-500 has-[:checked]:bg-primary-50">
+                                <input type="radio" name="next_step" value="publish" class="accent-primary-600" required>
+                                <span class="ml-2 font-semibold">{{ __('Publish again') }}</span>
+                                <span class="mt-1 block text-xs text-slate-500">{{ __('Make the property visible to renters again.') }}</span>
+                            </label>
+                            <label class="cursor-pointer rounded-card border border-slate-200 p-4 has-[:checked]:border-rental-500 has-[:checked]:bg-rental-50">
+                                <input type="radio" name="next_step" value="assign" class="accent-rental-600" required>
+                                <span class="ml-2 font-semibold">{{ __('Assign a renter') }}</span>
+                                <span class="mt-1 block text-xs text-slate-500">{{ __('Keep it off the public feed and invite a renter.') }}</span>
+                            </label>
+                        </div>
+                    </fieldset>
+                    <label class="flex items-start gap-2 text-sm text-slate-600"><input type="checkbox" name="confirmed" value="1" class="mt-1" required> <span>{{ __('I confirm that this renter contract should end today.') }}</span></label>
+                </div>
+
+                <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <x-form.button type="button" variant="secondary" onclick="this.closest('dialog').close()">{{ __('Keep contract') }}</x-form.button>
+                    <x-form.button type="submit" variant="danger">{{ __('End contract') }}</x-form.button>
+                </div>
+            </form>
+        </dialog>
+    @endif
 </x-layouts.app>

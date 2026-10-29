@@ -58,6 +58,41 @@
   ],
   "item": [
     {
+      "name": "Capabilities",
+      "description": "Public runtime feature availability for web and mobile clients.",
+      "item": [
+        {
+          "name": "Get capabilities",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 with feature flags', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().data).to.have.property('property_sales');",
+                  "    pm.expect(pm.response.json().data.property_sales).to.be.a('boolean');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/api/v1/capabilities",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "capabilities"]
+            },
+            "description": "Returns runtime marketplace capabilities. When `property_sales` is false, clients must expose rental discovery and rental property writes only."
+          }
+        }
+      ]
+    },
+    {
       "name": "Auth",
       "description": "SRS 9.3 / FR-AUTH-001 to FR-AUTH-006. Sanctum personal access tokens. The token's abilities are the account's role, so a token can never outrank its owner.",
       "item": [
@@ -630,7 +665,7 @@
     },
     {
       "name": "Monthly records",
-      "description": "SRS FR-MON-001 to FR-MON-009. The heart of the system: the renter declares what they paid for the month and attaches a receipt for each charge; the owner checks the receipts and approves, which freezes the record.\n\n**The order matters:** create -> attach a receipt for every charge -> submit. Submitting with an unevidenced charge answers `422`, and once submitted the renter can change nothing until the owner approves or returns it (BR-004).",
+      "description": "Monthly submissions separate owner receivables from bills paid directly to providers. Review approval verifies and freezes a submission; it does not mean paid. Payment status and immutable partial-payment history are separate.\n\n**The order matters:** create -> attach a receipt for every charge -> submit. Submitting with an unevidenced charge answers `422`, and once submitted the renter can change nothing until the owner approves or returns it (BR-004).",
       "item": [
         {
           "name": "List monthly records",
@@ -784,6 +819,24 @@
           }
         },
         {
+          "name": "Record payment received (owner)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"40000.00\",\n  \"received_on\": \"2026-10-26\",\n  \"reference\": \"BANK-123\",\n  \"notes\": \"First installment\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/monthly-records/{{monthly_record_id}}/payments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "monthly-records", "{{monthly_record_id}}", "payments"]
+            },
+            "description": "Owner only. Appends to immutable payment history and recalculates total received, rent received, outstanding receivable, and payment status. It does not change review approval status."
+          }
+        },
+        {
           "name": "Approve and freeze (owner)",
           "request": {
             "method": "POST",
@@ -793,7 +846,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "monthly-records", "{{monthly_record_id}}", "approve"]
             },
-            "description": "FR-MON-006/008. \"Everything checks out and the money was received.\" The record becomes **approved and frozen**: neither side edits it again without a reopen.\n\nOnly the owner of the property, and only while the record is pending."
+            "description": "FR-MON-006/008. The owner accepts the submitted record and evidence. The record becomes **approved and frozen**: neither side edits it again without a reopen. Approval is a review state and does not change `payment_status`."
           }
         },
         {

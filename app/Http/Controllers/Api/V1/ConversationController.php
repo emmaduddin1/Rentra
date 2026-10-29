@@ -20,6 +20,7 @@ class ConversationController extends Controller
         $user = $request->user();
 
         $conversations = Conversation::forParticipant($user)
+            ->availableInMarketplace()
             ->with(['application', 'latestMessage.sender', 'owner', 'property.primaryImage', 'renter'])
             ->withCount([
                 'messages as unread_messages_count' => fn ($query) => $query

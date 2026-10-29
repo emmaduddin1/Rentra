@@ -1,0 +1,8 @@
+version: 1
+name: Firebase web push HTTP v1
+mockSrc: default.js
+interceptRequests: true
+port: 4901
+origin:
+  - fcm.googleapis.com
+  - oauth2.googleapis.com

@@ -4,7 +4,8 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "test:js": "node --test tests/Unit/JavaScript/*.test.js"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
@@ -15,5 +16,11 @@
     },
     "optionalDependencies": {
         "@laravel/multiplex": "^0.4.1"
+    },
+    "dependencies": {
+        "firebase": "13.1.0"
+    },
+    "overrides": {
+        "@grpc/grpc-js": "^1.13.6"
     }
 }

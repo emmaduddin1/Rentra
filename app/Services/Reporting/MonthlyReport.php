@@ -4,6 +4,7 @@ namespace App\Services\Reporting;
 
 use App\Enums\MonthlyRecordStatus;
 use App\Enums\PaymentCategory;
+use App\Models\MaintenanceRequest;
 use App\Models\MonthlyRecord;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -74,10 +75,15 @@ class MonthlyReport
      */
     public function totals(): array
     {
-        $columns = collect(PaymentCategory::amountColumns())
+        $financialColumns = [
+            'rent_amount', 'rent_received', 'utilities_payable_to_owner', 'direct_utility_bills', 'unclassified_utility_bills',
+            'owner_payable_charges', 'discount_amount', 'adjustment_amount', 'maintenance_expenses',
+            'reimbursements_to_owner', 'total_receivable', 'total_received', 'outstanding_receivable',
+        ];
+        $columns = collect([...PaymentCategory::amountColumns(), 'other_utility_amount', ...$financialColumns])
+            ->unique()
             ->mapWithKeys(fn (string $column) => [$column => "COALESCE(SUM({$column}), 0) as {$column}"])
             ->values()
-            ->push('COALESCE(SUM(total_amount), 0) as total_amount')
             ->push('COUNT(*) as record_count')
             ->all();
 
@@ -86,11 +92,10 @@ class MonthlyReport
 
         $totals = ['record_count' => (string) ($row->record_count ?? 0)];
 
-        foreach (PaymentCategory::amountColumns() as $column) {
+        foreach ([...PaymentCategory::amountColumns(), 'other_utility_amount', ...$financialColumns] as $column) {
             $totals[$column] = (string) ($row->{$column} ?? '0');
         }
-
-        $totals['total_amount'] = (string) ($row->total_amount ?? '0');
+        $totals['total_amount'] = $totals['total_receivable'];
 
         return $totals;
     }
@@ -103,7 +108,7 @@ class MonthlyReport
     public function monthlySeries(): Collection
     {
         return $this->query()
-            ->selectRaw('period_month, COALESCE(SUM(total_amount), 0) as total')
+            ->selectRaw('period_month, COALESCE(SUM(total_receivable), 0) as total, COALESCE(SUM(total_received), 0) as received, COALESCE(SUM(rent_amount), 0) as rent_due, COALESCE(SUM(rent_received), 0) as rent_received')
             ->groupBy('period_month')
             ->orderBy('period_month')
             ->toBase()
@@ -112,7 +117,39 @@ class MonthlyReport
                 'period' => (string) $row->period_month,
                 'label' => Carbon::parse($row->period_month)->format('M y'),
                 'total' => (string) $row->total,
+                'received' => (string) $row->received,
+                'rent_due' => (string) $row->rent_due,
+                'rent_received' => (string) $row->rent_received,
             ]);
+    }
+
+    /** @return array<string, string> */
+    public function maintenanceTotals(): array
+    {
+        $query = MaintenanceRequest::forOwner($this->owner)
+            ->when($this->from(), fn ($query, $from) => $query->whereDate('created_at', '>=', $from))
+            ->when($this->to(), fn ($query, $to) => $query->whereDate('created_at', '<=', $to->copy()->endOfMonth()))
+            ->when(
+                $this->filters['property_id'] ?? null,
+                fn ($query, $propertyId) => $query->whereHas('tenancy', fn ($tenancy) => $tenancy->where('property_id', $propertyId))
+            )
+            ->when(
+                $this->filters['renter_id'] ?? null,
+                fn ($query, $renterId) => $query->whereHas('tenancy', fn ($tenancy) => $tenancy->where('renter_id', $renterId))
+            );
+
+        $row = $query->selectRaw(implode(', ', [
+            'COALESCE(SUM(amount), 0) as total',
+            "COALESCE(SUM(CASE WHEN paid_by = 'owner' THEN amount ELSE 0 END), 0) as owner_paid",
+            "COALESCE(SUM(CASE WHEN paid_by = 'renter' THEN amount ELSE 0 END), 0) as renter_paid",
+            "COALESCE(SUM(CASE WHEN reimbursement_required = 1 AND reimbursement_recipient = 'owner' THEN reimbursement_amount ELSE 0 END), 0) as owed_to_owner",
+            "COALESCE(SUM(CASE WHEN reimbursement_required = 1 AND reimbursement_recipient = 'renter' THEN reimbursement_amount ELSE 0 END), 0) as owed_to_renter",
+            "COALESCE(SUM(CASE WHEN reimbursement_required = 1 AND reimbursement_status != 'paid' THEN reimbursement_amount ELSE 0 END), 0) as outstanding",
+        ]))->toBase()->first();
+
+        return collect(['total', 'owner_paid', 'renter_paid', 'owed_to_owner', 'owed_to_renter', 'outstanding'])
+            ->mapWithKeys(fn ($column) => [$column => (string) ($row->{$column} ?? '0')])
+            ->all();
     }
 
     /**
@@ -121,7 +158,7 @@ class MonthlyReport
     public function statusBreakdown(): Collection
     {
         return $this->query()
-            ->selectRaw('status, COUNT(*) as record_count, COALESCE(SUM(total_amount), 0) as total')
+            ->selectRaw('status, COUNT(*) as record_count, COALESCE(SUM(total_receivable), 0) as total')
             ->groupBy('status')
             ->toBase()
             ->get()

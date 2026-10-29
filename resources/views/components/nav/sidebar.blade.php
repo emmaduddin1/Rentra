@@ -15,18 +15,18 @@
             [
                 'label' => __('Portfolio'),
                 'links' => [
-                    ['label' => __('Properties'), 'route' => 'owner.properties.index', 'match' => 'owner.properties.*', 'icon' => 'building'],
-                    ['label' => __('Tenancies'), 'route' => 'owner.tenancies.index', 'match' => 'owner.tenancies.*', 'icon' => 'key'],
+                    ['label' => __('Properties'), 'route' => 'owner.properties.index', 'match' => 'owner.properties.*', 'icon' => 'building', 'tour' => 'nav-properties'],
+                    ['label' => __('Tenancies'), 'route' => 'owner.tenancies.index', 'match' => 'owner.tenancies.*', 'icon' => 'key', 'tour' => 'nav-tenancies'],
                     ['label' => __('Renters'), 'route' => 'owner.renters.index', 'match' => 'owner.renters.*', 'icon' => 'users'],
                 ],
             ],
             [
                 'label' => __('Work'),
                 'links' => [
-                    ['label' => __('Approvals'), 'route' => 'owner.monthly-records.index', 'match' => 'owner.monthly-records.*', 'icon' => 'check-circle'],
+                    ['label' => __('Approvals'), 'route' => 'owner.monthly-records.index', 'match' => 'owner.monthly-records.*', 'icon' => 'check-circle', 'tour' => 'nav-approvals'],
                     ['label' => __('Maintenance'), 'route' => 'owner.maintenance.index', 'match' => 'owner.maintenance.*', 'icon' => 'wrench'],
                     ['label' => __('Applications'), 'route' => 'owner.applications.index', 'match' => 'owner.applications.*', 'icon' => 'inbox'],
-                    ['label' => __('Messages'), 'route' => 'conversations.index', 'match' => 'conversations.*', 'icon' => 'message'],
+                    ['label' => __('Messages'), 'route' => 'conversations.index', 'match' => 'conversations.*', 'icon' => 'message', 'tour' => 'nav-messages'],
                 ],
             ],
             [
@@ -47,18 +47,18 @@
             [
                 'label' => __('Find a place'),
                 'links' => [
-                    ['label' => __('Browse'), 'route' => 'listings.index', 'match' => 'listings.*', 'icon' => 'search'],
-                    ['label' => __('My applications'), 'route' => 'renter.applications.index', 'icon' => 'inbox'],
-                    ['label' => __('Messages'), 'route' => 'conversations.index', 'match' => 'conversations.*', 'icon' => 'message'],
+                    ['label' => __('Browse'), 'route' => 'listings.index', 'match' => 'listings.*', 'icon' => 'search', 'tour' => 'nav-browse'],
+                    ['label' => __('My applications'), 'route' => 'renter.applications.index', 'icon' => 'inbox', 'tour' => 'nav-applications'],
+                    ['label' => __('Messages'), 'route' => 'conversations.index', 'match' => 'conversations.*', 'icon' => 'message', 'tour' => 'nav-messages'],
                     ['label' => __('Saved'), 'route' => 'renter.favorites.index', 'icon' => 'heart'],
                 ],
             ],
             [
                 'label' => __('My tenancy'),
                 'links' => [
-                    ['label' => __('My property'), 'route' => 'renter.tenancies.index', 'match' => 'renter.tenancies.*', 'icon' => 'key'],
-                    ['label' => __('Monthly'), 'route' => 'renter.monthly-records.index', 'match' => 'renter.monthly-records.*', 'icon' => 'banknotes'],
-                    ['label' => __('Maintenance'), 'route' => 'renter.maintenance.index', 'match' => 'renter.maintenance.*', 'icon' => 'wrench'],
+                    ['label' => __('My property'), 'route' => 'renter.tenancies.index', 'match' => 'renter.tenancies.*', 'icon' => 'key', 'tour' => 'nav-tenancy'],
+                    ['label' => __('Monthly'), 'route' => 'renter.monthly-records.index', 'match' => 'renter.monthly-records.*', 'icon' => 'banknotes', 'tour' => 'nav-monthly'],
+                    ['label' => __('Maintenance'), 'route' => 'renter.maintenance.index', 'match' => 'renter.maintenance.*', 'icon' => 'wrench', 'tour' => 'nav-maintenance'],
                 ],
             ],
         ],
@@ -73,10 +73,10 @@
     data-sidebar
 >
     <div class="flex h-20 shrink-0 items-center justify-between gap-2 overflow-hidden border-b border-slate-200/80 px-6" data-sidebar-header>
-        <a href="{{ route('home') }}" class="flex min-w-0 shrink-0 items-center overflow-hidden" aria-label="{{ __('Tenantism home') }}" data-sidebar-brand-full>
+        <a href="{{ route('dashboard') }}" class="flex min-w-0 shrink-0 items-center overflow-hidden" aria-label="{{ __('Tenantism dashboard') }}" data-sidebar-brand-full data-tour="brand">
             <x-brand.logo class="h-9 max-w-40 sm:h-10 sm:max-w-44 lg:h-10 lg:max-w-44" />
         </a>
-        <a href="{{ route('home') }}" class="hidden shrink-0 items-center justify-center" aria-label="{{ __('Tenantism home') }}" data-sidebar-brand-compact>
+        <a href="{{ route('dashboard') }}" class="hidden shrink-0 items-center justify-center" aria-label="{{ __('Tenantism dashboard') }}" data-sidebar-brand-compact data-tour="brand">
             <x-brand.mark class="size-11" />
         </a>
 
@@ -97,6 +97,7 @@
                         :href="route($link['route'])"
                         :icon="$link['icon']"
                         :active="request()->routeIs($link['match'] ?? $link['route'])"
+                        :data-tour="$link['tour'] ?? null"
                     >{{ $link['label'] }}</x-nav.link>
                 @endforeach
             </div>

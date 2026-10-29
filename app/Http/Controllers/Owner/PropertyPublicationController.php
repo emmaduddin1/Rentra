@@ -20,6 +20,8 @@ class PropertyPublicationController extends Controller
 {
     public function publish(Property $property, PublishProperty $publishProperty): RedirectResponse
     {
+        abort_unless($property->isAvailableInMarketplace(), 404);
+
         Gate::authorize('publish', $property);
 
         $publishProperty->handle($property, true);
@@ -34,6 +36,8 @@ class PropertyPublicationController extends Controller
 
     public function unpublish(Property $property, PublishProperty $publishProperty): RedirectResponse
     {
+        abort_unless($property->isAvailableInMarketplace(), 404);
+
         // 'update' rather than 'publish': moving back to draft stays available
         // even for a house that has since been split into floors (BR-013).
         Gate::authorize('update', $property);
@@ -45,6 +49,8 @@ class PropertyPublicationController extends Controller
 
     public function changeStatus(Request $request, Property $property, ChangePropertyStatus $changeStatus): RedirectResponse
     {
+        abort_unless($property->isAvailableInMarketplace(), 404);
+
         Gate::authorize('update', $property);
 
         $validated = $request->validate([

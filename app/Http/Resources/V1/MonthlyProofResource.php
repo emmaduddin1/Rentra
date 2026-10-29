@@ -27,7 +27,7 @@ class MonthlyProofResource extends JsonResource
             'mime_type' => $this->mime_type,
             'size_bytes' => $this->size_bytes,
             'is_image' => $this->isImage(),
-            'download_url' => route('monthly-proofs.download', $this->resource),
+            'download_url' => route($request->is('api/*') ? 'api.v1.monthly-proofs.download' : 'monthly-proofs.download', $this->resource),
         ];
     }
 }

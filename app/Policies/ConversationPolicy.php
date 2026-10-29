@@ -14,11 +14,13 @@ class ConversationPolicy
 
     public function view(User $user, Conversation $conversation): bool
     {
-        return $conversation->isParticipant($user);
+        return $conversation->property->isAvailableInMarketplace()
+            && $conversation->isParticipant($user);
     }
 
     public function createMessage(User $user, Conversation $conversation): bool
     {
-        return $conversation->isWritableBy($user);
+        return $conversation->property->isAvailableInMarketplace()
+            && $conversation->isWritableBy($user);
     }
 }

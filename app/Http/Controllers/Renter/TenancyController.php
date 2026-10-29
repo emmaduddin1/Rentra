@@ -32,7 +32,7 @@ class TenancyController extends Controller
     {
         Gate::authorize('view', $tenancy);
 
-        $tenancy->load(['property.primaryImage', 'property.owner']);
+        $tenancy->load(['property.primaryImage', 'property.owner', 'statusHistory.changer', 'terminationRequests.requester', 'terminationRequests.responder']);
 
         return view('renter.tenancies.show', [
             'tenancy' => $tenancy,

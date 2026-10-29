@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\V1;
+use App\Http\Controllers\MaintenanceAttachmentDownloadController;
+use App\Http\Controllers\MonthlyProofDownloadController;
+use App\Http\Controllers\ProductTourController;
+use App\Http\Middleware\ResolveOptionalApiUser;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -19,6 +23,8 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::prefix('v1')->name('api.v1.')->group(function () {
+    Route::get('capabilities', V1\CapabilityController::class)->name('capabilities.show');
+
     /*
     | Public - the listing feed and authentication.
     | NFR-SEC-006 - login, password reset, and search are rate limited.
@@ -36,13 +42,25 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         ->name('password.forgot');
 
     Route::get('listings', [V1\ListingController::class, 'index'])
+        ->middleware(ResolveOptionalApiUser::class)
         ->middleware('throttle:120,1')
         ->name('listings.index');
-    Route::get('listings/{property}', [V1\ListingController::class, 'show'])->name('listings.show');
+    Route::get('listings/{property}', [V1\ListingController::class, 'show'])
+        ->middleware(ResolveOptionalApiUser::class)->name('listings.show');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout', [V1\AuthController::class, 'logout'])->name('logout');
         Route::get('me', [V1\AuthController::class, 'me'])->name('me');
+        Route::post('product-tour/complete', [ProductTourController::class, 'complete'])
+            ->middleware('role:owner,renter')->name('product-tour.complete');
+        Route::get('monthly-proofs/{proof}/download', MonthlyProofDownloadController::class)
+            ->name('monthly-proofs.download');
+        Route::get('maintenance-attachments/{attachment}/download', MaintenanceAttachmentDownloadController::class)
+            ->name('maintenance-attachments.download');
+        Route::middleware('role:renter')->group(function () {
+            Route::get('favorites', [V1\FavoriteController::class, 'index'])->name('favorites.index');
+            Route::post('favorites/{property}', [V1\FavoriteController::class, 'toggle'])->name('favorites.toggle');
+        });
 
         // FR-NOT-001/003.
         Route::get('notifications', [V1\NotificationController::class, 'index'])->name('notifications.index');
@@ -78,17 +96,28 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 ->name('monthly-records.reject');
             Route::post('monthly-records/{monthlyRecord}/reopen', [V1\MonthlyRecordApprovalController::class, 'reopen'])
                 ->name('monthly-records.reopen');
+            Route::post('monthly-records/{monthlyRecord}/payments', [V1\MonthlyRecordController::class, 'storePayment'])
+                ->name('monthly-records.payments.store');
         });
 
         // FR-TEN-001 to FR-TEN-005 - the list is role-aware; writes are owner only.
         Route::get('tenancies', [V1\TenancyController::class, 'index'])->name('tenancies.index');
+        Route::get('tenancies-active', [V1\TenancyController::class, 'active'])->name('tenancies.active');
+        Route::get('tenancy-invitations', [V1\TenancyController::class, 'invitations'])->name('tenancies.invitations');
+        Route::get('tenancy-history', [V1\TenancyController::class, 'history'])->name('tenancies.history');
         Route::get('tenancies/{tenancy}', [V1\TenancyController::class, 'show'])->name('tenancies.show');
 
         Route::middleware('role:owner')->group(function () {
             Route::post('tenancies', [V1\TenancyController::class, 'store'])->name('tenancies.store');
             Route::patch('tenancies/{tenancy}', [V1\TenancyController::class, 'update'])->name('tenancies.update');
-            Route::patch('tenancies/{tenancy}/end', [V1\TenancyController::class, 'end'])->name('tenancies.end');
+            Route::post('tenancies/{tenancy}/withdraw', [V1\TenancyController::class, 'withdraw'])->name('tenancies.withdraw');
+            Route::post('tenancies/{tenancy}/end', [V1\TenancyController::class, 'end'])->name('tenancies.end');
         });
+
+        Route::post('tenancies/{tenancy}/accept', [V1\TenancyController::class, 'accept'])->name('tenancies.accept');
+        Route::post('tenancies/{tenancy}/reject', [V1\TenancyController::class, 'reject'])->name('tenancies.reject');
+        Route::post('tenancies/{tenancy}/termination-requests', [V1\TenancyController::class, 'requestTermination'])->name('tenancies.termination.request');
+        Route::post('termination-requests/{termination}/respond', [V1\TenancyController::class, 'respondTermination'])->name('tenancies.termination.respond');
 
         // FR-MON-001 to FR-MON-005 - the list is role-aware; writes are renter only.
         Route::get('monthly-records', [V1\MonthlyRecordController::class, 'index'])->name('monthly-records.index');
@@ -114,5 +143,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::patch('maintenance-requests/{maintenance}/status', [V1\MaintenanceRequestController::class, 'updateStatus'])
             ->middleware('role:owner')
             ->name('maintenance-requests.status');
+        Route::patch('maintenance-requests/{maintenance}/financials', [V1\MaintenanceRequestController::class, 'updateFinancials'])
+            ->middleware('role:owner')
+            ->name('maintenance-requests.financials');
     });
 });

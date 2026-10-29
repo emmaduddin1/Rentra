@@ -3,9 +3,12 @@
     :heading="__('Owner dashboard')"
     :subheading="__('Portfolio overview for your properties, renters, and approvals.')"
 >
+    @if ($stats['tenancy_conflicts'] > 0)
+        <x-alert variant="danger" role="alert" class="mb-6" :title="__('Tenancy conflict requires administrator review')">{{ trans_choice(':count renter has conflicting active tenancy records. New financial activity is blocked for the conflict until it is reconciled.|:count renters have conflicting active tenancy records. New financial activity is blocked for those conflicts until they are reconciled.', $stats['tenancy_conflicts'], ['count' => $stats['tenancy_conflicts']]) }}</x-alert>
+    @endif
     <x-slot:actions>
-        <x-form.button :href="route('owner.properties.create')" icon="plus">{{ __('Add property') }}</x-form.button>
-        <x-form.button :href="route('owner.tenancies.create')" variant="secondary">{{ __('Assign renter') }}</x-form.button>
+        <x-form.button :href="route('owner.properties.create')" icon="plus" data-tour="owner-add-property">{{ __('Add property') }}</x-form.button>
+        <x-form.button :href="route('owner.tenancies.create')" variant="secondary" data-tour="owner-assign-renter">{{ __('Assign renter') }}</x-form.button>
     </x-slot:actions>
 
     {{-- FR-ADM-001 - counts are scoped to the authenticated owner (BR-010). --}}

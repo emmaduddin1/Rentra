@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\TenancyStatus;
+use App\Enums\UtilityPaymentArrangement;
 use App\Models\Property;
 use App\Models\Tenancy;
 use App\Models\User;
@@ -31,6 +32,12 @@ class TenancyFactory extends Factory
             'deposit' => $rent * 2,
             'billing_day' => 5,
             'status' => TenancyStatus::Active,
+            'utility_arrangements_effective_from' => now()->subMonths(6)->startOfMonth(),
+            'electricity_arrangement' => UtilityPaymentArrangement::ProviderDirect,
+            'gas_arrangement' => UtilityPaymentArrangement::ProviderDirect,
+            'water_arrangement' => UtilityPaymentArrangement::ProviderDirect,
+            'internet_arrangement' => UtilityPaymentArrangement::ProviderDirect,
+            'other_utility_arrangement' => UtilityPaymentArrangement::ProviderDirect,
         ];
     }
 

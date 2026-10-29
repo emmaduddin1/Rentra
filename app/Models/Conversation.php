@@ -100,4 +100,10 @@ class Conversation extends Model
                 ->orWhere('renter_id', $user->id);
         });
     }
+
+    /** @param  Builder<static>  $query */
+    public function scopeAvailableInMarketplace(Builder $query): void
+    {
+        $query->whereHas('property', fn (Builder $property) => $property->availableInMarketplace());
+    }
 }

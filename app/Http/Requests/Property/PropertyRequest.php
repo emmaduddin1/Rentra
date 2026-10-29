@@ -9,7 +9,10 @@ use App\Enums\PropertyStatus;
 use App\Enums\PropertyType;
 use App\Enums\PublicationStatus;
 use App\Enums\RentalMode;
+use App\Enums\UtilityPaymentArrangement;
 use App\Models\Property;
+use App\Support\Features;
+use App\Support\UtilityArrangements;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Rule;
@@ -25,6 +28,16 @@ use Illuminate\Validation\Rule;
  */
 class PropertyRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if (! Features::propertySales()) {
+            $this->merge([
+                'listing_purpose' => ListingPurpose::Rent->value,
+                'sale_price' => null,
+            ]);
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -34,7 +47,7 @@ class PropertyRequest extends FormRequest
             return [...$this->floorRules(), ...$this->sharedRules()];
         }
 
-        return [
+        $rules = [
             'type' => ['required', Rule::enum(PropertyType::class)],
             'category_id' => ['nullable', 'integer', Rule::exists('property_categories', 'id')->where('is_active', true)],
             'listing_purpose' => ['nullable', Rule::enum(ListingPurpose::class)],
@@ -76,6 +89,12 @@ class PropertyRequest extends FormRequest
             'amenities.*' => ['integer', Rule::exists('amenities', 'id')->where('is_active', true)],
             ...$this->sharedRules(),
         ];
+
+        foreach (UtilityArrangements::columns() as $column) {
+            $rules[$column] = ['sometimes', Rule::enum(UtilityPaymentArrangement::class)];
+        }
+
+        return $rules;
     }
 
     /**
@@ -242,6 +261,11 @@ class PropertyRequest extends FormRequest
     {
         $data = $this->safe()->except(['images', 'videos', 'amenities']);
         $data['listing_purpose'] ??= ListingPurpose::Rent->value;
+
+        if (! Features::propertySales()) {
+            $data['listing_purpose'] = ListingPurpose::Rent->value;
+            $data['sale_price'] = null;
+        }
 
         // BR-013 - the house's own rent is derived from its floors, so an empty
         // field must not be written as null over a NOT NULL column.

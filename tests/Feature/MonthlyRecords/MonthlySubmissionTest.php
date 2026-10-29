@@ -54,8 +54,9 @@ class MonthlySubmissionTest extends TestCase
         // SRS 12 - the month is normalised to the first of the month.
         $this->assertSame(now()->startOfMonth()->toDateString(), $record->period_month->toDateString());
 
-        // BR-012 - the total is derived from the categories, never posted.
-        $this->assertSame('58700.50', $record->total_amount);
+        // Direct provider bills are tracked, but never owner income.
+        $this->assertSame('50000.00', $record->total_receivable);
+        $this->assertSame('8700.50', $record->direct_utility_bills);
     }
 
     #[Test]
@@ -140,7 +141,8 @@ class MonthlySubmissionTest extends TestCase
 
         $record->refresh();
 
-        $this->assertSame('40900.25', $record->total_amount);
+        $this->assertSame('40000.00', $record->total_receivable);
+        $this->assertSame('900.25', $record->direct_utility_bills);
         // Cleared categories fall back to zero rather than keeping stale values.
         $this->assertSame('0.00', $record->electricity_amount);
     }

@@ -2,8 +2,11 @@
 
 namespace App\Models;
 
+use App\Enums\MaintenancePayer;
 use App\Enums\MaintenancePriority;
+use App\Enums\MaintenanceResponsibleParty;
 use App\Enums\MaintenanceStatus;
+use App\Enums\ReimbursementStatus;
 use Database\Factories\MaintenanceRequestFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,11 +16,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['tenancy_id', 'title', 'description', 'priority', 'status', 'created_by', 'completed_at'])]
+#[Fillable(['tenancy_id', 'title', 'description', 'priority', 'status', 'created_by', 'completed_at', 'amount', 'paid_by', 'responsible_party', 'reimbursement_required', 'reimbursement_recipient', 'reimbursement_amount', 'reimbursement_status', 'expense_notes'])]
 class MaintenanceRequest extends Model
 {
     /** @use HasFactory<MaintenanceRequestFactory> */
     use HasFactory, SoftDeletes;
+
+    protected $attributes = [
+        'amount' => 0,
+        'reimbursement_required' => false,
+        'reimbursement_amount' => 0,
+        'reimbursement_status' => ReimbursementStatus::NotRequired->value,
+    ];
 
     /** @return array<string, string> */
     protected function casts(): array
@@ -26,6 +36,12 @@ class MaintenanceRequest extends Model
             'priority' => MaintenancePriority::class,
             'status' => MaintenanceStatus::class,
             'completed_at' => 'datetime',
+            'amount' => 'decimal:2',
+            'paid_by' => MaintenancePayer::class,
+            'responsible_party' => MaintenanceResponsibleParty::class,
+            'reimbursement_required' => 'boolean',
+            'reimbursement_amount' => 'decimal:2',
+            'reimbursement_status' => ReimbursementStatus::class,
         ];
     }
 
@@ -80,7 +96,7 @@ class MaintenanceRequest extends Model
     {
         $ownerId = $owner instanceof User ? $owner->id : $owner;
 
-        $query->whereHas(
+        $query->availableInMarketplace()->whereHas(
             'tenancy.property',
             fn (Builder $property) => $property->where('owner_id', $ownerId)
         );
@@ -91,6 +107,13 @@ class MaintenanceRequest extends Model
     {
         $renterId = $renter instanceof User ? $renter->id : $renter;
 
-        $query->whereHas('tenancy', fn (Builder $tenancy) => $tenancy->where('renter_id', $renterId));
+        $query->availableInMarketplace()
+            ->whereHas('tenancy', fn (Builder $tenancy) => $tenancy->where('renter_id', $renterId));
+    }
+
+    /** @param  Builder<static>  $query */
+    public function scopeAvailableInMarketplace(Builder $query): void
+    {
+        $query->whereHas('tenancy.property', fn (Builder $property) => $property->availableInMarketplace());
     }
 }

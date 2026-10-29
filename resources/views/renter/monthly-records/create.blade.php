@@ -27,11 +27,11 @@
         <section class="mt-6 card p-6">
             <h2 class="text-sm font-semibold text-slate-900">{{ __('Amounts') }}</h2>
             <p class="mt-1 text-xs text-slate-500">
-                {{ __('Leave a category at zero if it does not apply this month. The total is calculated for you.') }}
+                {{ __('Enter rent and bills for tracking. Only utilities marked payable to owner increase Total receivable.') }}
             </p>
 
             <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                @foreach ($categories as $category)
+                @foreach (collect($categories)->reject(fn ($category) => in_array($category, [\App\Enums\PaymentCategory::Maintenance, \App\Enums\PaymentCategory::Other], true)) as $category)
                     <x-form.field :label="$category->label()" :name="$category->amountColumn()">
                         <x-form.input
                             :name="$category->amountColumn()"
@@ -41,6 +41,15 @@
                             :value="old($category->amountColumn(), $category === \App\Enums\PaymentCategory::Rent ? $selectedTenancy->agreed_rent : '0')"
                         />
                     </x-form.field>
+                @endforeach
+                @foreach ([
+                    'owner_payable_charges' => __('Other owner-payable charges'),
+                    'discount_amount' => __('Discount/credit'),
+                    'adjustment_amount' => __('Other adjustment/credit'),
+                    'maintenance_expenses' => __('Maintenance expenses (tracking only)'),
+                    'reimbursements_to_owner' => __('Reimbursements owed to owner'),
+                ] as $field => $label)
+                    <x-form.field :label="$label" :name="$field"><x-form.input :name="$field" type="number" step="0.01" min="0" :value="old($field, '0')" /></x-form.field>
                 @endforeach
             </div>
 

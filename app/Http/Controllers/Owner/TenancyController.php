@@ -4,13 +4,10 @@ namespace App\Http\Controllers\Owner;
 
 use App\Actions\Renters\CreateRenterAccount;
 use App\Actions\Tenancies\AssignRenter;
-use App\Actions\Tenancies\EndTenancy;
 use App\Actions\Tenancies\UpdateTenancy;
-use App\Enums\PropertyStatus;
 use App\Enums\TenancyStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Tenancy\EndTenancyRequest;
 use App\Http\Requests\Tenancy\StoreTenancyRequest;
 use App\Http\Requests\Tenancy\UpdateTenancyRequest;
 use App\Models\Property;
@@ -53,7 +50,7 @@ class TenancyController extends Controller
             'filters' => $filters,
             'statuses' => TenancyStatus::cases(),
             // BR-013 - a house let floor by floor never holds a tenancy itself.
-            'properties' => Property::ownedBy($request->user())->rentable()->orderBy('title')->get(['id', 'title']),
+            'properties' => Property::ownedBy($request->user())->availableInMarketplace()->rentable()->orderBy('title')->get(['id', 'title']),
         ]);
     }
 
@@ -66,6 +63,7 @@ class TenancyController extends Controller
         // BR-002 - a property already under an active tenancy is not offered.
         // BR-013 - and a house let floor by floor is rented as floors.
         $properties = Property::ownedBy($owner)
+            ->availableInMarketplace()
             ->rentable()
             ->whereDoesntHave('activeTenancy')
             ->orderBy('title')
@@ -88,7 +86,9 @@ class TenancyController extends Controller
         CreateRenterAccount $createRenterAccount,
     ): RedirectResponse {
         $owner = $request->user();
-        $property = Property::ownedBy($owner)->findOrFail($request->validated('property_id'));
+        $property = Property::ownedBy($owner)
+            ->availableInMarketplace()
+            ->findOrFail($request->validated('property_id'));
 
         // FR-TEN-001 / BR-002 - the policy blocks an already occupied property.
         Gate::authorize('assignRenter', $property);
@@ -112,7 +112,7 @@ class TenancyController extends Controller
 
         return redirect()
             ->route('owner.tenancies.show', $tenancy)
-            ->with('status', __('Renter assigned. The property is now occupied.'))
+            ->with('status', __('Invitation sent. The property remains available until the renter accepts.'))
             // NFR-SEC-008 - shown once to hand over, never stored or audited.
             ->with('temporary_password', $temporaryPassword);
     }
@@ -121,16 +121,12 @@ class TenancyController extends Controller
     {
         Gate::authorize('view', $tenancy);
 
-        $tenancy->load(['property.primaryImage', 'renter']);
+        $tenancy->load(['property.primaryImage', 'renter', 'statusHistory.changer', 'terminationRequests.requester', 'terminationRequests.responder']);
 
         return view('owner.tenancies.show', [
             'tenancy' => $tenancy,
             'monthlyRecords' => $tenancy->monthlyRecords()->limit(12)->get(),
             'maintenanceRequests' => $tenancy->maintenanceRequests()->limit(5)->get(),
-            'propertyStatuses' => array_filter(
-                PropertyStatus::cases(),
-                fn (PropertyStatus $status) => $status !== PropertyStatus::Occupied,
-            ),
         ]);
     }
 
@@ -152,25 +148,5 @@ class TenancyController extends Controller
         return redirect()
             ->route('owner.tenancies.show', $tenancy)
             ->with('status', __('Tenancy updated.'));
-    }
-
-    /**
-     * FR-TEN-005 - ending a tenancy frees the property.
-     */
-    public function end(EndTenancyRequest $request, Tenancy $tenancy, EndTenancy $endTenancy): RedirectResponse
-    {
-        Gate::authorize('end', $tenancy);
-
-        $endTenancy->handle(
-            tenancy: $tenancy,
-            owner: $request->user(),
-            endDate: $request->validated('end_date'),
-            propertyStatus: PropertyStatus::from($request->validated('property_status')),
-            reason: $request->validated('reason'),
-        );
-
-        return redirect()
-            ->route('owner.tenancies.show', $tenancy)
-            ->with('status', __('Tenancy ended. The history stays available.'));
     }
 }

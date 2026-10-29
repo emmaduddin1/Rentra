@@ -9,6 +9,7 @@ use App\Models\Property;
 use App\Services\AuditLogger;
 use App\Services\PropertyImageService;
 use App\Services\PropertyVideoService;
+use App\Support\Features;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
@@ -39,6 +40,10 @@ class UpdateProperty
      */
     public function handle(Property $property, array $data, array $amenities = [], array $images = [], array $videos = []): Property
     {
+        if (! Features::propertySales()) {
+            unset($data['listing_purpose'], $data['sale_price']);
+        }
+
         $status = isset($data['status']) ? PropertyStatus::from((string) $data['status']) : null;
         $publication = isset($data['publication_status'])
             ? PublicationStatus::from((string) $data['publication_status'])

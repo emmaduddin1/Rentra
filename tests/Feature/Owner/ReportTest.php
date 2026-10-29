@@ -38,7 +38,9 @@ class ReportTest extends TestCase
             'rent_amount' => 50000, 'electricity_amount' => 5000,
             'gas_amount' => 0, 'water_amount' => 0, 'internet_amount' => 0,
             'maintenance_amount' => 0, 'other_amount' => 0,
-            'total_amount' => 55000,
+            'total_amount' => 50000,
+            'total_receivable' => 50000,
+            'direct_utility_bills' => 5000,
         ]);
 
         MonthlyRecord::factory()->for($tenancy)->pending()->create([
@@ -46,17 +48,19 @@ class ReportTest extends TestCase
             'rent_amount' => 50000, 'electricity_amount' => 3000,
             'gas_amount' => 0, 'water_amount' => 0, 'internet_amount' => 0,
             'maintenance_amount' => 0, 'other_amount' => 0,
-            'total_amount' => 53000,
+            'total_amount' => 50000,
+            'total_receivable' => 50000,
+            'direct_utility_bills' => 3000,
         ]);
 
         // Another owner's data must not leak into the figures (BR-010).
-        MonthlyRecord::factory()->approved()->create(['total_amount' => 999999]);
+        MonthlyRecord::factory()->approved()->create(['total_amount' => 999999, 'total_receivable' => 999999]);
 
         $this->actingAs($owner)
             ->get(route('owner.reports.index'))
             ->assertOk()
-            ->assertSee('108,000.00')   // 55,000 + 53,000
-            ->assertSee('100,000.00')   // rent only
+            ->assertSee('100,000.00')   // owner receivable: rent only
+            ->assertSee('8,000.00')     // direct provider bills, shown separately
             ->assertDontSee('999,999.00');
     }
 
@@ -69,11 +73,15 @@ class ReportTest extends TestCase
 
         MonthlyRecord::factory()->for($tenancy)->approved()->create([
             'period_month' => now()->subMonths(6)->startOfMonth()->toDateString(),
+            'rent_amount' => 11111,
             'total_amount' => 11111,
+            'total_receivable' => 11111,
         ]);
         MonthlyRecord::factory()->for($tenancy)->pending()->create([
             'period_month' => now()->startOfMonth()->toDateString(),
+            'rent_amount' => 22222,
             'total_amount' => 22222,
+            'total_receivable' => 22222,
         ]);
 
         $this->actingAs($owner)
@@ -110,9 +118,10 @@ class ReportTest extends TestCase
             'period_month' => now()->startOfMonth()->toDateString(),
             'rent_amount' => 40000,
             'total_amount' => 40000,
+            'total_receivable' => 40000,
         ]);
 
-        MonthlyRecord::factory()->approved()->create(['total_amount' => 777777]);
+        MonthlyRecord::factory()->approved()->create(['total_amount' => 777777, 'total_receivable' => 777777]);
 
         $response = $this->actingAs($owner)
             ->get(route('owner.reports.export'))

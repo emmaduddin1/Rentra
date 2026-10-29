@@ -8,9 +8,11 @@ use App\Enums\MaintenancePriority;
 use App\Enums\MaintenanceStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Maintenance\StoreMaintenanceCommentRequest;
+use App\Http\Requests\Maintenance\UpdateMaintenanceFinancialsRequest;
 use App\Http\Requests\Maintenance\UpdateMaintenanceStatusRequest;
 use App\Models\MaintenanceRequest;
 use App\Models\Property;
+use App\Services\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -52,7 +54,7 @@ class MaintenanceRequestController extends Controller
             'filters' => $filters,
             'statuses' => MaintenanceStatus::cases(),
             'priorities' => MaintenancePriority::cases(),
-            'properties' => Property::ownedBy($owner)->orderBy('title')->get(['id', 'title']),
+            'properties' => Property::ownedBy($owner)->availableInMarketplace()->orderBy('title')->get(['id', 'title']),
             'openCount' => MaintenanceRequest::forOwner($owner)->open()->count(),
         ]);
     }
@@ -88,6 +90,19 @@ class MaintenanceRequestController extends Controller
         );
 
         return back()->with('status', __('Status updated. The renter has been notified.'));
+    }
+
+    public function updateFinancials(
+        UpdateMaintenanceFinancialsRequest $request,
+        MaintenanceRequest $maintenance,
+        AuditLogger $auditLogger,
+    ): RedirectResponse {
+        Gate::authorize('updateFinancials', $maintenance);
+
+        $maintenance->fill($request->financialData())->save();
+        $auditLogger->recordChanges('maintenance.financials_updated', $maintenance);
+
+        return back()->with('status', __('Maintenance financial details updated.'));
     }
 
     public function comment(

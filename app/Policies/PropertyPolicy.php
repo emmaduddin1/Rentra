@@ -18,7 +18,8 @@ class PropertyPolicy
 
     public function view(User $user, Property $property): bool
     {
-        return $property->isOwnedBy($user) || $property->isPubliclyVisible();
+        return $property->isAvailableInMarketplace()
+            && ($property->isOwnedBy($user) || $property->isPubliclyVisible());
     }
 
     public function create(User $user): bool
@@ -28,7 +29,9 @@ class PropertyPolicy
 
     public function update(User $user, Property $property): bool
     {
-        return $user->isOwner() && $property->isOwnedBy($user);
+        return $property->isAvailableInMarketplace()
+            && $user->isOwner()
+            && $property->isOwnedBy($user);
     }
 
     public function delete(User $user, Property $property): bool

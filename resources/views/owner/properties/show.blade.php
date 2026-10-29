@@ -290,7 +290,7 @@
                     </div>
                     <div>
                         <dt class="text-xs font-medium uppercase tracking-wide text-slate-500">
-                            {{ $isHouse ? __('Combined rent') : __('Price') }}
+                            {{ $isHouse ? __('Combined rent') : (\App\Support\Features::propertySales() ? __('Price') : __('Monthly rent')) }}
                         </dt>
                         <dd class="mt-1 text-sm text-slate-900">
                             <x-property-price :property="$property" />

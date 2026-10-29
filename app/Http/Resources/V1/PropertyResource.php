@@ -3,6 +3,7 @@
 namespace App\Http\Resources\V1;
 
 use App\Models\Property;
+use App\Support\UtilityArrangements;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -46,6 +47,13 @@ class PropertyResource extends JsonResource
             'sale_price' => $this->sale_price === null ? null : (string) $this->sale_price,
             'price_amount' => $this->priceAmount(),
             'price_suffix' => $this->priceSuffix(),
+            'utility_arrangements' => collect(UtilityArrangements::utilities())->mapWithKeys(fn (string $utility) => [
+                $utility => [
+                    'value' => $this->{"{$utility}_arrangement"}->value,
+                    'label' => $this->{"{$utility}_arrangement"}->label(),
+                    'description' => $this->{"{$utility}_arrangement"}->description(),
+                ],
+            ]),
             'area' => $this->area,
             'area_value' => $this->area_value === null ? null : (string) $this->area_value,
             'area_unit' => $this->area_unit?->value,

@@ -94,6 +94,10 @@
                 <h2 class="text-sm font-semibold text-slate-900">{{ __('Details') }}</h2>
 
                 <dl class="mt-3 space-y-2 text-sm">
+                    <div class="flex justify-between gap-2"><dt class="text-slate-500">{{ __('Maintenance expense') }}</dt><dd><x-money :amount="$request->amount" /></dd></div>
+                    <div class="flex justify-between gap-2"><dt class="text-slate-500">{{ __('Paid by') }}</dt><dd>{{ $request->paid_by?->label() ?? __('Not recorded') }}</dd></div>
+                    <div class="flex justify-between gap-2"><dt class="text-slate-500">{{ __('Responsible party') }}</dt><dd>{{ $request->responsible_party?->label() ?? __('Not decided') }}</dd></div>
+                    <div class="flex justify-between gap-2"><dt class="text-slate-500">{{ __('Reimbursement') }}</dt><dd>{{ $request->reimbursement_required ? ucfirst((string) $request->reimbursement_recipient).' · '.\App\Support\Money::format($request->reimbursement_amount) : __('Not required') }}</dd></div>
                     <div class="flex justify-between gap-2">
                         <dt class="text-slate-500">{{ __('Renter') }}</dt>
                         <dd>
@@ -113,6 +117,33 @@
                         </div>
                     @endif
                 </dl>
+
+                <form method="POST" action="{{ route('owner.maintenance.financials', $request) }}" class="mt-5 space-y-4 border-t border-slate-100 pt-4">
+                    @csrf
+                    @method('PATCH')
+
+                    <x-form.field :label="__('Maintenance expense')" name="amount" required>
+                        <x-form.input name="amount" type="number" min="0" step="0.01" :value="old('amount', $request->amount)" />
+                    </x-form.field>
+                    <x-form.field :label="__('Paid by')" name="paid_by">
+                        <x-form.select name="paid_by" :selected="old('paid_by', $request->paid_by?->value)" :options="collect(\App\Enums\MaintenancePayer::cases())->mapWithKeys(fn($item) => [$item->value => $item->label()])->all()" />
+                    </x-form.field>
+                    <x-form.field :label="__('Responsible party')" name="responsible_party">
+                        <x-form.select name="responsible_party" :selected="old('responsible_party', $request->responsible_party?->value)" :options="collect(\App\Enums\MaintenanceResponsibleParty::cases())->mapWithKeys(fn($item) => [$item->value => $item->label()])->all()" />
+                    </x-form.field>
+                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" name="reimbursement_required" value="1" @checked(old('reimbursement_required', $request->reimbursement_required))> {{ __('Reimbursement required') }}</label>
+                    <x-form.field :label="__('Reimbursement recipient')" name="reimbursement_recipient">
+                        <x-form.select name="reimbursement_recipient" :selected="old('reimbursement_recipient', $request->reimbursement_recipient)" :options="['owner' => __('Owner'), 'renter' => __('Renter')]" />
+                    </x-form.field>
+                    <x-form.field :label="__('Reimbursement amount')" name="reimbursement_amount">
+                        <x-form.input name="reimbursement_amount" type="number" min="0" step="0.01" :value="old('reimbursement_amount', $request->reimbursement_amount)" />
+                    </x-form.field>
+                    <x-form.field :label="__('Reimbursement status')" name="reimbursement_status">
+                        <x-form.select name="reimbursement_status" :selected="old('reimbursement_status', $request->reimbursement_status?->value)" :options="collect(\App\Enums\ReimbursementStatus::cases())->mapWithKeys(fn($item) => [$item->value => $item->label()])->all()" />
+                    </x-form.field>
+                    <x-form.field :label="__('Notes')" name="expense_notes"><x-form.textarea name="expense_notes" rows="3" :value="$request->expense_notes" /></x-form.field>
+                    <x-form.button type="submit" variant="secondary" class="w-full">{{ __('Save financial details') }}</x-form.button>
+                </form>
             </section>
         </aside>
     </div>

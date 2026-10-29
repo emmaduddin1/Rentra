@@ -25,6 +25,7 @@ class PropertyController extends Controller
         Gate::authorize('viewAny', Property::class);
 
         $properties = Property::ownedBy($request->user())
+            ->availableInMarketplace()
             // BR-013 - floors are nested under the house that holds them.
             ->topLevel()
             ->with(['primaryImage', 'category', 'amenities', 'floors.category'])
@@ -53,6 +54,8 @@ class PropertyController extends Controller
 
     public function show(Property $property): PropertyResource
     {
+        abort_unless($property->isAvailableInMarketplace(), 404);
+
         Gate::authorize('view', $property);
 
         return new PropertyResource($property->load(['images', 'primaryImage', 'videos', 'category', 'amenities', 'floors.category']));
@@ -60,6 +63,8 @@ class PropertyController extends Controller
 
     public function update(PropertyRequest $request, Property $property, UpdateProperty $updateProperty): PropertyResource
     {
+        abort_unless($property->isAvailableInMarketplace(), 404);
+
         Gate::authorize('update', $property);
 
         $updateProperty->handle(

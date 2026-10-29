@@ -4,7 +4,9 @@ namespace App\Http\Requests\Tenancy;
 
 use App\Enums\UserRole;
 use App\Enums\UserStatus;
+use App\Enums\UtilityPaymentArrangement;
 use App\Models\User;
+use App\Support\UtilityArrangements;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -45,7 +47,7 @@ class StoreTenancyRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'property_id' => [
                 'required',
                 // BR-010 - only the owner's own, non-archived properties.
@@ -97,6 +99,12 @@ class StoreTenancyRequest extends FormRequest
             'billing_day' => ['nullable', 'integer', 'min:1', 'max:31'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
+
+        foreach (UtilityArrangements::columns() as $column) {
+            $rules[$column] = ['sometimes', Rule::enum(UtilityPaymentArrangement::class)];
+        }
+
+        return $rules;
     }
 
     public function withValidator(Validator $validator): void
@@ -142,6 +150,7 @@ class StoreTenancyRequest extends FormRequest
     {
         return $this->safe()->only([
             'start_date', 'end_date', 'agreed_rent', 'deposit', 'billing_day', 'notes',
+            ...UtilityArrangements::columns(),
         ]);
     }
 

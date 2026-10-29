@@ -167,8 +167,8 @@ class MonthlyRecordController extends Controller
             'approved_this_year' => (string) $base()
                 ->status(MonthlyRecordStatus::Approved)
                 ->whereYear('period_month', $filters['year'] ?? now()->year)
-                ->sum('total_amount'),
-            'pending' => (string) $base()->status(MonthlyRecordStatus::Pending)->sum('total_amount'),
+                ->sum('total_receivable'),
+            'pending' => (string) $base()->status(MonthlyRecordStatus::Pending)->sum('total_receivable'),
             'year' => (string) ($filters['year'] ?? now()->year),
         ];
     }

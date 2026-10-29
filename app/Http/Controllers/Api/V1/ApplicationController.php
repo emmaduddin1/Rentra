@@ -27,6 +27,7 @@ class ApplicationController extends Controller
         $user = $request->user();
 
         $applications = Application::query()
+            ->availableInMarketplace()
             // BR-010 - an owner sees inquiries on their listings, a renter
             // sees their own, and nobody sees anything else.
             ->when($user->isOwner(), fn ($query) => $query->forOwner($user))

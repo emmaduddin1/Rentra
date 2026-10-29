@@ -27,6 +27,7 @@ class UserResource extends JsonResource
             'role' => $this->role->value,
             'role_label' => $this->role->label(),
             'status' => $this->status->value,
+            'product_tour_completed_at' => $this->when($request->user()?->id === $this->id, fn () => $this->product_tour_completed_at?->toIso8601String()),
             'profile_image_url' => $this->profile_image
                 ? Storage::disk(config('rental.uploads.images.disk'))->url($this->profile_image)
                 : null,

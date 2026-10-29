@@ -12,6 +12,7 @@ enum PaymentCategory: string
     case Gas = 'gas';
     case Water = 'water';
     case Internet = 'internet';
+    case OtherUtility = 'other_utility';
     case Maintenance = 'maintenance';
     case Other = 'other';
 
@@ -23,8 +24,9 @@ enum PaymentCategory: string
             self::Gas => 'Gas',
             self::Water => 'Water',
             self::Internet => 'Internet',
-            self::Maintenance => 'Maintenance',
-            self::Other => 'Other',
+            self::OtherUtility => 'Other utility',
+            self::Maintenance => 'Maintenance expense (legacy)',
+            self::Other => 'Other charge (legacy)',
         };
     }
 

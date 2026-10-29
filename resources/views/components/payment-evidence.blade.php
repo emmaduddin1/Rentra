@@ -6,7 +6,7 @@
     // and a proof is attached. Both parties read the same breakdown, so the
     // renter can see what is still missing before the owner does.
     $shown = collect($categories)->filter(
-        fn ($category) => (float) $record->{$category->amountColumn()} > 0
+        fn ($category) => bccomp((string) $record->{$category->amountColumn()}, '0.00', 2) > 0
             || $record->hasProofFor($category)
     );
 
@@ -49,7 +49,7 @@
     @forelse ($shown as $category)
         @php
             $amount = $record->{$category->amountColumn()};
-            $charged = (float) $amount > 0;
+            $charged = bccomp((string) $amount, '0.00', 2) > 0;
             $hasProof = $record->hasProofFor($category);
         @endphp
 
@@ -66,6 +66,12 @@
                         <x-badge variant="warning" dot>{{ __('No receipt') }}</x-badge>
                     @endif
                 </h3>
+
+                @if (in_array($category->value, \App\Support\UtilityArrangements::utilities(), true))
+                    <p class="w-full text-xs text-slate-500">
+                        {{ $record->{$category->value.'_arrangement'}->label() }}
+                    </p>
+                @endif
 
                 <span class="text-sm font-medium"><x-money :amount="$amount" /></span>
             </div>

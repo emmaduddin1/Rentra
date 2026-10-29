@@ -24,6 +24,7 @@
     $videoSlots = $videoSlots ?? $maxVideos;
     $house = $house ?? $property->house;
     $isFloor = $house !== null;
+    $salesEnabled = \App\Support\Features::propertySales();
 
     // FR-PROP-003 - the edit form only asks for the photos still missing.
     $existingImages = $property->exists ? $property->images()->count() : 0;
@@ -69,14 +70,18 @@
                         </x-form.field>
                     </div>
 
-                    <x-form.field :label="__('Listing purpose')" name="listing_purpose" required>
-                        <x-form.select
-                            name="listing_purpose"
-                            data-listing-purpose
-                            :selected="$property->listing_purpose?->value"
-                            :options="collect($purposes)->mapWithKeys(fn ($purpose) => [$purpose->value => $purpose->label()])->all()"
-                        />
-                    </x-form.field>
+                    @if ($salesEnabled)
+                        <x-form.field :label="__('Listing purpose')" name="listing_purpose" required>
+                            <x-form.select
+                                name="listing_purpose"
+                                data-listing-purpose
+                                :selected="$property->listing_purpose?->value"
+                                :options="collect($purposes)->mapWithKeys(fn ($purpose) => [$purpose->value => $purpose->label()])->all()"
+                            />
+                        </x-form.field>
+                    @else
+                        <input type="hidden" name="listing_purpose" value="rent">
+                    @endif
 
                     <x-form.field :label="__('Category')" name="category_id">
                         <x-form.select
@@ -124,7 +129,7 @@
                     </x-form.field>
                 </div>
 
-                @unless ($isFloor)
+                @if (! $isFloor && $salesEnabled)
                     <div class="sm:col-span-2" data-sale-field hidden>
                         <x-form.field
                             :label="__('Sale price (:currency)', ['currency' => \App\Support\Money::code()])"
@@ -133,7 +138,7 @@
                             <x-form.input name="sale_price" type="number" step="0.01" min="0" :value="old('sale_price', $property->sale_price)" />
                         </x-form.field>
                     </div>
-                @endunless
+                @endif
 
                 @unless ($isFloor)
                     <x-form.field :label="__('Area')" name="area" required :hint="__('Renters search by this field.')">
@@ -206,6 +211,28 @@
                 </div>
             </div>
         </section>
+
+        @unless ($isFloor)
+            <section class="card p-6">
+                <h2 class="text-sm font-semibold text-slate-900">{{ __('Utility payment arrangement') }}</h2>
+                <p class="mt-1 text-xs text-slate-500">{{ __('These defaults are copied into each new tenancy. Existing tenancies are never changed automatically.') }}</p>
+                <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                    @foreach (\App\Support\UtilityArrangements::utilities() as $utility)
+                        @php
+                            $column = $utility.'_arrangement';
+                            $current = old($column, $property->{$column}?->value ?? \App\Enums\UtilityPaymentArrangement::ProviderDirect->value);
+                        @endphp
+                        <x-form.field :label="__(str($utility)->replace('_', ' ')->title()->toString())" :name="$column" :hint="__(\App\Enums\UtilityPaymentArrangement::tryFrom($current)?->description() ?? \App\Enums\UtilityPaymentArrangement::Unclassified->description())">
+                            <x-form.select
+                                :name="$column"
+                                :selected="$current"
+                                :options="collect(\App\Enums\UtilityPaymentArrangement::cases())->reject(fn ($item) => $item === \App\Enums\UtilityPaymentArrangement::Unclassified)->mapWithKeys(fn ($item) => [$item->value => $item->label()])->all()"
+                            />
+                        </x-form.field>
+                    @endforeach
+                </div>
+            </section>
+        @endunless
 
         @if (count($amenities) > 0)
             <section class="card p-6">

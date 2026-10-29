@@ -29,6 +29,7 @@ class ApplicationController extends Controller
         ]);
 
         $applications = Application::forOwner($request->user())
+            ->availableInMarketplace()
             ->with(['conversation', 'property', 'renter'])
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when(
@@ -43,7 +44,7 @@ class ApplicationController extends Controller
             'applications' => $applications,
             'filters' => $filters,
             'statuses' => ApplicationStatus::cases(),
-            'properties' => Property::ownedBy($request->user())->rentable()->orderBy('title')->get(['id', 'title']),
+            'properties' => Property::ownedBy($request->user())->availableInMarketplace()->rentable()->orderBy('title')->get(['id', 'title']),
         ]);
     }
 

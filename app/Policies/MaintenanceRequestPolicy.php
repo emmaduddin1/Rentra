@@ -28,7 +28,7 @@ class MaintenanceRequestPolicy
      */
     public function create(User $user, Tenancy $tenancy): bool
     {
-        if (! $tenancy->isActive()) {
+        if (! $tenancy->isAvailableInMarketplace() || ! $tenancy->isActive()) {
             return false;
         }
 
@@ -44,6 +44,11 @@ class MaintenanceRequestPolicy
         return $this->isOwnerOfRequest($user, $request);
     }
 
+    public function updateFinancials(User $user, MaintenanceRequest $request): bool
+    {
+        return $this->isOwnerOfRequest($user, $request);
+    }
+
     public function comment(User $user, MaintenanceRequest $request): bool
     {
         return $this->view($user, $request);
@@ -51,11 +56,15 @@ class MaintenanceRequestPolicy
 
     protected function isOwnerOfRequest(User $user, MaintenanceRequest $request): bool
     {
-        return $user->isOwner() && $request->tenancy?->ownerId() === $user->id;
+        return $request->tenancy?->isAvailableInMarketplace() === true
+            && $user->isOwner()
+            && $request->tenancy->ownerId() === $user->id;
     }
 
     protected function isRenterOfRequest(User $user, MaintenanceRequest $request): bool
     {
-        return $user->isRenter() && $request->tenancy?->renter_id === $user->id;
+        return $request->tenancy?->isAvailableInMarketplace() === true
+            && $user->isRenter()
+            && $request->tenancy->renter_id === $user->id;
     }
 }

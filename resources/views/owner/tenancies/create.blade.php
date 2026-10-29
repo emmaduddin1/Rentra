@@ -1,11 +1,12 @@
 @php
     $mode = old('renter_mode', 'existing');
+    $defaultProperty = $properties->firstWhere('id', (int) old('property_id', $selectedPropertyId)) ?? $properties->first();
 @endphp
 
 <x-layouts.app
-    :title="__('Assign renter')"
-    :heading="__('Assign renter')"
-    :subheading="__('Link a renter to one of your available properties.')"
+    :title="__('Invite renter')"
+    :heading="__('Invite renter')"
+    :subheading="__('Send terms for the renter to accept or reject. The property stays available until acceptance.')"
     :back="['href' => route('owner.tenancies.index'), 'label' => __('Tenancies')]"
 >
     @if ($properties->isEmpty())
@@ -113,6 +114,22 @@
                         </div>
                     </div>
                 </section>
+
+                <section class="card p-6">
+                    <h2 class="text-sm font-semibold text-slate-900">{{ __('Review utility arrangement') }}</h2>
+                    <p class="mt-1 text-xs text-slate-500">{{ __('Review and override the property defaults before confirming. These terms become the tenancy contract snapshot.') }}</p>
+                    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                        @foreach (\App\Support\UtilityArrangements::utilities() as $utility)
+                            @php
+                                $column = $utility.'_arrangement';
+                                $current = old($column, $defaultProperty?->{$column}?->value ?? \App\Enums\UtilityPaymentArrangement::Unclassified->value);
+                            @endphp
+                            <x-form.field :label="__(str($utility)->replace('_', ' ')->title()->toString())" :name="$column">
+                                <x-form.select :name="$column" :selected="$current" :options="collect(\App\Enums\UtilityPaymentArrangement::cases())->mapWithKeys(fn ($item) => [$item->value => $item->label()])->all()" />
+                            </x-form.field>
+                        @endforeach
+                    </div>
+                </section>
             </div>
 
             <aside class="space-y-6">
@@ -147,7 +164,7 @@
                 </section>
 
                 <div class="flex flex-wrap gap-3">
-                    <x-form.button type="submit" class="w-full">{{ __('Assign renter') }}</x-form.button>
+                    <x-form.button type="submit" class="w-full">{{ __('Send tenancy invitation') }}</x-form.button>
                     <a href="{{ route('owner.tenancies.index') }}" class="w-full btn btn-secondary">
                         {{ __('Cancel') }}
                     </a>

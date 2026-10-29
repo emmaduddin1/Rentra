@@ -45,6 +45,14 @@ class CreateMaintenanceRequest
                 'priority' => $data['priority'],
                 'status' => MaintenanceStatus::Pending,
                 'created_by' => $author->id,
+                'amount' => $data['amount'] ?? 0,
+                'paid_by' => $data['paid_by'] ?? null,
+                'responsible_party' => $data['responsible_party'] ?? null,
+                'reimbursement_required' => $data['reimbursement_required'] ?? false,
+                'reimbursement_recipient' => $data['reimbursement_recipient'] ?? null,
+                'reimbursement_amount' => $data['reimbursement_amount'] ?? 0,
+                'reimbursement_status' => $data['reimbursement_status'] ?? 'not_required',
+                'expense_notes' => $data['expense_notes'] ?? null,
             ]);
 
             // FR-MNT-004 - the timeline starts at creation.

@@ -150,7 +150,9 @@ class ApiWorkflowTest extends TestCase
         ])->assertCreated();
 
         $recordId = $created->json('data.id');
-        $this->assertSame('54000.25', $created->json('data.total_amount'));
+        $this->assertSame('50000.00', $created->json('data.total_receivable'));
+        $this->assertSame('4000.25', $created->json('data.direct_utility_bills'));
+        $this->assertSame('0.00', $created->json('data.unclassified_utility_bills'));
         $this->assertSame('draft', $created->json('data.status'));
 
         // BR-003 - the same month twice is refused.
@@ -233,7 +235,7 @@ class ApiWorkflowTest extends TestCase
     }
 
     #[Test]
-    public function a_tenancy_is_assigned_and_ended_over_the_api(): void
+    public function a_tenancy_is_invited_accepted_and_ended_over_the_api(): void
     {
         $owner = User::factory()->owner()->create();
         $property = Property::factory()->for($owner, 'owner')->create();
@@ -250,7 +252,14 @@ class ApiWorkflowTest extends TestCase
         ])->assertCreated();
 
         $tenancy = Tenancy::findOrFail($created->json('data.id'));
+        $this->assertSame('invited', $tenancy->status->value);
+        $this->assertSame('available', $property->fresh()->status->value);
+
+        Sanctum::actingAs($renter);
+        $this->postJson(route('api.v1.tenancies.accept', $tenancy))->assertOk();
         $this->assertSame('occupied', $property->fresh()->status->value);
+
+        Sanctum::actingAs($owner);
 
         $identifierProperty = Property::factory()->for($owner, 'owner')->create();
         $identifierRenter = User::factory()->renter()->create(['email' => 'linked@example.test']);
@@ -274,11 +283,13 @@ class ApiWorkflowTest extends TestCase
             'agreed_rent' => '70000.00',
         ])->assertForbidden();
 
-        // FR-TEN-005.
-        $this->patchJson(route('api.v1.tenancies.end', $tenancy), [
-            'end_date' => now()->toDateString(),
-            'property_status' => 'available',
+        Sanctum::actingAs($renter);
+        $this->postJson(route('api.v1.tenancies.termination.request', $tenancy), [
+            'proposed_end_date' => now()->toDateString(), 'reason' => 'Agreement completed.', 'confirmed' => true,
         ])->assertOk();
+        $termination = $tenancy->terminationRequests()->firstOrFail();
+        Sanctum::actingAs($owner);
+        $this->postJson(route('api.v1.tenancies.termination.respond', $termination), ['decision' => 'accept'])->assertOk();
 
         $this->assertSame('ended', $tenancy->fresh()->status->value);
         $this->assertSame('available', $property->fresh()->status->value);

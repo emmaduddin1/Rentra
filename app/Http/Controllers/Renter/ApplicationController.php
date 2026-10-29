@@ -28,6 +28,7 @@ class ApplicationController extends Controller
 
         return view('renter.applications.index', [
             'applications' => Application::forRenter($request->user())
+                ->availableInMarketplace()
                 ->with(['conversation', 'property.primaryImage'])
                 ->latest('submitted_at')
                 ->paginate(config('rental.pagination.per_page')),

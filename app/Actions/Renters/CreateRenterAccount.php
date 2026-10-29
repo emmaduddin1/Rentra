@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Notifier;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -45,6 +46,9 @@ class CreateRenterAccount
                 newValues: ['role' => $renter->role->value],
                 actor: $owner,
             );
+
+            app(Notifier::class)->send($renter, 'account.created', 'Welcome to Tenantism',
+                'Your account is ready.', idempotencyKey: 'account.created:'.$renter->id);
 
             return $renter;
         });

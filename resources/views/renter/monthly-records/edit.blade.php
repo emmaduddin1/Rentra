@@ -28,7 +28,7 @@
                     <h2 class="text-sm font-semibold text-slate-900">{{ __('Amounts') }}</h2>
 
                     <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        @foreach ($categories as $category)
+                        @foreach (collect($categories)->reject(fn ($category) => in_array($category, [\App\Enums\PaymentCategory::Maintenance, \App\Enums\PaymentCategory::Other], true)) as $category)
                             <x-form.field :label="$category->label()" :name="$category->amountColumn()">
                                 <x-form.input
                                     :name="$category->amountColumn()"
@@ -38,6 +38,15 @@
                                     :value="old($category->amountColumn(), $record->{$category->amountColumn()})"
                                 />
                             </x-form.field>
+                        @endforeach
+                        @foreach ([
+                            'owner_payable_charges' => __('Other owner-payable charges'),
+                            'discount_amount' => __('Discount/credit'),
+                            'adjustment_amount' => __('Other adjustment/credit'),
+                            'maintenance_expenses' => __('Maintenance expenses (tracking only)'),
+                            'reimbursements_to_owner' => __('Reimbursements owed to owner'),
+                        ] as $field => $label)
+                            <x-form.field :label="$label" :name="$field"><x-form.input :name="$field" type="number" step="0.01" min="0" :value="old($field, $record->{$field})" /></x-form.field>
                         @endforeach
                     </div>
 
@@ -50,7 +59,7 @@
                     <div class="mt-5 flex flex-wrap items-center gap-3">
                         <x-form.button type="submit" variant="secondary">{{ __('Save amounts') }}</x-form.button>
                         <p class="text-sm text-slate-500">
-                            {{ __('Current total') }}: <span class="font-medium text-slate-900"><x-money :amount="$record->total_amount" /></span>
+                            {{ __('Current total receivable') }}: <span class="font-medium text-slate-900"><x-money :amount="$record->total_receivable" /></span>
                         </p>
                     </div>
                 </section>

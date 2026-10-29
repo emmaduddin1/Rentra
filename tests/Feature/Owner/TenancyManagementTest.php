@@ -3,13 +3,16 @@
 namespace Tests\Feature\Owner;
 
 use App\Enums\PropertyStatus;
+use App\Enums\PublicationStatus;
 use App\Enums\TenancyStatus;
+use App\Enums\TerminationRequestStatus;
 use App\Enums\UserRole;
 use App\Models\AuditLog;
 use App\Models\Property;
 use App\Models\Tenancy;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -36,7 +39,7 @@ class TenancyManagementTest extends TestCase
     }
 
     #[Test]
-    public function an_owner_assigns_an_existing_renter_and_the_property_becomes_occupied(): void
+    public function assignment_creates_an_invitation_and_acceptance_occupies_the_property(): void
     {
         $owner = User::factory()->owner()->create();
         $property = Property::factory()->published()->for($owner, 'owner')->create();
@@ -50,23 +53,26 @@ class TenancyManagementTest extends TestCase
 
         $this->assertSame($renter->id, $tenancy->renter_id);
         $this->assertSame($property->id, $tenancy->property_id);
-        $this->assertSame(TenancyStatus::Active, $tenancy->status);
+        $this->assertSame(TenancyStatus::Invited, $tenancy->status);
         $this->assertSame('75000.00', $tenancy->agreed_rent);
 
-        // 5.1 step 6 - the property is marked occupied, so it leaves the feed.
+        // Invitations do not claim the property.
         $property->refresh();
-        $this->assertSame(PropertyStatus::Occupied, $property->status);
-        $this->assertFalse($property->isPubliclyVisible());
+        $this->assertSame(PropertyStatus::Available, $property->status);
 
         // The renter is told, and the assignment is audited (BR-008).
         $this->assertDatabaseHas('notifications', [
             'user_id' => $renter->id,
-            'type' => 'tenancy.assigned',
+            'type' => 'tenancy.invited',
         ]);
         $this->assertDatabaseHas('audit_logs', [
             'user_id' => $owner->id,
-            'action' => 'tenancy.assigned',
+            'action' => 'tenancy.invited',
         ]);
+
+        $this->actingAs($renter)->post(route('tenancies.accept', $tenancy))->assertRedirect();
+        $this->assertSame(TenancyStatus::Active, $tenancy->fresh()->status);
+        $this->assertSame(PropertyStatus::Occupied, $property->fresh()->status);
     }
 
     #[Test]
@@ -194,18 +200,15 @@ class TenancyManagementTest extends TestCase
     }
 
     #[Test]
-    public function ending_a_tenancy_frees_the_property_and_keeps_the_history(): void
+    public function owner_can_end_contract_and_publish_the_property_again(): void
     {
         $tenancy = Tenancy::factory()->create();
         $owner = $tenancy->property->owner;
+        $tenancy->property->forceFill(['publication_status' => PublicationStatus::Published])->save();
 
-        $this->actingAs($owner)
-            ->patch(route('owner.tenancies.end', $tenancy), [
-                'end_date' => now()->toDateString(),
-                'property_status' => PropertyStatus::Available->value,
-                'reason' => 'Tenant moved out.',
-            ])
-            ->assertRedirect();
+        $this->actingAs($owner)->post(route('tenancies.end', $tenancy), [
+            'reason' => 'Tenant moved out.', 'next_step' => 'publish', 'confirmed' => 1,
+        ])->assertRedirect(route('owner.properties.show', $tenancy->property_id));
 
         $tenancy->refresh();
 
@@ -213,6 +216,7 @@ class TenancyManagementTest extends TestCase
         $this->assertSame(TenancyStatus::Ended, $tenancy->status);
         $this->assertNotNull($tenancy->ended_at);
         $this->assertSame(PropertyStatus::Available, $tenancy->property->fresh()->status);
+        $this->assertSame(PublicationStatus::Published, $tenancy->property->fresh()->publication_status);
 
         // FR-TEN-004 - the record survives.
         $this->assertDatabaseHas('tenancies', ['id' => $tenancy->id, 'deleted_at' => null]);
@@ -220,43 +224,127 @@ class TenancyManagementTest extends TestCase
     }
 
     #[Test]
-    public function a_tenancy_cannot_be_ended_twice_or_leave_the_property_occupied(): void
+    public function owner_can_end_contract_and_continue_to_assign_another_renter(): void
     {
         $tenancy = Tenancy::factory()->create();
         $owner = $tenancy->property->owner;
 
-        $this->actingAs($owner)
-            ->patch(route('owner.tenancies.end', $tenancy), [
-                'end_date' => now()->toDateString(),
-                'property_status' => PropertyStatus::Occupied->value,
-            ])
-            ->assertSessionHasErrors('property_status');
+        $this->actingAs($owner)->post(route('tenancies.end', $tenancy), [
+            'reason' => 'Contract completed.', 'next_step' => 'assign', 'confirmed' => 1,
+        ])->assertRedirect(route('owner.tenancies.create', ['property_id' => $tenancy->property_id]));
 
-        $this->actingAs($owner)->patch(route('owner.tenancies.end', $tenancy), [
-            'end_date' => now()->toDateString(),
-            'property_status' => PropertyStatus::Available->value,
-        ]);
-
-        // The policy blocks a second ending of the same tenancy.
-        $this->actingAs($owner)
-            ->patch(route('owner.tenancies.end', $tenancy), [
-                'end_date' => now()->toDateString(),
-                'property_status' => PropertyStatus::Available->value,
-            ])
-            ->assertForbidden();
+        $property = $tenancy->property->fresh();
+        $this->assertSame(PropertyStatus::Available, $property->status);
+        $this->assertSame(PublicationStatus::Draft, $property->publication_status);
     }
 
     #[Test]
-    public function the_end_date_cannot_precede_the_start_date(): void
+    public function owner_can_cancel_an_active_contract_before_its_start_date_without_a_field_error(): void
+    {
+        $tenancy = Tenancy::factory()->create([
+            'status' => TenancyStatus::NoticePeriod,
+            'start_date' => now()->addWeek()->toDateString(),
+            'end_date' => now()->addMonth()->toDateString(),
+        ]);
+
+        $this->actingAs($tenancy->property->owner)->post(route('tenancies.end', $tenancy), [
+            'reason' => 'Contract cancelled before occupancy.',
+            'next_step' => 'publish',
+            'confirmed' => 1,
+        ])->assertRedirect(route('owner.properties.show', $tenancy->property_id))
+            ->assertSessionHasNoErrors();
+
+        $tenancy->refresh();
+        $this->assertSame(TenancyStatus::Cancelled, $tenancy->status);
+        $this->assertNull($tenancy->end_date);
+        $this->assertNotNull($tenancy->ended_at);
+        $this->assertSame(PropertyStatus::Available, $tenancy->property->fresh()->status);
+        $this->assertSame(PublicationStatus::Published, $tenancy->property->fresh()->publication_status);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'tenancy.cancelled']);
+    }
+
+    #[Test]
+    public function ending_one_imported_duplicate_resolves_the_conflict_and_locks_the_remaining_tenancy(): void
+    {
+        $renter = User::factory()->renter()->create();
+        $remaining = Tenancy::factory()->for($renter, 'renter')->create();
+        $closing = Tenancy::factory()->for($renter, 'renter')->create([
+            'start_date' => now()->addWeek()->toDateString(),
+        ]);
+        DB::table('tenancy_conflicts')->insert([
+            'conflict_type' => 'renter',
+            'conflict_key' => $renter->id,
+            'tenancy_ids' => json_encode([$remaining->id, $closing->id]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($closing->property->owner)->post(route('tenancies.end', $closing), [
+            'reason' => 'Duplicate contract confirmed invalid.',
+            'next_step' => 'assign',
+            'confirmed' => 1,
+        ])->assertRedirect();
+
+        $this->assertNotNull(DB::table('tenancy_conflicts')->value('resolved_at'));
+        $this->assertDatabaseHas('tenancy_active_locks', [
+            'tenancy_id' => $remaining->id,
+            'renter_id' => $renter->id,
+            'property_id' => $remaining->property_id,
+        ]);
+    }
+
+    #[Test]
+    public function renter_cannot_end_the_contract_directly(): void
+    {
+        $tenancy = Tenancy::factory()->create();
+
+        $this->actingAs($tenancy->renter)->post(route('tenancies.end', $tenancy), [
+            'reason' => 'Trying to leave directly.', 'next_step' => 'publish', 'confirmed' => 1,
+        ])->assertForbidden();
+
+        $this->assertSame(TenancyStatus::Active, $tenancy->fresh()->status);
+    }
+
+    #[Test]
+    public function direct_owner_ending_closes_the_pending_renter_request(): void
+    {
+        $tenancy = Tenancy::factory()->create();
+        $payload = [
+            'proposed_end_date' => now()->addMonth()->toDateString(),
+            'reason' => 'Renter is relocating.',
+            'confirmed' => 1,
+        ];
+        $this->actingAs($tenancy->renter)->post(route('tenancies.termination.request', $tenancy), $payload);
+        $termination = $tenancy->terminationRequests()->firstOrFail();
+
+        $this->actingAs($tenancy->property->owner)->post(route('tenancies.end', $tenancy), [
+            'reason' => 'Move-out completed early.', 'next_step' => 'assign', 'confirmed' => 1,
+        ])->assertRedirect();
+
+        $this->assertSame(TerminationRequestStatus::Accepted, $termination->fresh()->status);
+        $this->assertSame(TenancyStatus::Ended, $tenancy->fresh()->status);
+    }
+
+    #[Test]
+    public function a_duplicate_termination_request_is_rejected(): void
+    {
+        $tenancy = Tenancy::factory()->create();
+        $payload = ['proposed_end_date' => now()->addMonth()->toDateString(), 'reason' => 'Moving out soon.', 'confirmed' => 1];
+        $this->actingAs($tenancy->renter)->post(route('tenancies.termination.request', $tenancy), $payload)->assertRedirect();
+        $this->actingAs($tenancy->renter)->post(route('tenancies.termination.request', $tenancy), $payload)->assertSessionHasErrors('status');
+    }
+
+    #[Test]
+    public function a_termination_date_cannot_be_in_the_past(): void
     {
         $tenancy = Tenancy::factory()->create(['start_date' => now()->subMonth()->toDateString()]);
 
-        $this->actingAs($tenancy->property->owner)
-            ->patch(route('owner.tenancies.end', $tenancy), [
-                'end_date' => now()->subYear()->toDateString(),
-                'property_status' => PropertyStatus::Available->value,
+        $this->actingAs($tenancy->renter)
+            ->post(route('tenancies.termination.request', $tenancy), [
+                'proposed_end_date' => now()->subYear()->toDateString(),
+                'reason' => 'Invalid past date.', 'confirmed' => 1,
             ])
-            ->assertSessionHasErrors('end_date');
+            ->assertSessionHasErrors('proposed_end_date');
 
         $this->assertSame(TenancyStatus::Active, $tenancy->fresh()->status);
     }

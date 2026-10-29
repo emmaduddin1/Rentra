@@ -11,6 +11,7 @@ use App\Models\MonthlyRecord;
 use App\Models\Property;
 use App\Models\Tenancy;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -27,6 +28,7 @@ class DashboardController extends Controller
         return view('owner.dashboard', [
             // NFR-PERF-003 - eager loaded, so the recent lists stay at one query each.
             'recentApplications' => Application::forOwner($owner)
+                ->availableInMarketplace()
                 ->with(['property', 'renter'])
                 ->latest('submitted_at')
                 ->limit(5)
@@ -34,19 +36,23 @@ class DashboardController extends Controller
             // BR-013 - the portfolio is counted in buildings, and let in
             // rentable units: an independent property or a single floor.
             'recentProperties' => Property::ownedBy($owner)
+                ->availableInMarketplace()
                 ->topLevel()
                 ->with('primaryImage')
                 ->latest('id')
                 ->limit(5)
                 ->get(),
             'stats' => [
-                'properties' => Property::ownedBy($owner)->topLevel()->count(),
-                'available' => Property::ownedBy($owner)->rentable()->where('status', PropertyStatus::Available->value)->count(),
-                'occupied' => Property::ownedBy($owner)->rentable()->where('status', PropertyStatus::Occupied->value)->count(),
+                'properties' => Property::ownedBy($owner)->availableInMarketplace()->topLevel()->count(),
+                'available' => Property::ownedBy($owner)->availableInMarketplace()->rentable()->where('status', PropertyStatus::Available->value)->count(),
+                'occupied' => Property::ownedBy($owner)->availableInMarketplace()->rentable()->where('status', PropertyStatus::Occupied->value)->count(),
                 'active_renters' => Tenancy::forOwner($owner)->active()->distinct('renter_id')->count('renter_id'),
                 'pending_approvals' => MonthlyRecord::forOwner($owner)->status(MonthlyRecordStatus::Pending)->count(),
                 'open_maintenance' => MaintenanceRequest::forOwner($owner)->open()->count(),
-                'pending_applications' => Application::forOwner($owner)->where('status', 'pending')->count(),
+                'pending_applications' => Application::forOwner($owner)->availableInMarketplace()->where('status', 'pending')->count(),
+                'tenancy_conflicts' => DB::table('tenancy_conflicts')->whereNull('resolved_at')
+                    ->whereIn('conflict_key', Tenancy::forOwner($owner)->active()->select('renter_id'))
+                    ->where('conflict_type', 'renter')->count(),
             ],
         ]);
     }

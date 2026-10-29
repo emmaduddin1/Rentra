@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Enums\MaintenanceStatus;
 use App\Enums\MonthlyRecordStatus;
 use App\Enums\PaymentCategory;
+use App\Enums\UtilityPaymentArrangement;
 use App\Models\MonthlyRecord;
 use App\Models\Tenancy;
 use App\Support\Money;
@@ -40,6 +41,8 @@ class DomainRulesTest extends TestCase
             'rent_amount' => '45000.10',
             'electricity_amount' => '3499.20',
             'gas_amount' => '0.70',
+            'electricity_arrangement' => UtilityPaymentArrangement::Owner,
+            'gas_arrangement' => UtilityPaymentArrangement::Owner,
         ]);
 
         $this->assertSame('48500.00', $record->calculateTotal());

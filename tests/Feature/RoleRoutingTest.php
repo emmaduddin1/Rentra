@@ -2,8 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ListingPurpose;
+use App\Models\Property;
+use App\Models\PropertyImage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -27,6 +31,50 @@ class RoleRoutingTest extends TestCase
     public function the_landing_page_is_public(): void
     {
         $this->get(route('home'))->assertOk();
+    }
+
+    #[Test]
+    public function the_landing_hero_is_independent_of_property_images(): void
+    {
+        $property = Property::factory()->published()->create();
+        $image = PropertyImage::factory()->primary()->for($property)->create([
+            'file_path' => 'property-images/never-use-as-homepage-hero.jpg',
+        ]);
+
+        $response = $this->get(route('home'))->assertOk();
+        $heroMarkup = Str::before($response->getContent(), '<form');
+
+        $this->assertStringContainsString('images/tenantism-hero.webp', $heroMarkup);
+        $this->assertStringNotContainsString($image->url(), $heroMarkup);
+        $response->assertSee($image->url(), false);
+    }
+
+    #[Test]
+    public function the_landing_tabs_filter_properties_by_listing_purpose(): void
+    {
+        config(['features.property_sales' => true]);
+
+        Property::factory()->published()->create([
+            'title' => 'Rent only home',
+            'listing_purpose' => ListingPurpose::Rent,
+        ]);
+        Property::factory()->published()->create([
+            'title' => 'Sale only home',
+            'listing_purpose' => ListingPurpose::Sale,
+            'sale_price' => 12_500_000,
+        ]);
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('Rent only home')
+            ->assertDontSee('Sale only home');
+
+        $this->get(route('home', ['listing_purpose' => 'sale']))
+            ->assertOk()
+            ->assertSee('Sale only home')
+            ->assertDontSee('Rent only home')
+            ->assertSee('name="listing_purpose" value="sale"', false)
+            ->assertSee('aria-selected="true"', false);
     }
 
     #[Test]

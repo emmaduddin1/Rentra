@@ -20,6 +20,7 @@ class ConversationController extends Controller
         $user = $request->user();
 
         $conversations = Conversation::forParticipant($user)
+            ->availableInMarketplace()
             ->with([
                 'application',
                 'latestMessage.sender',

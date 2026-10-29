@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\MonthlyRecords\CreateMonthlyRecord;
+use App\Actions\MonthlyRecords\RecordMonthlyPayment;
 use App\Actions\MonthlyRecords\SubmitMonthlyRecord;
 use App\Actions\MonthlyRecords\UpdateMonthlyRecord;
 use App\Enums\MonthlyRecordStatus;
@@ -10,6 +11,7 @@ use App\Enums\PaymentCategory;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MonthlyRecord\MonthlyRecordRequest;
 use App\Http\Requests\MonthlyRecord\StoreMonthlyProofRequest;
+use App\Http\Requests\MonthlyRecord\StoreMonthlyRecordPaymentRequest;
 use App\Http\Requests\MonthlyRecord\StoreMonthlyRecordRequest;
 use App\Http\Resources\V1\MonthlyRecordResource;
 use App\Models\MonthlyRecord;
@@ -79,8 +81,19 @@ class MonthlyRecordController extends Controller
         Gate::authorize('view', $monthlyRecord);
 
         return new MonthlyRecordResource(
-            $monthlyRecord->load(['tenancy.property', 'tenancy.renter', 'proofs'])
+            $monthlyRecord->load(['tenancy.property', 'tenancy.renter', 'proofs', 'payments.recorder'])
         );
+    }
+
+    public function storePayment(
+        StoreMonthlyRecordPaymentRequest $request,
+        MonthlyRecord $monthlyRecord,
+        RecordMonthlyPayment $recordPayment,
+    ): MonthlyRecordResource {
+        Gate::authorize('recordPayment', $monthlyRecord);
+        $recordPayment->handle($monthlyRecord, $request->user(), $request->validated());
+
+        return new MonthlyRecordResource($monthlyRecord->fresh()->load(['tenancy.property', 'payments.recorder']));
     }
 
     public function update(

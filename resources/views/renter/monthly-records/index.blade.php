@@ -61,7 +61,7 @@
                             <tr>
                                 <th scope="col">{{ __('Month') }}</th>
                                 <th scope="col">{{ __('Property') }}</th>
-                                <th scope="col">{{ __('Total') }}</th>
+                                <th scope="col">{{ __('Total receivable') }}</th>
                                 <th scope="col">{{ __('Status') }}</th>
                                 <th scope="col" class="text-right">{{ __('Actions') }}</th>
                             </tr>
@@ -75,7 +75,7 @@
                                         </a>
                                     </td>
                                     <td class="text-slate-600">{{ $record->tenancy->property->title }}</td>
-                                    <td><x-money :amount="$record->total_amount" /></td>
+                                    <td><x-money :amount="$record->total_receivable" /></td>
                                     <td>
                                         <x-badge :variant="$record->displayStatusBadge()">{{ $record->displayStatusLabel() }}</x-badge>
                                     </td>

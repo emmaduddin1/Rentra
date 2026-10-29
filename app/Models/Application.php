@@ -76,4 +76,10 @@ class Application extends Model
     {
         $query->where('renter_id', $renter instanceof User ? $renter->id : $renter);
     }
+
+    /** @param Builder<static> $query */
+    public function scopeAvailableInMarketplace(Builder $query): void
+    {
+        $query->whereHas('property', fn (Builder $property) => $property->availableInMarketplace());
+    }
 }

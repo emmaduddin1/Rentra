@@ -3,6 +3,12 @@
     :heading="__('Renter dashboard')"
     :subheading="__('Your tenancy, this month\'s submission, and open maintenance.')"
 >
+    @if ($hasTenancyConflict)
+        <x-alert variant="danger" role="alert" class="mb-6" :title="__('Tenancy records need administrator review')">{{ __('More than one active tenancy was found. New monthly records and additional tenancy acceptance are blocked until an administrator confirms the valid agreement. No history has been deleted.') }}</x-alert>
+    @endif
+    @if ($invitations->isNotEmpty())
+        <section class="mb-6 card border-rental-200 bg-rental-50/40 p-5"><div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="font-semibold text-slate-900">{{ trans_choice(':count tenancy invitation|:count tenancy invitations', $invitations->count(), ['count' => $invitations->count()]) }}</h2><p class="mt-1 text-sm text-slate-600">{{ __('Review the property and contract terms before accepting or rejecting.') }}</p></div><a href="{{ route('renter.tenancies.index') }}" class="btn btn-primary btn-sm">{{ __('Review invitations') }}</a></div></section>
+    @endif
     @if ($activeTenancy === null)
         <div class="card border-dashed p-8 text-center">
             <p class="text-sm text-slate-600">
@@ -49,7 +55,7 @@
                         <x-badge :variant="$currentRecord->displayStatusBadge()">{{ $currentRecord->displayStatusLabel() }}</x-badge>
                     </p>
                     <p class="mt-2 text-sm text-slate-600">
-                        {{ __('Total') }}: <x-money :amount="$currentRecord->total_amount" />
+                        {{ __('Total receivable') }}: <x-money :amount="$currentRecord->total_receivable" />
                     </p>
                     <a href="{{ route('renter.monthly-records.show', $currentRecord) }}" class="mt-3 inline-block link text-sm">
                         {{ $currentRecord->isEditableByRenter() ? __('Continue this month') : __('View submission') }}

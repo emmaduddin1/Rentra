@@ -10,7 +10,10 @@ use App\Enums\PropertyType;
 use App\Enums\PublicationStatus;
 use App\Enums\RentalMode;
 use App\Enums\TenancyStatus;
+use App\Enums\UtilityPaymentArrangement;
+use App\Support\Features;
 use App\Support\PropertyPrice;
+use App\Support\UtilityArrangements;
 use Database\Factories\PropertyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -29,6 +32,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'bedrooms', 'bathrooms', 'total_rooms', 'kitchens', 'parking_spaces', 'furnishing_status',
     'contact_name', 'contact_phone', 'contact_email', 'latitude', 'longitude', 'map_address',
     'status', 'publication_status', 'published_at',
+    'electricity_arrangement', 'gas_arrangement', 'water_arrangement',
+    'internet_arrangement', 'other_utility_arrangement',
 ])]
 class Property extends Model
 {
@@ -45,7 +50,8 @@ class Property extends Model
      */
     public const INHERITED_FROM_HOUSE = [
         'type', 'category_id', 'listing_purpose', 'area', 'city', 'address', 'contact_name', 'contact_phone', 'contact_email',
-        'latitude', 'longitude', 'map_address',
+        'latitude', 'longitude', 'map_address', 'electricity_arrangement', 'gas_arrangement', 'water_arrangement',
+        'internet_arrangement', 'other_utility_arrangement',
     ];
 
     /**
@@ -57,6 +63,11 @@ class Property extends Model
     protected $attributes = [
         'rental_mode' => RentalMode::Whole->value,
         'listing_purpose' => ListingPurpose::Rent->value,
+        'electricity_arrangement' => UtilityPaymentArrangement::ProviderDirect->value,
+        'gas_arrangement' => UtilityPaymentArrangement::ProviderDirect->value,
+        'water_arrangement' => UtilityPaymentArrangement::ProviderDirect->value,
+        'internet_arrangement' => UtilityPaymentArrangement::ProviderDirect->value,
+        'other_utility_arrangement' => UtilityPaymentArrangement::ProviderDirect->value,
     ];
 
     /** @return array<string, string> */
@@ -83,6 +94,7 @@ class Property extends Model
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
             'published_at' => 'datetime',
+            ...array_fill_keys(UtilityArrangements::columns(), UtilityPaymentArrangement::class),
         ];
     }
 
@@ -170,7 +182,11 @@ class Property extends Model
      */
     public function activeTenancy(): HasOne
     {
-        return $this->hasOne(Tenancy::class)->where('status', TenancyStatus::Active->value);
+        return $this->hasOne(Tenancy::class)->whereIn('status', [
+            TenancyStatus::Active->value,
+            TenancyStatus::TerminationRequested->value,
+            TenancyStatus::NoticePeriod->value,
+        ]);
     }
 
     /** @return HasMany<Application, $this> */
@@ -197,9 +213,15 @@ class Property extends Model
      */
     public function isPubliclyVisible(): bool
     {
-        return $this->isRentable()
+        return $this->isAvailableInMarketplace()
+            && $this->isRentable()
             && $this->publication_status === PublicationStatus::Published
             && $this->status === PropertyStatus::Available;
+    }
+
+    public function isAvailableInMarketplace(): bool
+    {
+        return Features::propertySales() || $this->isForRent();
     }
 
     /**
@@ -345,9 +367,18 @@ class Property extends Model
      */
     public function scopePubliclyVisible(Builder $query): void
     {
-        $query->rentable()
+        $query->availableInMarketplace()
+            ->rentable()
             ->where('publication_status', PublicationStatus::Published->value)
             ->where('status', PropertyStatus::Available->value);
+    }
+
+    /** @param Builder<static> $query */
+    public function scopeAvailableInMarketplace(Builder $query): void
+    {
+        if (! Features::propertySales()) {
+            $query->where('listing_purpose', ListingPurpose::Rent->value);
+        }
     }
 
     /**

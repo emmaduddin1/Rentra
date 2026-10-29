@@ -12,8 +12,12 @@ use App\Http\Controllers\MaintenanceAttachmentDownloadController;
 use App\Http\Controllers\MonthlyProofDownloadController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Owner;
+use App\Http\Controllers\ProductTourController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\Renter;
+use App\Http\Controllers\TenancyLifecycleController;
+use App\Services\Push\PushConfiguration;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -27,6 +31,12 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', HomeController::class)->name('home');
+
+// Public Firebase config contains no service-account fields; fetched by the root worker.
+Route::get('push-config.js', function (PushConfiguration $configuration) {
+    return response('self.TENANTISM_PUSH = '.json_encode($configuration->publicConfig(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT).';')
+        ->header('Content-Type', 'application/javascript')->header('Cache-Control', 'no-store');
+})->name('push.config');
 
 Route::get('listings', [ListingController::class, 'index'])
     ->middleware('throttle:120,1')
@@ -68,7 +78,8 @@ Route::middleware('guest')->group(function () {
 */
 
 Route::middleware('auth')->group(function () {
-    Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+    Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->block(60, 30)->name('logout');
+    Route::post('product-tour/complete', [ProductTourController::class, 'complete'])->name('product-tour.complete');
 
     // FR-AUTH-004 - route each role to its own portal.
     Route::get('dashboard', DashboardController::class)->name('dashboard');
@@ -84,6 +95,13 @@ Route::middleware('auth')->group(function () {
 
     // FR-NOT-001/003 - in-app notifications for every role.
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('push-subscriptions', [PushSubscriptionController::class, 'store'])->block(60, 30)->middleware('throttle:20,1')->name('push.store');
+    Route::delete('push-subscriptions/current', [PushSubscriptionController::class, 'destroy'])->block(60, 30)->middleware('throttle:20,1')->name('push.destroy');
+    Route::patch('notification-preferences', [PushSubscriptionController::class, 'preferences'])->middleware('throttle:30,1')->name('push.preferences');
+    Route::get('notifications/feed', [NotificationController::class, 'feed'])->name('notifications.feed');
+    Route::get('notifications/unread-count', [NotificationController::class, 'count']);
+    // GET only shows a CSRF-protected opening form; it never changes read state.
+    Route::get('notifications/{notification}/open', [NotificationController::class, 'open'])->name('notifications.open');
     Route::get('notifications/count', [NotificationController::class, 'count'])->name('notifications.count');
     Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
@@ -98,6 +116,15 @@ Route::middleware('auth')->group(function () {
     Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
+
+    Route::post('tenancies/{tenancy}/accept', [TenancyLifecycleController::class, 'accept'])->name('tenancies.accept');
+    Route::post('tenancies/{tenancy}/reject', [TenancyLifecycleController::class, 'reject'])->name('tenancies.reject');
+    Route::post('tenancies/{tenancy}/withdraw', [TenancyLifecycleController::class, 'withdraw'])->name('tenancies.withdraw');
+    Route::post('tenancies/{tenancy}/end', [TenancyLifecycleController::class, 'end'])
+        ->middleware('role:owner')
+        ->name('tenancies.end');
+    Route::post('tenancies/{tenancy}/termination-requests', [TenancyLifecycleController::class, 'requestTermination'])->name('tenancies.termination.request');
+    Route::post('termination-requests/{termination}/respond', [TenancyLifecycleController::class, 'respondTermination'])->name('tenancies.termination.respond');
 
     /*
     | Owner portal (SRS 11.2) - tenancy, approval, maintenance and reporting
@@ -147,7 +174,6 @@ Route::middleware('auth')->group(function () {
         // FR-TEN-001 to FR-TEN-005.
         Route::resource('tenancies', Owner\TenancyController::class)
             ->only(['index', 'create', 'store', 'show', 'edit', 'update']);
-        Route::patch('tenancies/{tenancy}/end', [Owner\TenancyController::class, 'end'])->name('tenancies.end');
 
         // FR-TEN-003.
         Route::get('renters', [Owner\RenterController::class, 'index'])->name('renters.index');
@@ -157,6 +183,8 @@ Route::middleware('auth')->group(function () {
         Route::get('monthly-records', [Owner\MonthlyRecordController::class, 'index'])->name('monthly-records.index');
         Route::get('monthly-records/{monthlyRecord}', [Owner\MonthlyRecordController::class, 'show'])
             ->name('monthly-records.show');
+        Route::post('monthly-records/{monthlyRecord}/payments', [Owner\MonthlyRecordController::class, 'storePayment'])
+            ->name('monthly-records.payments.store');
         Route::post('monthly-records/{monthlyRecord}/approve', [Owner\MonthlyRecordController::class, 'approve'])
             ->name('monthly-records.approve');
         Route::post('monthly-records/{monthlyRecord}/reject', [Owner\MonthlyRecordController::class, 'reject'])
@@ -169,6 +197,8 @@ Route::middleware('auth')->group(function () {
         Route::get('maintenance/{maintenance}', [Owner\MaintenanceRequestController::class, 'show'])->name('maintenance.show');
         Route::patch('maintenance/{maintenance}/status', [Owner\MaintenanceRequestController::class, 'updateStatus'])
             ->name('maintenance.status');
+        Route::patch('maintenance/{maintenance}/financials', [Owner\MaintenanceRequestController::class, 'updateFinancials'])
+            ->name('maintenance.financials');
         Route::post('maintenance/{maintenance}/comments', [Owner\MaintenanceRequestController::class, 'comment'])
             ->name('maintenance.comments.store');
 

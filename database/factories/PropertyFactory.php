@@ -6,6 +6,7 @@ use App\Enums\PropertyStatus;
 use App\Enums\PropertyType;
 use App\Enums\PublicationStatus;
 use App\Enums\RentalMode;
+use App\Enums\UtilityPaymentArrangement;
 use App\Models\Property;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -37,6 +38,11 @@ class PropertyFactory extends Factory
             'contact_email' => fake()->safeEmail(),
             'status' => PropertyStatus::Available,
             'publication_status' => PublicationStatus::Draft,
+            'electricity_arrangement' => UtilityPaymentArrangement::ProviderDirect,
+            'gas_arrangement' => UtilityPaymentArrangement::ProviderDirect,
+            'water_arrangement' => UtilityPaymentArrangement::ProviderDirect,
+            'internet_arrangement' => UtilityPaymentArrangement::ProviderDirect,
+            'other_utility_arrangement' => UtilityPaymentArrangement::ProviderDirect,
         ];
     }
 

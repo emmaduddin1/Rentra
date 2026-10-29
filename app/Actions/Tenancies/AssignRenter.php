@@ -2,13 +2,14 @@
 
 namespace App\Actions\Tenancies;
 
-use App\Enums\PropertyStatus;
 use App\Enums\TenancyStatus;
 use App\Models\Property;
 use App\Models\Tenancy;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\Notifier;
+use App\Support\UtilityArrangements;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -48,6 +49,17 @@ class AssignRenter
                 ]);
             }
 
+            if (Tenancy::query()->where('property_id', $locked->id)->where('renter_id', $renter->id)
+                ->where('status', TenancyStatus::Invited->value)->exists()) {
+                throw ValidationException::withMessages([
+                    'renter_id' => __('This renter already has a pending invitation for this property.'),
+                ]);
+            }
+
+            $arrangements = collect(UtilityArrangements::columns())->mapWithKeys(fn (string $column) => [
+                $column => $data[$column] ?? $locked->{$column}->value,
+            ])->all();
+
             $tenancy = Tenancy::create([
                 'property_id' => $locked->id,
                 'renter_id' => $renter->id,
@@ -57,28 +69,52 @@ class AssignRenter
                 'deposit' => $data['deposit'] ?? 0,
                 'billing_day' => $data['billing_day'] ?? 1,
                 'notes' => $data['notes'] ?? null,
-                'status' => TenancyStatus::Active,
+                'status' => TenancyStatus::Invited,
+                'invitation_expires_at' => now()->addDays(7),
+                'utility_arrangements_effective_from' => $data['start_date'],
+                ...$arrangements,
             ]);
 
-            // 5.1 step 6 - assigning a renter marks the property occupied.
-            $locked->status = PropertyStatus::Occupied;
-            $locked->save();
+            try {
+                DB::table('tenancy_invitation_locks')->insert([
+                    'tenancy_id' => $tenancy->id,
+                    'renter_id' => $renter->id,
+                    'property_id' => $locked->id,
+                    'created_at' => now(), 'updated_at' => now(),
+                ]);
+            } catch (QueryException) {
+                throw ValidationException::withMessages([
+                    'renter_id' => __('This renter already has a pending invitation for this property.'),
+                ]);
+            }
 
-            $property->setRawAttributes($locked->getAttributes(), sync: true);
+            $tenancy->statusHistory()->create([
+                'new_status' => TenancyStatus::Invited,
+                'changed_by' => $owner->id,
+                'reason' => 'owner_sent_invitation',
+                'changed_at' => now(),
+            ]);
+
+            $tenancy->utilityArrangementHistory()->create([
+                'effective_from' => $data['start_date'],
+                'changed_by' => $owner->id,
+                'change_reason' => 'Initial tenancy agreement',
+                ...$arrangements,
+            ]);
 
             $this->notifier->send(
                 recipient: $renter,
-                type: 'tenancy.assigned',
-                title: __('You have been assigned to :property', ['property' => $locked->title]),
-                body: __('Your tenancy starts on :date.', ['date' => $tenancy->start_date->format('d M Y')]),
+                type: 'tenancy.invited',
+                title: __('Tenancy invitation for :property', ['property' => $locked->title]),
+                body: __('Review the terms and accept or reject before :date.', ['date' => $tenancy->invitation_expires_at->format('d M Y')]),
                 actionUrl: route('renter.tenancies.show', $tenancy),
                 data: ['tenancy_id' => $tenancy->id, 'property_id' => $locked->id],
-                idempotencyKey: 'tenancy.assigned:'.$tenancy->id,
+                idempotencyKey: 'tenancy.invited:'.$tenancy->id,
             );
 
             // BR-008 - assignment is an audited action.
             $this->auditLogger->record(
-                action: 'tenancy.assigned',
+                action: 'tenancy.invited',
                 subject: $tenancy,
                 newValues: [
                     'property_id' => $locked->id,

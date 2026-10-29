@@ -33,6 +33,16 @@
                     />
                 </x-form.field>
 
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <x-form.field :label="__('Maintenance amount')" name="amount" :hint="__('Tracked separately from utilities.')"><x-form.input name="amount" type="number" step="0.01" min="0" :value="old('amount', '0')" /></x-form.field>
+                    <x-form.field :label="__('Paid by')" name="paid_by"><x-form.select name="paid_by" :selected="old('paid_by')" :placeholder="__('Not paid yet')" :options="collect(\App\Enums\MaintenancePayer::cases())->mapWithKeys(fn($item) => [$item->value => $item->label()])->all()" /></x-form.field>
+                    <x-form.field :label="__('Responsible party')" name="responsible_party"><x-form.select name="responsible_party" :selected="old('responsible_party')" :placeholder="__('Not decided')" :options="collect(\App\Enums\MaintenanceResponsibleParty::cases())->mapWithKeys(fn($item) => [$item->value => $item->label()])->all()" /></x-form.field>
+                    <x-form.field :label="__('Reimbursement recipient')" name="reimbursement_recipient"><x-form.select name="reimbursement_recipient" :selected="old('reimbursement_recipient')" :placeholder="__('No reimbursement')" :options="['owner' => __('Owner'), 'renter' => __('Renter')]" /></x-form.field>
+                    <x-form.field :label="__('Reimbursement amount')" name="reimbursement_amount"><x-form.input name="reimbursement_amount" type="number" step="0.01" min="0" :value="old('reimbursement_amount', '0')" /></x-form.field>
+                    <label class="flex items-center gap-2 text-sm font-medium text-slate-700"><input type="checkbox" name="reimbursement_required" value="1" @checked(old('reimbursement_required'))>{{ __('Reimbursement required') }}</label>
+                </div>
+                <x-form.field :label="__('Expense notes')" name="expense_notes"><x-form.textarea name="expense_notes" rows="2" /></x-form.field>
+
                 {{-- FR-MNT-002 - optional images or documents. --}}
                 <x-form.field
                     :label="__('Photos or documents')"

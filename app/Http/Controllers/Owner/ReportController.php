@@ -35,6 +35,7 @@ class ReportController extends Controller
             'filters' => $filters,
             'totals' => $report->totals(),
             'series' => $report->monthlySeries(),
+            'maintenanceTotals' => $report->maintenanceTotals(),
             'statusBreakdown' => $report->statusBreakdown(),
             'records' => $report->query()
                 ->with(['tenancy.property', 'tenancy.renter'])
@@ -43,7 +44,7 @@ class ReportController extends Controller
                 ->withQueryString(),
             'categories' => PaymentCategory::cases(),
             'statuses' => MonthlyRecordStatus::cases(),
-            'properties' => Property::ownedBy($owner)->rentable()->orderBy('title')->get(['id', 'title']),
+            'properties' => Property::ownedBy($owner)->availableInMarketplace()->rentable()->orderBy('title')->get(['id', 'title']),
             'renters' => User::query()
                 ->whereHas('tenancies', fn ($query) => $query->forOwner($owner))
                 ->orderBy('name')
@@ -71,7 +72,7 @@ class ReportController extends Controller
                 $header[] = $category->label();
             }
 
-            $header[] = 'Total';
+            $header = [...$header, 'Utilities payable to owner', 'Bills paid directly by renter', 'Unclassified legacy utility bills', 'Maintenance expenses', 'Reimbursements to owner', 'Total receivable', 'Total received', 'Outstanding receivable', 'Payment status'];
             $header[] = 'Submitted at';
             $header[] = 'Approved at';
 
@@ -91,7 +92,7 @@ class ReportController extends Controller
                     $row[] = $record->{$column};
                 }
 
-                $row[] = $record->total_amount;
+                $row = [...$row, $record->utilities_payable_to_owner, $record->direct_utility_bills, $record->unclassified_utility_bills, $record->maintenance_expenses, $record->reimbursements_to_owner, $record->total_receivable, $record->total_received, $record->outstanding_receivable, $record->payment_status->label()];
                 $row[] = $record->submitted_at?->toDateTimeString();
                 $row[] = $record->approved_at?->toDateTimeString();
 

@@ -3,7 +3,9 @@
 namespace App\Actions\Tenancies;
 
 use App\Enums\PropertyStatus;
+use App\Enums\PublicationStatus;
 use App\Enums\TenancyStatus;
+use App\Enums\TerminationRequestStatus;
 use App\Models\Tenancy;
 use App\Models\User;
 use App\Services\AuditLogger;
@@ -28,7 +30,7 @@ class EndTenancy
 
     public function handle(
         Tenancy $tenancy,
-        User $owner,
+        ?User $actor,
         Carbon|string $endDate,
         PropertyStatus $propertyStatus = PropertyStatus::Available,
         ?string $reason = null,
@@ -41,11 +43,12 @@ class EndTenancy
 
         $endDate = $endDate instanceof Carbon ? $endDate : Carbon::parse($endDate);
 
-        if ($endDate->lt($tenancy->start_date)) {
-            throw ValidationException::withMessages([
-                'end_date' => __('The end date cannot be before the tenancy started.'),
-            ]);
-        }
+        // A contract can already be marked active/notice-period even though its
+        // agreed start date is still ahead. Closing it now is a cancellation,
+        // not an impossible end date before the start date.
+        $finalStatus = $endDate->lt($tenancy->start_date)
+            ? TenancyStatus::Cancelled
+            : TenancyStatus::Ended;
 
         if ($propertyStatus === PropertyStatus::Occupied) {
             throw ValidationException::withMessages([
@@ -53,42 +56,124 @@ class EndTenancy
             ]);
         }
 
-        return DB::transaction(function () use ($tenancy, $owner, $endDate, $propertyStatus, $reason) {
+        return DB::transaction(function () use ($tenancy, $actor, $endDate, $propertyStatus, $reason, $finalStatus) {
+            $tenancy->terminationRequests()
+                ->whereIn('status', [TerminationRequestStatus::Pending->value, TerminationRequestStatus::Countered->value])
+                ->update([
+                    'status' => TerminationRequestStatus::Accepted->value,
+                    'responded_by' => $actor?->id,
+                    'response_notes' => $reason,
+                    'responded_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+            $previous = $tenancy->status;
             $tenancy->fill([
-                'status' => TenancyStatus::Ended,
-                'end_date' => $endDate->toDateString(),
+                'status' => $finalStatus,
+                'end_date' => $finalStatus === TenancyStatus::Ended ? $endDate->toDateString() : null,
                 'ended_at' => now(),
                 'end_reason' => $reason,
             ])->save();
 
+            DB::table('tenancy_active_locks')->where('tenancy_id', $tenancy->id)->delete();
+            $this->resolveSatisfiedConflicts($tenancy);
+            $statusReason = $finalStatus === TenancyStatus::Cancelled ? 'contract_cancelled_before_start' : 'tenancy_ended';
+            $tenancy->recordStatusChange($previous, $actor, $reason ?: $statusReason);
+
             $property = $tenancy->property;
-            $property->status = $propertyStatus;
+            $hasAnotherActiveTenancy = $property->activeTenancy()->exists();
+            $property->status = $hasAnotherActiveTenancy ? PropertyStatus::Occupied : $propertyStatus;
+            if (! $hasAnotherActiveTenancy) {
+                // Ending a contract must not silently put the old listing back
+                // in the public feed. The owner explicitly chooses what is next.
+                $property->publication_status = PublicationStatus::Draft;
+                $property->published_at = null;
+            }
             $property->save();
 
             $this->notifier->send(
                 recipient: $tenancy->renter,
-                type: 'tenancy.ended',
-                title: __('Your tenancy at :property has ended', ['property' => $property->title]),
+                type: 'tenancy.'.$finalStatus->value,
+                title: $finalStatus === TenancyStatus::Cancelled
+                    ? __('Your contract at :property was cancelled', ['property' => $property->title])
+                    : __('Your tenancy at :property has ended', ['property' => $property->title]),
                 body: $reason,
                 actionUrl: route('renter.tenancies.show', $tenancy),
                 data: ['tenancy_id' => $tenancy->id],
-                idempotencyKey: 'tenancy.ended:'.$tenancy->id,
+                idempotencyKey: 'tenancy.'.$finalStatus->value.':'.$tenancy->id,
             );
 
+            if ($actor === null || $actor->id !== $property->owner_id) {
+                $this->notifier->send(
+                    recipient: $property->owner,
+                    type: 'tenancy.'.$finalStatus->value,
+                    title: $finalStatus === TenancyStatus::Cancelled
+                        ? __('Contract cancelled at :property', ['property' => $property->title])
+                        : __('Tenancy ended at :property', ['property' => $property->title]),
+                    body: $reason,
+                    actionUrl: route('owner.tenancies.show', $tenancy),
+                    data: ['tenancy_id' => $tenancy->id],
+                    idempotencyKey: 'tenancy.'.$finalStatus->value.'.owner:'.$tenancy->id,
+                );
+            }
+
             $this->auditLogger->record(
-                action: 'tenancy.ended',
+                action: 'tenancy.'.$finalStatus->value,
                 subject: $tenancy,
-                oldValues: ['status' => TenancyStatus::Active->value],
+                oldValues: ['status' => $previous->value],
                 newValues: [
-                    'status' => TenancyStatus::Ended->value,
-                    'end_date' => $endDate->toDateString(),
+                    'status' => $finalStatus->value,
+                    'end_date' => $finalStatus === TenancyStatus::Ended ? $endDate->toDateString() : null,
                     'property_status' => $propertyStatus->value,
+                    'publication_status' => $property->publication_status->value,
                 ],
                 reason: $reason,
-                actor: $owner,
+                actor: $actor,
             );
 
             return $tenancy;
         });
+    }
+
+    /**
+     * An explicit contract closure can safely resolve an imported duplicate:
+     * the owner chose which record to close, so the sole remaining active row
+     * is deterministic rather than selected by the system.
+     */
+    private function resolveSatisfiedConflicts(Tenancy $closedTenancy): void
+    {
+        $conflicts = DB::table('tenancy_conflicts')
+            ->whereNull('resolved_at')
+            ->where(function ($query) use ($closedTenancy) {
+                $query->where(fn ($item) => $item->where('conflict_type', 'renter')->where('conflict_key', $closedTenancy->renter_id))
+                    ->orWhere(fn ($item) => $item->where('conflict_type', 'property')->where('conflict_key', $closedTenancy->property_id));
+            })
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($conflicts as $conflict) {
+            $tenancyIds = json_decode($conflict->tenancy_ids, true, flags: JSON_THROW_ON_ERROR);
+            $remaining = Tenancy::query()->active()->whereIn('id', $tenancyIds)->lockForUpdate()->get();
+
+            if ($remaining->count() > 1) {
+                continue;
+            }
+
+            if ($valid = $remaining->first()) {
+                DB::table('tenancy_active_locks')->insertOrIgnore([
+                    'tenancy_id' => $valid->id,
+                    'renter_id' => $valid->renter_id,
+                    'property_id' => $valid->property_id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            DB::table('tenancy_conflicts')->where('id', $conflict->id)->update([
+                'resolved_at' => now(),
+                'resolution_reason' => 'Resolved when tenancy '.$closedTenancy->id.' was explicitly closed by its owner.',
+                'updated_at' => now(),
+            ]);
+        }
     }
 }

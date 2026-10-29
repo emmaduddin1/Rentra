@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Owner;
 
 use App\Actions\MonthlyRecords\ApproveMonthlyRecord;
+use App\Actions\MonthlyRecords\RecordMonthlyPayment;
 use App\Actions\MonthlyRecords\RejectMonthlyRecord;
 use App\Actions\MonthlyRecords\ReopenMonthlyRecord;
 use App\Enums\MonthlyRecordStatus;
@@ -10,6 +11,7 @@ use App\Enums\PaymentCategory;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\MonthlyRecord\RejectMonthlyRecordRequest;
 use App\Http\Requests\MonthlyRecord\ReopenMonthlyRecordRequest;
+use App\Http\Requests\MonthlyRecord\StoreMonthlyRecordPaymentRequest;
 use App\Models\MonthlyRecord;
 use App\Models\Property;
 use Illuminate\Http\RedirectResponse;
@@ -65,7 +67,7 @@ class MonthlyRecordController extends Controller
             'filters' => $filters,
             'activeStatus' => $status,
             'statuses' => MonthlyRecordStatus::cases(),
-            'properties' => Property::ownedBy($owner)->orderBy('title')->get(['id', 'title']),
+            'properties' => Property::ownedBy($owner)->availableInMarketplace()->orderBy('title')->get(['id', 'title']),
             'pendingCount' => MonthlyRecord::forOwner($owner)->status(MonthlyRecordStatus::Pending)->count(),
         ]);
     }
@@ -75,13 +77,24 @@ class MonthlyRecordController extends Controller
         Gate::authorize('view', $monthlyRecord);
 
         $monthlyRecord->load([
-            'tenancy.property', 'tenancy.renter', 'proofs', 'approver', 'rejecter', 'reopener',
+            'tenancy.property', 'tenancy.renter', 'proofs', 'payments.recorder', 'approver', 'rejecter', 'reopener',
         ]);
 
         return view('owner.monthly-records.show', [
             'record' => $monthlyRecord,
             'categories' => PaymentCategory::cases(),
         ]);
+    }
+
+    public function storePayment(
+        StoreMonthlyRecordPaymentRequest $request,
+        MonthlyRecord $monthlyRecord,
+        RecordMonthlyPayment $recordPayment,
+    ): RedirectResponse {
+        Gate::authorize('recordPayment', $monthlyRecord);
+        $recordPayment->handle($monthlyRecord, $request->user(), $request->validated());
+
+        return back()->with('status', __('Payment recorded.'));
     }
 
     /**
