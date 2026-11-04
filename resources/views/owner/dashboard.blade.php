@@ -1,7 +1,7 @@
 <x-layouts.app
     :title="__('Owner dashboard')"
     :heading="__('Owner dashboard')"
-    :subheading="__('Portfolio overview for your properties, renters, and approvals.')"
+    :subheading="__('Your properties, renters and tasks in one place.')"
 >
     @if ($stats['tenancy_conflicts'] > 0)
         <x-alert variant="danger" role="alert" class="mb-6" :title="__('Tenancy conflict requires administrator review')">{{ trans_choice(':count renter has conflicting active tenancy records. New financial activity is blocked for the conflict until it is reconciled.|:count renters have conflicting active tenancy records. New financial activity is blocked for those conflicts until they are reconciled.', $stats['tenancy_conflicts'], ['count' => $stats['tenancy_conflicts']]) }}</x-alert>
@@ -12,7 +12,7 @@
     </x-slot:actions>
 
     {{-- FR-ADM-001 - counts are scoped to the authenticated owner (BR-010). --}}
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <x-stat-card
             icon="building"
             :label="__('Properties')"
@@ -28,10 +28,10 @@
     {{-- What is waiting on the owner, kept apart from the plain counts. --}}
     <h2 class="mt-8 mb-3 text-sm font-semibold text-slate-900">{{ __('Needs your attention') }}</h2>
 
-    <div class="grid gap-4 sm:grid-cols-3">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         <x-stat-card
             icon="check-circle"
-            :label="__('Pending approvals')"
+            :label="__('Awaiting review')"
             :value="$stats['pending_approvals']"
             :variant="$stats['pending_approvals'] > 0 ? 'warning' : null"
             :href="route('owner.monthly-records.index')"
@@ -45,6 +45,7 @@
         />
         <x-stat-card
             icon="inbox"
+            class="col-span-2 sm:col-span-1"
             :label="__('New applications')"
             :value="$stats['pending_applications']"
             :variant="$stats['pending_applications'] > 0 ? 'warning' : null"
@@ -53,7 +54,7 @@
     </div>
 
     {{-- FR-ADM-003 - recent items link to their detail pages. --}}
-    <div class="mt-8 grid gap-6 lg:grid-cols-2">
+    <div class="mt-8 grid items-start gap-6 lg:grid-cols-2">
         <x-card :title="__('Recent applications')" :padded="false">
             <x-slot:action>
                 <a href="{{ route('owner.applications.index') }}" class="link text-sm">{{ __('View all') }}</a>
@@ -114,7 +115,7 @@
     </div>
 
     <div class="mt-8 flex flex-wrap gap-2">
-        <x-form.button :href="route('owner.monthly-records.index')" variant="secondary" icon="check-circle">{{ __('Review approvals') }}</x-form.button>
+        <x-form.button :href="route('owner.monthly-records.index')" variant="secondary" icon="check-circle">{{ __('Review submissions') }}</x-form.button>
         <x-form.button :href="route('owner.reports.index')" variant="secondary" icon="chart">{{ __('Open reports') }}</x-form.button>
     </div>
 </x-layouts.app>

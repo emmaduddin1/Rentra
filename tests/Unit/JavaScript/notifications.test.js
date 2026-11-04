@@ -29,7 +29,7 @@ test('worker uses the same route and binding validation and data-only display', 
     assert.equal(listeners.has('message'), true);
 });
 
-function workerHarness({ visible = false, focused = visible, noWindows = false, contextStatus = 200, readStatus = 200, readRoute = '/messages/9', navigationFails = false } = {}) {
+function workerHarness({ visible = false, focused = visible, noWindows = false, displayFails = false, navigationFails = false } = {}) {
     const listeners = new Map();
     const store = new Map([['binding', { binding: payload.subscription_key, environment: 'staging' }]]);
     const shown = [], navigated = [], posted = [], requests = [];
@@ -44,15 +44,14 @@ function workerHarness({ visible = false, focused = visible, noWindows = false, 
     } };
     const context = vm.createContext({ URL, Date, AbortController, setTimeout, clearTimeout, fetch: async (url, options) => {
         requests.push({ url, options });
-        const status = url.endsWith('/open') ? contextStatus : readStatus;
-        return { ok: status === 200, status, json: async () => url.endsWith('/open') ? { csrf_token: 'c'.repeat(40) } : { route: readRoute, unread_count: 0 } };
+        throw new Error('Click navigation must not depend on a background fetch');
     }, indexedDB: { open() {
         const request = { result: db };
         queueMicrotask(() => request.onsuccess?.()); return request;
     } }, importScripts() {}, firebase: { initializeApp() {}, messaging: () => ({}) },
     self: { addEventListener: (name, cb) => listeners.set(name, cb), TENANTISM_PUSH: { enabled: true, environment: 'staging', firebase: {} }, location: { origin },
         clients: { matchAll: async () => noWindows ? [] : [client], openWindow: async url => navigated.push(url) },
-        registration: { getNotifications: async () => [], showNotification: async (...args) => shown.push(args) } } });
+        registration: { pushManager: { getSubscription: async () => ({}) }, getNotifications: async () => [], showNotification: async (...args) => { if (displayFails) throw new Error('Display rejected'); shown.push(args); } } } });
     vm.runInContext(readFileSync(new URL('../../../public/firebase-messaging-sw.js', import.meta.url), 'utf8'), context);
     const background = async message => {
         let pending, stopped = false;
@@ -84,6 +83,11 @@ test('a visible Tenantism window behind another app still produces a desktop ale
     assert.equal(worker.shown.length, 1);
     assert.equal(worker.posted.length, 1);
 });
+test('an explicit staging click diagnostic displays even while the page is focused', async () => {
+    const worker = workerHarness({ visible: true });
+    await worker.background({ data: { ...payload, type: 'account.browser_click_check' } });
+    assert.equal(worker.shown.length, 1);
+});
 test('native push displays with no open Tenantism windows', async () => {
     const worker = workerHarness({ noWindows: true });
     await worker.background({ data: payload });
@@ -109,20 +113,14 @@ test('logout and stale account bindings suppress delayed background delivery', a
     assert.equal(worker.shown.length, 0);
     assert.equal(worker.posted.length, 0);
 });
-test('click marks read with the session CSRF token before navigating to the server deep link', async () => {
+test('click opens the protected notification page immediately without background read requests', async () => {
     const worker = workerHarness();
     let closed = false, pending;
     worker.listeners.get('notificationclick')({ notification: { data: payload, close: () => { closed = true; } }, stopImmediatePropagation() {}, waitUntil: p => { pending = p; } });
     await pending;
     assert.equal(closed, true);
-    assert.deepEqual(worker.navigated, [`${origin}/messages/9`]);
-    assert.equal(worker.requests.length, 2);
-    assert.equal(worker.requests[0].url, '/notifications/12/open');
-    assert.equal(worker.requests[1].url, '/notifications/12/read');
-    assert.equal(worker.requests[1].options.method, 'POST');
-    assert.equal(worker.requests[1].options.headers['X-CSRF-TOKEN'], 'c'.repeat(40));
-    assert.equal(worker.requests[1].options.credentials, 'same-origin');
-    assert.equal(worker.posted[0].type, 'TENANTISM_NOTIFICATIONS_CHANGED');
+    assert.deepEqual(worker.navigated, [`${origin}/notifications/12/open`]);
+    assert.equal(worker.requests.length, 0);
 });
 test('worker rejects auto-display payloads outside the data-only contract', () => {
     const worker = workerHarness(); let stopped = false;
@@ -140,41 +138,39 @@ async function click(worker, data = payload) {
     worker.listeners.get('notificationclick')({ notification: { data, close() {} }, stopImmediatePropagation() {}, waitUntil: value => { pending = value; } });
     await pending;
 }
-test('wrapped Firebase alerts use the same authorized read flow', async () => {
+test('wrapped Firebase alerts open the same protected notification page', async () => {
     const worker = workerHarness();
     await click(worker, { FCM_MSG: { data: payload } });
-    assert.equal(worker.requests[1].options.method, 'POST');
-    assert.deepEqual(worker.navigated, [`${origin}/messages/9`]);
+    assert.equal(worker.requests.length, 0);
+    assert.deepEqual(worker.navigated, [`${origin}/notifications/12/open`]);
 });
 test('a rejected window navigation falls back to opening a new window', async () => {
     const worker = workerHarness({ navigationFails: true });
     await click(worker);
-    assert.deepEqual(worker.navigated, [`${origin}/messages/9`]);
+    assert.deepEqual(worker.navigated, [`${origin}/notifications/12/open`]);
 });
-test('expired login or forbidden ownership falls back without posting a read', async () => {
-    for (const contextStatus of [401, 403]) {
-        const worker = workerHarness({ contextStatus });
-        await click(worker);
-        assert.equal(worker.requests.length, 1);
-        assert.deepEqual(worker.navigated, [`${origin}/notifications/12/open`]);
-    }
-});
-test('a failed read request leaves the protected opening form as the fallback', async () => {
-    const worker = workerHarness({ readStatus: 419 });
+test('a closed app opens the protected page in a new window', async () => {
+    const worker = workerHarness({ noWindows: true });
     await click(worker);
     assert.deepEqual(worker.navigated, [`${origin}/notifications/12/open`]);
-    assert.equal(worker.posted.length, 0);
 });
-test('the server response cannot redirect a clicked alert off origin', async () => {
-    const worker = workerHarness({ readRoute: 'https://evil.test/' });
-    await click(worker);
-    assert.deepEqual(worker.navigated, [`${origin}/notifications`]);
+test('payload deep links cannot replace the authenticated notification opening page', async () => {
+    const worker = workerHarness();
+    await click(worker, { ...payload, route: '/owner/tenancies/789' });
+    assert.deepEqual(worker.navigated, [`${origin}/notifications/12/open`]);
+});
+test('an unsafe payload route cannot open a window or issue requests', async () => {
+    const worker = workerHarness();
+    await click(worker, { ...payload, route: 'https://evil.test/' });
+    assert.equal(worker.navigated.length, 0);
+    assert.equal(worker.requests.length, 0);
 });
 test('a previously displayed alert remains clickable if push is disabled afterward', async () => {
     const worker = workerHarness();
     worker.context.self.TENANTISM_PUSH.enabled = false;
     await click(worker);
-    assert.equal(worker.requests.length, 2);
+    assert.deepEqual(worker.navigated, [`${origin}/notifications/12/open`]);
+    assert.equal(worker.requests.length, 0);
 });
 test('a previous account binding cannot post reads or navigate on a stale click', async () => {
     const worker = workerHarness();
@@ -188,4 +184,41 @@ test('the local desktop test opens only the inbox and never reads a business not
     await click(worker, { tenantism_test: true, route: 'https://evil.test/' });
     assert.equal(worker.requests.length, 0);
     assert.deepEqual(worker.navigated, [`${origin}/notifications`]);
+});
+
+async function deliveryStatus(worker, binding = payload.subscription_key, source = origin) {
+    let pending, reply;
+    worker.listeners.get('message')({ data: { type: 'TENANTISM_STATUS', binding }, source: { url: source },
+        ports: [{ postMessage: value => { reply = value; } }], waitUntil: value => { pending = value; } });
+    await pending;
+    return reply;
+}
+test('delivery check distinguishes a connected browser with no receipt from a real received push', async () => {
+    const worker = workerHarness();
+    const empty = await deliveryStatus(worker);
+    assert.equal(empty.subscribed, true);
+    assert.equal(empty.last, null);
+    await worker.background({ data: payload });
+    const result = await deliveryStatus(worker);
+    assert.equal(result.last.outcome, 'desktop');
+    assert.equal(typeof result.last.at, 'number');
+    const encoded = JSON.stringify(result);
+    for (const secret of [payload.subscription_key, payload.title, payload.body, 'notification_id', 'token', 'endpoint']) assert.equal(encoded.includes(secret), false);
+});
+test('delivery check explains foreground suppression and display failures', async () => {
+    for (const [options, outcome] of [[{ visible: true }, 'foreground'], [{ displayFails: true }, 'display-failed']]) {
+        const worker = workerHarness(options);
+        await worker.background({ data: payload });
+        assert.equal((await deliveryStatus(worker)).last.outcome, outcome);
+    }
+});
+test('delivery results are hidden from other origins and previous account bindings', async () => {
+    const worker = workerHarness();
+    await worker.background({ data: payload });
+    assert.equal(await deliveryStatus(worker, payload.subscription_key, 'https://evil.test/'), undefined);
+    const other = await deliveryStatus(worker, 'b'.repeat(64));
+    assert.equal(other.matches, false);
+    assert.equal(other.last, null);
+    worker.store.set('binding', { binding: 'b'.repeat(64), environment: 'staging' });
+    assert.equal((await deliveryStatus(worker, 'b'.repeat(64))).last, null);
 });

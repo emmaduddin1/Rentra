@@ -23,7 +23,7 @@
             [
                 'label' => __('Work'),
                 'links' => [
-                    ['label' => __('Approvals'), 'route' => 'owner.monthly-records.index', 'match' => 'owner.monthly-records.*', 'icon' => 'check-circle', 'tour' => 'nav-approvals'],
+                    ['label' => __('Rent & bill reviews'), 'route' => 'owner.monthly-records.index', 'match' => 'owner.monthly-records.*', 'icon' => 'check-circle', 'tour' => 'nav-approvals'],
                     ['label' => __('Maintenance'), 'route' => 'owner.maintenance.index', 'match' => 'owner.maintenance.*', 'icon' => 'wrench'],
                     ['label' => __('Applications'), 'route' => 'owner.applications.index', 'match' => 'owner.applications.*', 'icon' => 'inbox'],
                     ['label' => __('Messages'), 'route' => 'conversations.index', 'match' => 'conversations.*', 'icon' => 'message', 'tour' => 'nav-messages'],
@@ -57,7 +57,7 @@
                 'label' => __('My tenancy'),
                 'links' => [
                     ['label' => __('My property'), 'route' => 'renter.tenancies.index', 'match' => 'renter.tenancies.*', 'icon' => 'key', 'tour' => 'nav-tenancy'],
-                    ['label' => __('Monthly'), 'route' => 'renter.monthly-records.index', 'match' => 'renter.monthly-records.*', 'icon' => 'banknotes', 'tour' => 'nav-monthly'],
+                    ['label' => __('Rent & bills'), 'route' => 'renter.monthly-records.index', 'match' => 'renter.monthly-records.*', 'icon' => 'banknotes', 'tour' => 'nav-monthly'],
                     ['label' => __('Maintenance'), 'route' => 'renter.maintenance.index', 'match' => 'renter.maintenance.*', 'icon' => 'wrench', 'tour' => 'nav-maintenance'],
                 ],
             ],
@@ -89,7 +89,7 @@
         @foreach ($groups as $group)
             <div class="space-y-1">
                 @if ($group['label'])
-                    <p class="px-3 pb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase" data-sidebar-label>{{ $group['label'] }}</p>
+                    <p class="px-3 pb-1 text-xs font-semibold tracking-wider text-slate-500 uppercase" data-sidebar-label>{{ $group['label'] }}</p>
                 @endif
 
                 @foreach ($group['links'] as $link)

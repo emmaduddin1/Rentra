@@ -1,4 +1,5 @@
 import { safeRoute, validPush, newInstallationId } from './notifications/payload.js';
+import { renderPushSettings, deliverySummary } from './notifications/settings.js';
 
 const bootstrap = document.getElementById('tenantism-push-config');
 if (bootstrap) {
@@ -37,14 +38,21 @@ function start(config) {
             return await response.json();
         } finally { clearTimeout(timer); }
     };
-    const state = (text) => document.querySelectorAll('[data-push-state]').forEach(el => { el.textContent = text; });
-    const setCount = count => document.querySelectorAll('[data-notification-count]').forEach(el => {
+    const state = status => renderPushSettings(document, status, config.enabled);
+    const actionError = () => document.querySelectorAll('[data-notification-action-state]').forEach(el => {
+        el.textContent = 'Could not update this notification. Please try again.';
+    });
+    const setCount = count => {
+        document.querySelectorAll('[data-notifications-read-all]').forEach(el => { el.hidden = count < 1; });
+        document.querySelectorAll('[data-notification-count]').forEach(el => {
         el.textContent = count > 99 ? '99+' : String(count);
         el.classList.toggle('hidden', count < 1);
-    });
+        });
+    };
     const read = async (id, navigate = true) => {
         if (!/^[1-9]\d*$/.test(String(id))) return;
         const result = await api(`/notifications/${id}/read`, 'POST');
+        document.querySelectorAll('[data-notification-action-state]').forEach(el => { el.textContent = ''; });
         setCount(result.unread_count);
         announce();
         if (navigate) window.location.assign(safeRoute(result.route, location.origin) || '/notifications');
@@ -53,21 +61,28 @@ function start(config) {
     function render(root, items) {
         if (!root) return;
         const list = document.createElement('ul');
-        list.className = 'divide-y divide-slate-100';
+        list.className = 'divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white';
         if (!items.length) {
-            const empty = document.createElement('li'); empty.textContent = 'No notifications.'; empty.className = 'py-4 text-sm text-slate-500'; list.append(empty);
+            const empty = document.createElement('li'); empty.textContent = 'No notifications.'; empty.className = 'px-5 py-8 text-center text-sm text-slate-600'; list.append(empty);
         }
         for (const item of items) {
-            const row = document.createElement('li'); row.className = 'py-3'; row.dataset.notificationId = item.id;
-            const open = document.createElement('button'); open.type = 'button'; open.className = 'w-full text-left text-sm';
-            const title = document.createElement('span'); title.className = item.read_at ? 'block' : 'block font-semibold';
+            const row = document.createElement('li'); row.className = `px-4 py-4 sm:px-5 ${item.read_at ? '' : 'bg-rental-50/50'}`; row.dataset.notificationId = item.id;
+            const open = document.createElement('button'); open.type = 'button'; open.className = 'w-full rounded-lg text-left text-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-rental-600';
+            const title = document.createElement('span'); title.className = 'block font-semibold text-slate-900';
             title.textContent = `${item.read_at ? '' : 'New · '}${item.title}`;
-            const body = document.createElement('span'); body.className = 'block text-slate-600'; body.textContent = item.body || '';
-            open.append(title, body); open.addEventListener('click', () => read(item.id).catch(() => state('Temporarily unavailable')));
+            const body = document.createElement('span'); body.className = 'mt-1 block break-words text-sm leading-6 text-slate-600'; body.textContent = item.body || '';
+            const time = document.createElement('time');
+            const created = new Date(item.created_at);
+            if (!Number.isNaN(created.valueOf())) {
+                time.dateTime = item.created_at;
+                time.textContent = created.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+                time.className = 'mt-2 block text-xs text-slate-500';
+            }
+            open.append(title, body, time); open.addEventListener('click', () => read(item.id).catch(actionError));
             row.append(open);
             if (!item.read_at) {
-                const mark = document.createElement('button'); mark.type = 'button'; mark.className = 'mt-2 text-xs underline'; mark.textContent = 'Mark as read';
-                mark.addEventListener('click', () => read(item.id, false).catch(() => state('Temporarily unavailable'))); row.append(mark);
+                const mark = document.createElement('button'); mark.type = 'button'; mark.className = 'mt-2 min-h-11 rounded-lg text-sm font-medium text-rental-700 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rental-600'; mark.textContent = 'Mark as read';
+                mark.addEventListener('click', () => read(item.id, false).catch(actionError)); row.append(mark);
             }
             list.append(row);
         }
@@ -113,7 +128,7 @@ function start(config) {
             storage.set(`${key}.seen.${id}`, '1');
             const box = document.querySelector('[data-notification-toast]');
             box.querySelector('[data-toast-body]').textContent = text;
-            box.querySelector('[data-toast-open]').onclick = () => read(id).catch(() => state('Temporarily unavailable'));
+            box.querySelector('[data-toast-open]').onclick = () => read(id).catch(actionError);
             box.classList.remove('hidden');
         };
         if (navigator.locks) await navigator.locks.request(`${key}.toast`, show); else show();
@@ -139,10 +154,11 @@ function start(config) {
     }
     async function connect() {
         const intent = ++pushIntent;
-        if (!config.enabled) { state('Temporarily unavailable'); return; }
-        if (!installation || !window.isSecureContext || !('serviceWorker' in navigator) || !('Notification' in window)) { state('Not supported'); return; }
+        if (!config.enabled) { state('unavailable'); return; }
+        if (!installation || !window.isSecureContext || !('serviceWorker' in navigator) || !('Notification' in window)) { state('unsupported'); return; }
+        state('connecting');
         sdk = await import('firebase/messaging');
-        if (!(await sdk.isSupported())) { state('Not supported'); return; }
+        if (!(await sdk.isSupported())) { state('unsupported'); return; }
         const { initializeApp, getApps } = await import('firebase/app');
         registration = await navigator.serviceWorker.register(config.workerUrl || '/firebase-messaging-sw.js', { scope: '/', updateViaCache: 'none' });
         await navigator.serviceWorker.ready;
@@ -159,7 +175,7 @@ function start(config) {
         await workerState({ binding, environment: config.environment });
         if (stopped || intent !== pushIntent) return;
         unsubscribe?.(); unsubscribe = sdk.onMessage(messaging, message => receive(message.data));
-        state('Enabled');
+        state('enabled');
     }
     async function disable(updateState = true) {
         ++pushIntent;
@@ -169,23 +185,24 @@ function start(config) {
         await workerState(null).catch(() => {});
         await api('/push-subscriptions/current', 'DELETE', { installation_id: installation });
         if (messaging) await sdk.deleteToken(messaging).catch(() => {});
-        if (updateState) state('Not enabled');
+        if (updateState) state('disabled');
     }
     document.querySelector('[data-push-enable]')?.addEventListener('click', async () => {
         try {
-            if (!('Notification' in window)) { state('Not supported'); return; }
-            if (!config.enabled) { state('Temporarily unavailable'); return; }
-            if (Notification.permission === 'denied') { state('Blocked by browser. Allow notifications in your browser’s site settings.'); return; }
+            if (!('Notification' in window)) { state('unsupported'); return; }
+            if (!config.enabled) { state('unavailable'); return; }
+            if (Notification.permission === 'denied') { state('blocked'); return; }
             storage.set(`${key}.disabled`, '0');
-            state('Permission requested');
+            state('requesting');
             const permission = await Notification.requestPermission();
             if (permission === 'granted') await connect();
-            else state(permission === 'denied' ? 'Blocked by browser. Allow notifications in your browser’s site settings.' : 'Not enabled');
-        } catch { state('Temporarily unavailable'); }
+            else state(permission === 'denied' ? 'blocked' : 'disabled');
+        } catch { state('unavailable'); }
     });
     document.querySelector('[data-push-disable]')?.addEventListener('click', async () => {
         storage.set(`${key}.disabled`, '1');
-        await disable().catch(() => state('Temporarily unavailable'));
+        state('disabling');
+        await disable().catch(() => state('unavailable'));
     });
     document.querySelector('[data-push-test]')?.addEventListener('click', async event => {
         const button = event.currentTarget;
@@ -214,6 +231,25 @@ function start(config) {
             feedback.textContent = 'Could not show the desktop test. Refresh, enable notifications, then try again.';
         } finally { button.disabled = false; }
     });
+    document.querySelector('[data-push-check]')?.addEventListener('click', async event => {
+        const button = event.currentTarget;
+        const feedback = document.querySelector('[data-push-delivery-state]');
+        button.disabled = true;
+        feedback.textContent = 'Checking this browser’s delivery connection…';
+        try {
+            const current = registration || await navigator.serviceWorker.getRegistration('/');
+            if (!current?.active || !binding) throw new Error('Browser is not connected');
+            const result = await new Promise((resolve, reject) => {
+                const channel = new MessageChannel();
+                const timer = setTimeout(() => { channel.port1.close(); reject(new Error('Worker timeout')); }, 5000);
+                channel.port1.onmessage = event => { clearTimeout(timer); channel.port1.close(); resolve(event.data); };
+                current.active.postMessage({ type: 'TENANTISM_STATUS', binding }, [channel.port2]);
+            });
+            feedback.textContent = deliverySummary(result);
+        } catch {
+            feedback.textContent = 'The browser delivery check is unavailable. Refresh this page and try again.';
+        } finally { button.disabled = false; }
+    });
     document.querySelector('[data-toast-close]')?.addEventListener('click', () => document.querySelector('[data-notification-toast]').classList.add('hidden'));
     document.addEventListener('submit', event => {
         const form = event.target;
@@ -224,7 +260,7 @@ function start(config) {
         } else if (form.matches('[data-notification-read], [data-notification-open]')) {
             event.preventDefault();
             const id = form.dataset.notificationRead || form.action.match(/notifications\/(\d+)\/read/)?.[1];
-            read(id).catch(() => state('Temporarily unavailable'));
+            read(id).catch(actionError);
         } else if (form.matches('[data-notifications-read-all]')) {
             event.preventDefault();
             api('/notifications/read-all', 'POST').then(async result => { setCount(result.unread_count); announce(); await refresh(); }).catch(() => {});
@@ -246,10 +282,15 @@ function start(config) {
         }
     });
     const reconcilePermission = () => {
-        if (!('Notification' in window)) { state('Not supported'); return; }
+        if (!installation || !window.isSecureContext || !('serviceWorker' in navigator) || !('Notification' in window)) { state('unsupported'); return; }
+        if (!config.enabled) { state('unavailable'); return; }
         if (Notification.permission === 'denied') {
-            state('Blocked by browser. Allow notifications in your browser’s site settings.');
+            state('blocked');
             if (binding) disable(false).catch(() => {});
+        } else if (Notification.permission !== 'granted' || storage.get(`${key}.disabled`) === '1') {
+            state('disabled');
+        } else if (binding) {
+            state('enabled');
         }
     };
     window.addEventListener('focus', () => { reconcilePermission(); refresh().catch(() => {}); });
@@ -257,12 +298,11 @@ function start(config) {
     document.querySelector('[data-notification-panel]')?.addEventListener('toggle', () => refresh().catch(() => {}));
     setInterval(() => refresh().catch(() => {}), 30000);
     // getToken also detects replacements; renew on each page and periodically while open.
-    setInterval(() => { if (!stopped && binding && Notification.permission === 'granted') connect().catch(() => state('Temporarily unavailable')); }, 60 * 60 * 1000);
-    if (!config.enabled) state('Temporarily unavailable');
-    if (!installation || !window.isSecureContext || !('serviceWorker' in navigator) || !('Notification' in window)) state('Not supported');
+    setInterval(() => { if (!stopped && binding && Notification.permission === 'granted') connect().catch(() => state('unavailable')); }, 60 * 60 * 1000);
+    state('checking');
     reconcilePermission();
     refresh().catch(() => {});
-    if ('Notification' in window && Notification.permission === 'granted' && storage.get(`${key}.disabled`) !== '1') connect().catch(() => state('Temporarily unavailable'));
+    if ('Notification' in window && Notification.permission === 'granted' && storage.get(`${key}.disabled`) !== '1') connect().catch(() => state('unavailable'));
     const opening = document.querySelector('[data-notification-auto-open]');
-    if (opening) read(opening.action.match(/notifications\/(\d+)\/read/)?.[1]).catch(() => {});
+    if (opening) read(opening.action.match(/notifications\/(\d+)\/read/)?.[1]).catch(actionError);
 }

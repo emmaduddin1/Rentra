@@ -1,6 +1,6 @@
 <x-layouts.app
-    :title="__('Monthly approvals')"
-    :heading="__('Monthly approvals')"
+    :title="__('Rent & bill reviews')"
+    :heading="__('Rent & bill reviews')"
     :subheading="__('Rent and utility submissions from your renters.')"
 >
     @php

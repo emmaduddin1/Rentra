@@ -5,7 +5,7 @@
         'renter' => $record->tenancy->renter->name,
         'property' => $record->tenancy->property->title,
     ])"
-    :back="['href' => route('owner.monthly-records.index'), 'label' => __('Approvals')]"
+    :back="['href' => route('owner.monthly-records.index'), 'label' => __('Rent & bill reviews')]"
 >
     <div class="mb-6 flex flex-wrap items-center gap-3">
         <x-badge :variant="$record->displayStatusBadge()">{{ $record->displayStatusLabel() }}</x-badge>

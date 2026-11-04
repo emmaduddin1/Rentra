@@ -1,5 +1,7 @@
 # Web push staging deployment — 27–28 October 2026
 
+> Update, 4 November 2026: the basic real Chrome flow is verified, including opening a system alert and automatic persisted read. The active worker is `dac3d7dfd88d`; its click opens the protected page first. See [current evidence and remaining checks](OUTSTANDING-2026-11-04.md). Sections below retain earlier deployment history.
+
 Status: deployed to **https://staging.tenantism.com**, with push enabled and automatic hPanel scheduler/queue execution verified. Production was not changed.
 
 ## Deployed configuration

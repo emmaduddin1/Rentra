@@ -31,6 +31,12 @@ function validBinding(data, binding) {
 function valid(data, binding) {
     return validBinding(data, binding) && self.TENANTISM_PUSH?.enabled && data.environment === self.TENANTISM_PUSH.environment;
 }
+async function receipt(binding, outcome) {
+    if (!binding?.binding) return;
+    try {
+        await state({ binding: binding.binding, environment: binding.environment, outcome, at: Date.now() }, true, 'last-delivery');
+    } catch { /* Diagnostics must never prevent delivery. */ }
+}
 async function openNotificationRoute(route) {
     const target = `${self.location.origin}${route}`;
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
@@ -43,46 +49,53 @@ async function openNotificationRoute(route) {
 }
 function receivePush(data) {
     deliveryQueue = deliveryQueue.then(async () => {
+        let binding;
         try {
-            if (!valid(data, await state())) return;
+            binding = await state();
+            if (!valid(data, binding)) {
+                await receipt(binding, 'ignored');
+                return;
+            }
             const tag = `tenantism-${data.environment}-${data.notification_id}`;
-            if (await state(undefined, false, tag)) return;
+            if (await state(undefined, false, tag)) {
+                await receipt(binding, 'duplicate');
+                return;
+            }
             const windows = (await self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
                 .filter(client => new URL(client.url).origin === self.location.origin);
             // A visible page behind another window is still a background recipient.
-            const foreground = windows.some(client => client.focused && client.visibilityState === 'visible');
+            const diagnostic = data.environment === 'staging' && data.type === 'account.browser_click_check';
+            const foreground = !diagnostic && windows.some(client => client.focused && client.visibilityState === 'visible');
             if (!foreground && !(await self.registration.getNotifications({ tag })).length) {
                 await self.registration.showNotification(data.title, { body: data.body, tag,
                     icon: '/icons/favicon-192.png', badge: '/icons/favicon-32.png', data });
             }
             await state(Date.now(), true, tag);
+            await receipt(binding, foreground ? 'foreground' : 'desktop');
             windows.forEach(client => client.postMessage({ type: 'TENANTISM_PUSH', data }));
-        } catch { /* Missing binding or storage: fail closed, keep database notification. */ }
+        } catch {
+            await receipt(binding, 'display-failed');
+            /* Missing binding or storage: fail closed, keep database notification. */
+        }
     });
     return deliveryQueue;
 }
-async function readClickedNotification(data) {
-    const fallback = `/notifications/${data.notification_id}/open`;
-    const controller = new AbortController();
-    // Keep the notification click's window-opening activation while allowing a slow/offline fallback.
-    const timer = setTimeout(() => controller.abort(), 2500);
-    const options = { credentials: 'same-origin', cache: 'no-store', redirect: 'error', signal: controller.signal };
-    try {
-        const context = await fetch(fallback, { ...options, headers: { Accept: 'application/json' } });
-        if (!context.ok) return { route: fallback, read: false };
-        const { csrf_token: csrf } = await context.json();
-        if (typeof csrf !== 'string' || !csrf) return { route: fallback, read: false };
-        const response = await fetch(`/notifications/${data.notification_id}/read`, { ...options, method: 'POST',
-            headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf }, body: '{}' });
-        if (!response.ok) return { route: fallback, read: false };
-        const result = await response.json();
-        return { route: validRoute(result.route) ? result.route : '/notifications', read: true };
-    } catch {
-        return { route: fallback, read: false };
-    } finally { clearTimeout(timer); }
-}
 self.addEventListener('message', event => {
-    if (event.data?.type !== 'TENANTISM_BIND' || !event.source?.url || new URL(event.source.url).origin !== self.location.origin) return;
+    if (!event.source?.url || new URL(event.source.url).origin !== self.location.origin) return;
+    if (event.data?.type === 'TENANTISM_STATUS') {
+        event.waitUntil((async () => {
+            const binding = await state();
+            const matches = !!binding?.binding && binding.binding === event.data.binding;
+            const last = matches ? await state(undefined, false, 'last-delivery') : null;
+            const subscription = matches ? await self.registration.pushManager?.getSubscription() : null;
+            event.ports[0]?.postMessage({ ready: messagingReady, matches,
+                subscribed: !!subscription,
+                last: last && last.binding === binding?.binding && last.environment === binding?.environment
+                    ? { outcome: last.outcome, at: last.at } : null });
+        })().catch(() => event.ports[0]?.postMessage({ ready: false })));
+        return;
+    }
+    if (event.data?.type !== 'TENANTISM_BIND') return;
     const value = event.data.value;
     if (value !== null && (!/^[a-f0-9]{64}$/.test(value?.binding) || typeof value.environment !== 'string')) return;
     event.waitUntil(state(value, true).then(() => event.ports[0]?.postMessage({ ready: messagingReady })));
@@ -100,10 +113,9 @@ self.addEventListener('notificationclick', event => {
     event.waitUntil((async () => {
         // Previously displayed alerts remain clickable if push is subsequently disabled/offline.
         if (!validBinding(data, await state())) return;
-        const result = await readClickedNotification(data);
-        const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-        if (result.read) windows.forEach(client => client.postMessage({ type: 'TENANTISM_NOTIFICATIONS_CHANGED' }));
-        await openNotificationRoute(result.route);
+        // Use the click's activation immediately. The protected page performs the
+        // authorized CSRF POST in its signed-in window, then follows the safe route.
+        await openNotificationRoute(`/notifications/${data.notification_id}/open`);
     })().catch(() => {}));
 });
 // Own display routing before Firebase's visibility-only foreground shortcut runs.

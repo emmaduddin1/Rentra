@@ -3,7 +3,11 @@
     :heading="__('Notifications')"
     :subheading="__('What happened while you were away.')"
 >
-    <x-notification-settings />
+    <x-slot:actions>
+        <a href="#notification-settings" class="btn btn-secondary">{{ __('Notification settings') }}</a>
+    </x-slot:actions>
+    <h2 class="mb-4 text-lg font-semibold">{{ __('Your inbox') }}</h2>
+    <p data-notification-action-state role="alert" class="mb-3 text-sm text-red-700"></p>
     <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div class="segmented">
             <x-tab-link :href="route('notifications.index')" :active="$filter === 'all'">{{ __('All') }}</x-tab-link>
@@ -15,12 +19,10 @@
             >{{ __('Unread') }}</x-tab-link>
         </div>
 
-        @if ($unreadCount > 0)
-            <form method="POST" data-notifications-read-all action="{{ route('notifications.read-all') }}">
+            <form method="POST" data-notifications-read-all @if ($unreadCount < 1) hidden @endif action="{{ route('notifications.read-all') }}">
                 @csrf
                 <x-form.button type="submit" variant="secondary" icon="check">{{ __('Mark all as read') }}</x-form.button>
             </form>
-        @endif
     </div>
 
     <div data-notification-page-list>
@@ -62,4 +64,5 @@
         <div class="mt-6">{{ $notifications->links() }}</div>
     @endif
     </div>
+    <x-notification-settings />
 </x-layouts.app>

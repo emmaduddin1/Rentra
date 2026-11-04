@@ -61,7 +61,7 @@
                             <tr>
                                 <th scope="col">{{ __('Month') }}</th>
                                 <th scope="col">{{ __('Property') }}</th>
-                                <th scope="col">{{ __('Total receivable') }}</th>
+                                <th scope="col">{{ __('Total payable to owner') }}</th>
                                 <th scope="col">{{ __('Status') }}</th>
                                 <th scope="col" class="text-right">{{ __('Actions') }}</th>
                             </tr>

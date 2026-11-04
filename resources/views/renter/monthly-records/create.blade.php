@@ -1,8 +1,8 @@
 <x-layouts.app
-    :title="__('New monthly record')"
-    :heading="__('New monthly record')"
-    :subheading="__('Open the record for a month. You can save it as a draft and add proofs before submitting.')"
-    :back="['href' => route('renter.monthly-records.index'), 'label' => __('Monthly records')]"
+    :title="__('Add rent & bills')"
+    :heading="__('Add rent & bills')"
+    :subheading="__('Save a draft, add payment evidence, then send it to your owner for review.')"
+    :back="['href' => route('renter.monthly-records.index'), 'label' => __('Rent & bills')]"
 >
     <form method="POST" action="{{ route('renter.monthly-records.store') }}" class="max-w-3xl">
         @csrf
@@ -18,7 +18,7 @@
                 </x-form.field>
 
                 {{-- SRS 12 - one canonical month, normalised server side. --}}
-                <x-form.field :label="__('Month')" name="period_month" required :hint="__('One record per month (BR-003).')">
+                <x-form.field :label="__('Month')" name="period_month" required :hint="__('You can create one record for each month.')">
                     <x-form.input name="period_month" type="month" :value="old('period_month', $defaultPeriod)" />
                 </x-form.field>
             </div>
@@ -27,7 +27,7 @@
         <section class="mt-6 card p-6">
             <h2 class="text-sm font-semibold text-slate-900">{{ __('Amounts') }}</h2>
             <p class="mt-1 text-xs text-slate-500">
-                {{ __('Enter rent and bills for tracking. Only utilities marked payable to owner increase Total receivable.') }}
+                {{ __('Track your rent and bills here. Bills paid directly to a provider are kept separate from amounts payable to your owner.') }}
             </p>
 
             <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

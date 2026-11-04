@@ -62,4 +62,6 @@ The validation-only check establishes server authentication and FCM send permiss
 
 Production remains separate and unchanged. Deployment details, backups and cron settings are in [STAGING-WEB-PUSH-DEPLOYMENT.md](STAGING-WEB-PUSH-DEPLOYMENT.md).
 
+Update, 4 November 2026: the basic Chrome flow is now verified on staging. Real FCM receipt, desktop alert presentation and opening Tenantism were confirmed; test record 58 was automatically marked read at 19:05:45 Asia/Karachi. Current evidence, the navigation-first worker fix and remaining device checks are recorded in [OUTSTANDING-2026-11-04.md](OUTSTANDING-2026-11-04.md). Android physical acceptance and iOS setup are deferred at the user's request.
+
 No Firebase login tokens or private service-account material belong in this document, `.firebaserc`, `firebase.json`, Vite variables or Git.

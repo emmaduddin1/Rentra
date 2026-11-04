@@ -1,4 +1,12 @@
 import './notifications.js';
+
+// Native details keeps secondary filters usable without JavaScript.
+document.querySelectorAll('[data-more-filters]').forEach(details => {
+    const summary = details.querySelector('summary');
+    const sync = () => summary?.setAttribute('aria-expanded', String(details.open));
+    details.addEventListener('toggle', sync);
+    sync();
+});
 // The navigation drawer works with CSS alone; this only adds the polish a
 // keyboard user expects - Escape closes it, and the page never scrolls behind.
 const toggle = document.getElementById('nav-toggle');
@@ -338,7 +346,7 @@ if (productTour) {
         },
         {
             selector: '[data-tour="nav-approvals"]',
-            title: 'Review monthly submissions',
+            title: 'Review rent & bills',
             description: 'Approve rent and utility submissions and keep the financial record accurate.',
         },
         {
@@ -356,7 +364,7 @@ if (productTour) {
         {
             selector: '[data-tour="nav-browse"]',
             title: 'Find a property',
-            description: 'Browse published properties and filter by location, type, purpose, and budget.',
+            description: 'Find properties by location, type and budget.',
         },
         {
             selector: '[data-tour="nav-applications"]',
@@ -370,7 +378,7 @@ if (productTour) {
         },
         {
             selector: '[data-tour="nav-monthly"]',
-            title: 'Submit monthly records',
+            title: 'Manage rent & bills',
             description: 'Record rent and utilities and attach payment evidence for owner review.',
         },
         {
