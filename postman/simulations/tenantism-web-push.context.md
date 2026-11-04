@@ -26,3 +26,9 @@ Start `postman simulation run postman/simulations/tenantism-web-push.sim.yaml --
 
 - 2026-10-27: Restricted execution returned `listen EPERM` for the simulator and prevented the PHP client reaching loopback. Running these local checks with the appropriate execution permission resolved it.
 - 2026-10-27: Handwritten mock manifests need `version: 1` and `mockSrc`; an `entry` field produced `Manifest must specify mockSrc`. The committed manifest fixes this.
+
+## Native delivery extension — 3 November 2026
+
+The existing mock now also validates Android notification/channel configuration and iOS APNs alert configuration, leaving browser data-only checks intact. The real Laravel `MobileFcmSimulationTest::test_real_mobile_fcm_http_against_local_simulation` passed (1 test, 24 assertions). The NDJSON log confirmed nine Firebase-member requests: OAuth 200, send 200, UNREGISTERED 404, and three attempts each for 503 and 429. Accepted devices were not sent twice; invalid tokens were revoked and retry exhaustion recorded. Generated credentials and an isolated database were used. This proves caller behavior under the modeled responses, not delivery by Google or an OS.
+
+The Postman CLI was 1.74.0; its `postman status` command is unavailable. Discovery returned no relevant owning Firebase mock; the checked-in provider mock was reused. Nothing was published. See the adjacent YAML context for current scoped claims; the historical observations above remain applicable to the web paths previously exercised.

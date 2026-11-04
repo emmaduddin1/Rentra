@@ -16,7 +16,7 @@ class PushService
 
     public function subscriptions(Notification $notification): Collection
     {
-        if (! app(PushConfiguration::class)->available() || $notification->push_environment !== config('push.environment')
+        if (! app(PushConfiguration::class)->mobileAvailable() || $notification->push_environment !== config('push.environment')
             || ! $notification->user?->isActive() || $notification->read_at || $notification->created_at->lt(now()->subDay())) {
             return new Collection;
         }
@@ -26,7 +26,8 @@ class PushService
             return new Collection;
         }
 
-        return PushSubscription::active()->where('user_id', $notification->user_id)->get();
+        return PushSubscription::active()->where('user_id', $notification->user_id)->get()
+            ->filter(fn ($subscription) => $subscription->platform !== 'web' || app(PushConfiguration::class)->available());
     }
 
     /** Returns true when at least one device requires a bounded retry. */
@@ -42,7 +43,7 @@ class PushService
             }
             // Serialize sends with account reassignment/revocation. Never send to a new owner of a token.
             $retry = DB::transaction(function () use ($notification, $subscription) {
-                $current = PushSubscription::active()->whereKey($subscription->id)->where('user_id', $notification->user_id)->lockForUpdate()->first();
+                $current = PushSubscription::active()->whereKey($subscription->id)->where('user_id', $notification->user_id)->where('token_hash', $subscription->token_hash)->lockForUpdate()->first();
                 if (! $current) {
                     return false;
                 }
@@ -54,7 +55,7 @@ class PushService
                 }
                 $delivery->increment('attempts');
                 try {
-                    $result = $this->client->send($current->token, [...$this->payload->make($notification), 'subscription_key' => $current->bindingKey()]);
+                    $result = $this->client->send($current->token, [...($current->platform === 'web' ? $this->payload->make($notification) : $this->payload->makeMobile($notification)), 'subscription_key' => $current->bindingKey()], $current->platform);
                 } catch (Throwable) {
                     $result = ['status' => 'retry', 'code' => 'TRANSPORT_OR_CONFIGURATION'];
                 }

@@ -16,7 +16,13 @@ http.createServer(async (req, res) => {
     let body = req.body;
     if (typeof body === 'string') { try { body = JSON.parse(body); } catch { return reply(400, { error: { status: 'INVALID_ARGUMENT' } }); } }
     const message = body?.message;
-    if (!message?.token || !message.data || Object.values(message.data).some(value => typeof value !== 'string') || message.notification || !message.webpush?.headers?.TTL) return reply(400, { error: { status: 'INVALID_ARGUMENT' } });
+    if (!message?.token || !message.data || Object.values(message.data).some(value => typeof value !== 'string')) return reply(400, { error: { status: 'INVALID_ARGUMENT' } });
+    const native = message.android || message.apns;
+    if (native) {
+        if (!message.notification?.title || !message.notification?.body || !message.data.recipient_id) return reply(400, { error: { status: 'INVALID_ARGUMENT' } });
+        if (message.android && message.android.notification?.channel_id !== 'tenantism_updates') return reply(400, { error: { status: 'INVALID_ARGUMENT' } });
+        if (message.apns && message.apns.headers?.['apns-push-type'] !== 'alert') return reply(400, { error: { status: 'INVALID_ARGUMENT' } });
+    } else if (message.notification || !message.webpush?.headers?.TTL) return reply(400, { error: { status: 'INVALID_ARGUMENT' } });
     const code = message.token.startsWith('unregistered') ? 'UNREGISTERED' : message.token.startsWith('invalid') ? 'INVALID_ARGUMENT' : null;
     if (code) return reply(code === 'UNREGISTERED' ? 404 : 400, { error: { status: code === 'UNREGISTERED' ? 'NOT_FOUND' : 'INVALID_ARGUMENT', message: 'Invalid registration token', details: [{ '@type': 'type.googleapis.com/google.firebase.fcm.v1.FcmError', errorCode: code }] } });
     if (message.token.startsWith('temporary')) return reply(503, { error: { status: 'UNAVAILABLE' } });

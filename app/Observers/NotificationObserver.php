@@ -28,7 +28,7 @@ class NotificationObserver
     public static function enqueue(Notification $notification): void
     {
         try {
-            if (! app(PushConfiguration::class)->available()) {
+            if (! app(PushConfiguration::class)->mobileAvailable()) {
                 return;
             }
             SendWebPush::dispatch($notification->id, $notification->push_environment);

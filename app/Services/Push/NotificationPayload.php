@@ -66,4 +66,26 @@ class NotificationPayload
             'environment' => config('push.environment'),
         ];
     }
+
+    /** Native route identifiers use only known entity IDs; no arbitrary URL is trusted. */
+    public function makeMobile(Notification $notification): array
+    {
+        [$route, $key, $entity] = match (explode('.', $notification->type)[0]) {
+            'tenancy' => ['tenancy_details', 'tenancy_id', 'tenancy'],
+            'monthly_record', 'payment', 'rent' => ['monthly_record_details', 'monthly_record_id', 'monthly_record'],
+            'maintenance' => ['maintenance_details', 'maintenance_request_id', 'maintenance'],
+            'message' => ['conversation_details', 'conversation_id', 'conversation'],
+            'application' => ['application_details', 'application_id', 'application'],
+            default => ['notifications', null, 'general'],
+        };
+        $id = $key ? ($notification->data_json[$key] ?? null) : null;
+        $valid = is_scalar($id) && ctype_digit((string) $id) && (int) $id > 0;
+
+        return [...$this->make($notification),
+            'recipient_id' => (string) $notification->user_id,
+            'route' => $valid ? $route : 'notifications',
+            'entity_type' => $valid ? $entity : 'general',
+            'entity_id' => $valid ? (string) $id : '',
+        ];
+    }
 }

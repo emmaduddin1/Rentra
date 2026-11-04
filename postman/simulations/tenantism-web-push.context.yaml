@@ -1,0 +1,30 @@
+purpose:
+  stands_in_for: Firebase OAuth and HTTP v1 web, Android and iOS send responses.
+  unblocks: Local testing of the real Laravel push client, delivery ledger and bounded retries.
+assumptions:
+  - id: native-payload-and-recovery
+    status: supported
+    claim: The Laravel sender handles the modeled native success, UNREGISTERED, 503 and 429 responses with per-device deduplication and bounded retries.
+    reason: The real client and delivery service ran over HTTP and their persisted ledger was asserted.
+    verification: On 2026-11-03 the mobile integration method passed 24 assertions. Nine logged requests reached the Firebase member (200 twice, 404 once, 503 three times, 429 three times).
+    source: tests/Integration/MobileFcmSimulationTest.php; postman/mocks/firebase-web-push/default.js
+    updated_at: "2026-11-03"
+  - id: real-google-and-os-delivery
+    status: unknown
+    claim: Firebase accepts these payloads under the staging IAM credentials and the target OS displays them.
+    reason: Generated test credentials and a local stand-in cannot establish real IAM or device behavior.
+    verification: Not established by simulation. Separate physical-device evidence belongs in the mobile push implementation report.
+    source: postman/mocks/firebase-web-push/default.js; postman/simulations/tenantism-web-push.context.md
+    updated_at: "2026-11-03"
+  - id: historical-web-evidence
+    status: supported
+    claim: The 2026-10-27 browser sender tests exercised the modeled web response paths.
+    reason: The original context records the run and its limits; it is retained without treating it as a new native-delivery observation.
+    verification: Historical web HTTP integration run is documented in the preserved Markdown context. The 2026-11-03 full Laravel suite also passed existing web feature tests.
+    source: postman/simulations/tenantism-web-push.context.md; tests/Integration/FcmSimulationTest.php
+    updated_at: "2026-11-03"
+fingerprints:
+  - id: native-extension
+    date: "2026-11-03"
+    commit: null
+    cli: "1.74.0"

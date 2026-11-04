@@ -6,6 +6,7 @@ use App\Actions\Auth\RegisterUser;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\V1\UserResource;
+use App\Models\PushSubscription;
 use App\Models\User;
 use App\Services\AuditLogger;
 use Illuminate\Auth\Events\Registered;
@@ -105,6 +106,10 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
+        PushSubscription::where('user_id', $request->user()->id)
+            ->where('personal_access_token_id', $request->user()->currentAccessToken()?->getKey())
+            ->whereIn('platform', ['android', 'ios'])
+            ->update(['revoked_at' => now(), 'notifications_enabled' => false]);
         $request->user()->currentAccessToken()?->delete();
 
         return response()->json(['message' => __('Logged out.')]);

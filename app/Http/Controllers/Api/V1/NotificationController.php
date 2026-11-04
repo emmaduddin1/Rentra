@@ -30,6 +30,13 @@ class NotificationController extends Controller
             ]);
     }
 
+    public function show(Notification $notification): JsonResponse
+    {
+        Gate::authorize('view', $notification);
+
+        return response()->json(['data' => new NotificationResource($notification)]);
+    }
+
     /**
      * Marks the given ids as read, or everything when no ids are given.
      */

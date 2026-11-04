@@ -3,6 +3,7 @@
 namespace App\Http\Resources\V1;
 
 use App\Models\Notification;
+use App\Services\Push\NotificationPayload;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -17,6 +18,7 @@ class NotificationResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            'mobile_target' => app(NotificationPayload::class)->makeMobile($this->resource),
             'id' => $this->id,
             'type' => $this->type,
             'title' => $this->title,
