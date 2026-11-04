@@ -24,7 +24,19 @@ class PushSubscription extends Model
 
     public function scopeActive(Builder $query): void
     {
-        $query->where('environment', config('push.environment'))->where('platform', 'web')
+        $query->where('environment', config('push.environment'))->where(function (Builder $platform) {
+            $platform->where('platform', 'web')->orWhere(function (Builder $mobile) {
+                $mobile->whereIn('platform', ['android', 'ios'])
+                    ->whereExists(function ($tokens) {
+                        $tokens->selectRaw('1')->from('personal_access_tokens')
+                            ->whereColumn('personal_access_tokens.id', 'push_subscriptions.personal_access_token_id')
+                            ->whereColumn('personal_access_tokens.tokenable_id', 'push_subscriptions.user_id')
+                            ->where('personal_access_tokens.tokenable_type', (new User)->getMorphClass())
+                            ->when(config('sanctum.expiration'), fn ($expiry) => $expiry->where('personal_access_tokens.created_at', '>', now()->subMinutes(config('sanctum.expiration'))))
+                            ->where(fn ($expiry) => $expiry->whereNull('expires_at')->orWhere('expires_at', '>', now()));
+                    });
+            });
+        })
             ->where('notifications_enabled', true)->whereNull('revoked_at')
             ->where('last_used_at', '>=', now()->subDays(config('push.stale_days')));
     }

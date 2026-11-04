@@ -465,4 +465,16 @@ class WebPushTest extends TestCase
         $notification = $this->notification(User::factory()->renter()->create());
         $this->getJson('/notifications/'.$notification->id.'/open')->assertUnauthorized();
     }
+
+    public function test_click_navigation_get_is_read_only_and_only_trusted_navigation_auto_opens(): void
+    {
+        $user = User::factory()->renter()->create();
+        $notification = $this->notification($user);
+        foreach (['same-origin' => true, 'none' => true, 'cross-site' => false] as $site => $autoOpen) {
+            $this->actingAs($user)->withHeader('Sec-Fetch-Site', $site)
+                ->get('/notifications/'.$notification->id.'/open')->assertOk()
+                ->assertViewHas('autoOpen', $autoOpen);
+            $this->assertNull($notification->fresh()->read_at);
+        }
+    }
 }

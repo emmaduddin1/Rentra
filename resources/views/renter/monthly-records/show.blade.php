@@ -2,7 +2,7 @@
     :title="$record->period_month->format('F Y')"
     :heading="$record->period_month->format('F Y')"
     :subheading="$record->tenancy->property->title"
-    :back="['href' => route('renter.monthly-records.index'), 'label' => __('Monthly records')]"
+    :back="['href' => route('renter.monthly-records.index'), 'label' => __('Rent & bills')]"
 >
     <div class="mb-6 flex flex-wrap items-center gap-3">
         <x-badge :variant="$record->displayStatusBadge()">{{ $record->displayStatusLabel() }}</x-badge>

@@ -11,14 +11,27 @@ class FcmClient
     /** Short-lived bearer tokens stay in this worker's memory, never the database cache. */
     private static array $accessTokens = [];
 
-    public function send(string $token, array $payload): array
+    public function send(string $token, array $payload, string $platform = 'web'): array
     {
+        $message = ['token' => $token, 'data' => $payload];
+        if ($platform === 'web') {
+            $message['webpush'] = ['headers' => ['TTL' => '3600', 'Urgency' => 'high']];
+        } else {
+            $message['notification'] = ['title' => $payload['title'], 'body' => $payload['body']];
+            $tag = 'tenantism-'.($payload['notification_id'] ?? 'update');
+            if ($platform === 'android') {
+                $message['android'] = ['priority' => 'HIGH', 'ttl' => '3600s',
+                    'notification' => ['channel_id' => 'tenantism_updates', 'icon' => 'ic_stat_tenantism', 'tag' => $tag]];
+            } elseif ($platform === 'ios') {
+                $message['apns'] = ['headers' => ['apns-priority' => '10', 'apns-push-type' => 'alert', 'apns-collapse-id' => $tag],
+                    'payload' => ['aps' => ['sound' => 'default', 'content-available' => 1, 'thread-id' => 'tenantism_updates']]];
+            }
+        }
         $project = config('push.project_id');
         $base = app()->environment('testing') ? config('push.test_base_url', 'https://fcm.googleapis.com') : 'https://fcm.googleapis.com';
         $response = Http::withToken($this->accessToken())->acceptJson()->connectTimeout(5)->timeout(15)
             ->post($base.'/v1/projects/'.rawurlencode($project).'/messages:send', [
-                'message' => ['token' => $token, 'data' => $payload,
-                    'webpush' => ['headers' => ['TTL' => '3600', 'Urgency' => 'high']]],
+                'message' => $message,
             ]);
         if ($response->successful()) {
             return ['status' => 'sent', 'code' => null];

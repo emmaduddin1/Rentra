@@ -62,9 +62,16 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('favorites/{property}', [V1\FavoriteController::class, 'toggle'])->name('favorites.toggle');
         });
 
+        Route::get('notifications/push-config', [V1\PushDeviceController::class, 'config'])->name('notifications.push-config');
+        Route::post('notifications/devices', [V1\PushDeviceController::class, 'store'])
+            ->middleware('throttle:20,1')->name('notifications.devices.store');
+        Route::delete('notifications/devices', [V1\PushDeviceController::class, 'destroy'])
+            ->middleware('throttle:20,1')->name('notifications.devices.destroy');
+
         // FR-NOT-001/003.
         Route::get('notifications', [V1\NotificationController::class, 'index'])->name('notifications.index');
         Route::post('notifications/read', [V1\NotificationController::class, 'read'])->name('notifications.read');
+        Route::get('notifications/{notification}', [V1\NotificationController::class, 'show'])->name('notifications.show');
 
         // FR-APP-005 - renters apply; FR-APP-006 - owners respond.
         Route::get('applications', [V1\ApplicationController::class, 'index'])->name('applications.index');

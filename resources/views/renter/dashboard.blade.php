@@ -22,11 +22,11 @@
                 <h2 class="text-sm font-semibold text-slate-900">{{ __('My property') }}</h2>
                 <p class="mt-2 text-lg font-medium">{{ $activeTenancy->property->title }}</p>
                 <p class="text-sm text-slate-600">{{ $activeTenancy->property->address }}, {{ $activeTenancy->property->area }}</p>
-                <a href="{{ route('renter.tenancies.show', $activeTenancy) }}" class="mt-2 inline-block link text-sm">
+                <a href="{{ route('renter.tenancies.show', $activeTenancy) }}" class="btn btn-secondary mt-3">
                     {{ __('Open tenancy details') }}
                 </a>
 
-                <dl class="mt-4 grid gap-4 sm:grid-cols-3">
+                <dl class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
                     <div>
                         <dt class="text-xs uppercase tracking-wide text-slate-500">{{ __('Agreed rent') }}</dt>
                         <dd class="mt-0.5 text-sm font-medium"><x-money :amount="$activeTenancy->agreed_rent" /></dd>
@@ -55,9 +55,9 @@
                         <x-badge :variant="$currentRecord->displayStatusBadge()">{{ $currentRecord->displayStatusLabel() }}</x-badge>
                     </p>
                     <p class="mt-2 text-sm text-slate-600">
-                        {{ __('Total receivable') }}: <x-money :amount="$currentRecord->total_receivable" />
+                        {{ __('Total payable to owner') }}: <x-money :amount="$currentRecord->total_receivable" />
                     </p>
-                    <a href="{{ route('renter.monthly-records.show', $currentRecord) }}" class="mt-3 inline-block link text-sm">
+                    <a href="{{ route('renter.monthly-records.show', $currentRecord) }}" class="btn mt-3 {{ $currentRecord->isEditableByRenter() ? 'btn-primary' : 'btn-secondary' }}">
                         {{ $currentRecord->isEditableByRenter() ? __('Continue this month') : __('View submission') }}
                     </a>
                 @endif
@@ -104,10 +104,10 @@
     @endif
 
     {{-- FR-APP-001/005/007 - the same account keeps looking for a place. --}}
-    <div class="mt-8 grid gap-4 sm:grid-cols-3">
+    <div class="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         <x-stat-card :label="__('Applications')" :value="$stats['applications']" :href="route('renter.applications.index')" />
         <x-stat-card :label="__('Awaiting response')" :value="$stats['pending_applications']" />
-        <x-stat-card :label="__('Saved listings')" :value="$stats['favorites']" :href="route('renter.favorites.index')" />
+        <x-stat-card :label="__('Saved listings')" :value="$stats['favorites']" :href="route('renter.favorites.index')" class="col-span-2 sm:col-span-1" />
     </div>
 
     @if ($recentApplications->isNotEmpty())
@@ -141,8 +141,8 @@
         @if ($latestListings->isEmpty())
             <x-empty-state
                 class="mt-3"
-                :title="__('No published listings yet.')"
-                :description="__('New properties appear here as soon as owners publish them.')"
+                :title="__('No properties available yet.')"
+                :description="__('Check back soon for new places to rent.')"
             />
         @else
             <div class="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -14,7 +14,7 @@
 
 <{{ $tag }} @if ($href) href="{{ $href }}" @endif {{ $attributes->class([
     'card group flex flex-col gap-1 p-4 transition',
-    'hover:border-brand-200 hover:shadow-sm' => (bool) $href,
+    'hover:border-brand-200 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rental-600' => (bool) $href,
 ]) }}>
     <span class="flex items-center gap-2 text-sm font-medium text-slate-500">
         @if ($icon)
@@ -29,6 +29,6 @@
     ])>{{ $value }}</span>
 
     @if ($hint)
-        <span class="text-xs text-slate-400">{{ $hint }}</span>
+        <span class="text-xs text-slate-500">{{ $hint }}</span>
     @endif
 </{{ $tag }}>
