@@ -2,6 +2,20 @@ purpose:
   stands_in_for: Firebase OAuth and HTTP v1 web, Android and iOS send responses.
   unblocks: Local testing of the real Laravel push client, delivery ledger and bounded retries.
 assumptions:
+  - id: maintenance-comment-database-queue
+    status: supported
+    claim: A renter maintenance comment reaches only the owner through the real Laravel persistent queue and modeled Firebase success response.
+    reason: The business HTTP action, after-commit outbox, fanout/device jobs and delivery ledger ran against isolated fixtures and the existing local HTTP provider mock.
+    verification: On 2026-11-05 the opt-in queued maintenance comment integration method passed 17 assertions; the simulation logged two HTTP 200 requests (OAuth and send), with the author excluded and no pending/failed job left.
+    source: tests/Integration/FcmSimulationTest.php; tests/Feature/WebPushTest.php; docs/NOTIFICATION-DIAGNOSIS-2026-11-05.md
+    updated_at: "2026-11-05"
+  - id: audit-web-and-native-regression
+    status: supported
+    claim: The current sender handles the modeled web and native success, UNREGISTERED, 503 and 429 responses with deduplication and bounded retries.
+    reason: Both real Laravel clients and delivery services ran over loopback HTTP after the audited dependency update; no real Google traffic or recipients were used.
+    verification: On 2026-11-05 the filtered web integration method passed 16 assertions and the native method passed 24. The simulator logged 18 requests, comprising two OAuth 200, two send 200, two UNREGISTERED 404, six 503 and six 429 responses. The checked-in mock was reused; no owning-workspace mock was retrieved or published.
+    source: tests/Integration/FcmSimulationTest.php; tests/Integration/MobileFcmSimulationTest.php; postman/mocks/firebase-web-push/default.js; docs/AUDIT-STABILIZATION-2026-11-05.md
+    updated_at: "2026-11-05"
   - id: native-payload-and-recovery
     status: supported
     claim: The Laravel sender handles the modeled native success, UNREGISTERED, 503 and 429 responses with per-device deduplication and bounded retries.
@@ -26,5 +40,9 @@ assumptions:
 fingerprints:
   - id: native-extension
     date: "2026-11-03"
+    commit: null
+    cli: "1.74.0"
+  - id: audit-stabilization
+    date: "2026-11-05"
     commit: null
     cli: "1.74.0"

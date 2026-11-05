@@ -16,6 +16,18 @@ class NotificationTest extends TestCase
 {
     use RefreshDatabase;
 
+    #[Test]
+    public function same_second_events_are_newest_first_in_the_live_feed_and_inbox(): void
+    {
+        $this->freezeTime();
+        $user = User::factory()->renter()->create();
+        $old = $this->notify($user, key: 'same-second-old');
+        $new = $this->notify($user, key: 'same-second-new');
+        $this->assertSame($old->created_at->toDateTimeString(), $new->created_at->toDateTimeString());
+        $this->actingAs($user)->getJson(route('notifications.feed'))->assertOk()->assertJsonPath('notifications.0.id', (string) $new->id);
+        $this->assertSame($new->id, $this->get(route('notifications.index'))->viewData('notifications')->first()->id);
+    }
+
     protected function notify(User $user, string $type = 'test.event', ?string $key = null): ?Notification
     {
         return app(Notifier::class)->send(

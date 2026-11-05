@@ -22,15 +22,16 @@ class UpdateMonthlyRecord
      */
     public function handle(MonthlyRecord $record, array $data): MonthlyRecord
     {
-        if (! $record->isEditableByRenter()) {
-            throw ValidationException::withMessages([
-                'status' => $record->isFrozen()
-                    ? __('This record is frozen and cannot be edited.')
-                    : __('This record is awaiting approval and cannot be edited.'),
-            ]);
-        }
-
         return DB::transaction(function () use ($record, $data) {
+            $record->refreshForUpdate();
+            if (! $record->isEditableByRenter()) {
+                throw ValidationException::withMessages([
+                    'status' => $record->isFrozen()
+                        ? __('This record is frozen and cannot be edited.')
+                        : __('This record is awaiting approval and cannot be edited.'),
+                ]);
+            }
+
             $record->fill($data);
             $record->validateUtilityAmounts();
             $record->syncFinancials();

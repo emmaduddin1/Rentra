@@ -11,6 +11,15 @@ use Tests\Feature\WebPushTest;
 /** Opt-in real HTTP check; no production Firebase credentials or tokens are used. */
 class FcmSimulationTest extends WebPushTest
 {
+    public function test_real_queued_maintenance_comment_against_local_simulation(): void
+    {
+        $base = getenv('TENANTISM_FCM_SIMULATION_BASE') ?: '';
+        $this->assertMatchesRegularExpression('#^http://127\.0\.0\.1:[0-9]+/firebase$#', $base);
+        config(['push.test_base_url' => $base, 'push.test_oauth_url' => $base.'/token']);
+        Http::allowStrayRequests([$base.'/*']);
+        $this->assertQueuedMaintenanceCommentDelivery();
+    }
+
     public function test_real_fcm_http_against_local_simulation(): void
     {
         $base = getenv('TENANTISM_FCM_SIMULATION_BASE') ?: '';

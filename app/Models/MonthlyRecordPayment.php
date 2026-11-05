@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['monthly_record_id', 'amount', 'received_on', 'reference', 'notes', 'recorded_by'])]
+#[Fillable(['monthly_record_id', 'amount', 'received_on', 'reference', 'notes', 'recorded_by', 'idempotency_key'])]
 class MonthlyRecordPayment extends Model
 {
     protected function casts(): array

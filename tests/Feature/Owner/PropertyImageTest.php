@@ -5,8 +5,10 @@ namespace Tests\Feature\Owner;
 use App\Models\Property;
 use App\Models\PropertyImage;
 use App\Models\User;
+use App\Services\PropertyImageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -17,6 +19,29 @@ use Tests\TestCase;
 class PropertyImageTest extends TestCase
 {
     use RefreshDatabase;
+
+    #[Test]
+    public function deleting_a_stale_image_uses_the_current_primary_and_preserves_files_on_rollback(): void
+    {
+        Storage::fake('public');
+        $property = Property::factory()->create();
+        $images = app(PropertyImageService::class)->attach($property, [
+            UploadedFile::fake()->image('one.jpg'), UploadedFile::fake()->image('two.jpg'),
+            UploadedFile::fake()->image('three.jpg'), UploadedFile::fake()->image('four.jpg'),
+        ]);
+        $stale = $images[1]->fresh();
+        app(PropertyImageService::class)->makePrimary($images[1]->fresh());
+        app(PropertyImageService::class)->delete($stale);
+        $this->assertSame(1, $property->images()->where('is_primary', true)->count());
+
+        config(['rental.uploads.images.min_per_property' => 0]);
+        $image = $property->images()->first();
+        DB::beginTransaction();
+        app(PropertyImageService::class)->delete($image);
+        DB::rollBack();
+        $this->assertDatabaseHas('property_images', ['id' => $image->id]);
+        Storage::disk('public')->assertExists($image->file_path);
+    }
 
     #[Test]
     public function images_are_appended_in_upload_order(): void

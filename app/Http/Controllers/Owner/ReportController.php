@@ -76,14 +76,14 @@ class ReportController extends Controller
             $header[] = 'Submitted at';
             $header[] = 'Approved at';
 
-            fputcsv($handle, $header);
+            fputcsv($handle, $header, escape: '');
 
             foreach ($report->exportRows() as $record) {
                 $row = [
                     $record->period_month->format('Y-m'),
-                    $record->tenancy->property->title,
-                    $record->tenancy->property->area,
-                    $record->tenancy->renter->name,
+                    $this->spreadsheetText($record->tenancy->property->title),
+                    $this->spreadsheetText($record->tenancy->property->area),
+                    $this->spreadsheetText($record->tenancy->renter->name),
                     // SRS 9.1 keeps "Frozen" as the user-visible status.
                     $record->displayStatusLabel(),
                 ];
@@ -96,13 +96,23 @@ class ReportController extends Controller
                 $row[] = $record->submitted_at?->toDateTimeString();
                 $row[] = $record->approved_at?->toDateTimeString();
 
-                fputcsv($handle, $row);
+                fputcsv($handle, $row, escape: '');
             }
 
             fclose($handle);
         }, $filename, [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
+    }
+
+    private function spreadsheetText(?string $value): string
+    {
+        $value ??= '';
+
+        // Quote user-supplied formula prefixes, including whitespace/control
+        // prefixes spreadsheets can ignore. Numeric accounting cells stay numeric.
+        return preg_match('/^(?:[\x00-\x20]*[=+@\-＝＋＠－]|[\t\r\n])/u', $value)
+            ? "'".$value : $value;
     }
 
     /**

@@ -1,98 +1,83 @@
-# Rental Property Management System
+# Tenantism
 
-Laravel web portal + MySQL, built against [docs/SRS.md](docs/SRS.md) (v1.0, 31 July 2026).
-The backend is layered so the same business logic can be exposed as REST APIs for the
-future Flutter clients (SRS §4, §9.3).
+Tenantism is a rental property discovery and management platform: a Laravel web portal
+and REST API, with a separate Flutter mobile client. The repository retains its earlier
+name, **Rentra**.
 
-**Current state: all seven SRS phases delivered.** Every workflow in SRS §5 runs end to
-end - property publication, renter inquiry, renter assignment, monthly submission, owner
-approval and freeze, maintenance tracking, reporting, and the versioned REST API.
+## Project documentation
 
-A house can also be rented **floor by floor**: each floor is listed, priced, and let on its
-own, while an independent house stays a single listing - see
-[docs/MULTI-FLOOR-HOUSES.md](docs/MULTI-FLOOR-HOUSES.md). Every listing carries 3 to 12
-photos and optional walkthrough videos, and deleting one hides it from renters without
-losing it - see [docs/LISTING-MEDIA-AND-DELETION.md](docs/LISTING-MEDIA-AND-DELETION.md).
+The consolidated record was updated on **5 November 2026**:
 
-See [docs/PHASE-1.md](docs/PHASE-1.md), [docs/PHASE-2.md](docs/PHASE-2.md), and
-[docs/PHASE-3-TO-7.md](docs/PHASE-3-TO-7.md) for what is built, the decisions taken along
-the way, and the gaps that remain deliberate.
+- **[Complete project documentation](docs/PROJECT-DOCUMENTATION.md)** — features,
+  owner/renter journeys, financial/tenancy rules, architecture, data and mobile work.
+- **[Development history](docs/PROJECT-HISTORY.md)** — original phases, fixes,
+  Firebase rollout, UI work, merges and staging releases from start to this snapshot.
+- **[Current status and run guide](docs/CURRENT-STATUS.md)** — deployment state,
+  evidence, outstanding work and safe local commands.
 
-## Requirements
+The latest merged web release is `f009cce` ([PR #2](https://github.com/emmaduddin1/Rentra/pull/2)).
+It was deployed to [staging](https://staging.tenantism.com) on 5 November. This does not
+establish equivalent production or complete mobile-device acceptance.
 
-- PHP 8.3+
-- MySQL 8 (production/local); the test suite runs on in-memory SQLite
-- Node 20+ (Vite 8 / Tailwind 4)
+## What is implemented
 
-## Getting started
+- Owner/renter authentication, role-aware portals, policies and profiles.
+- Property discovery/search, categories, galleries, videos and publication/archival rules.
+- Whole-property and floor-by-floor rentals.
+- Applications, favorites and eligible owner/renter conversations.
+- Invitation-first tenancies, cancellation requests, owner decisions and retained history.
+- Monthly records, private proofs, review/freeze/reopen and immutable owner receipts.
+- Maintenance, private attachments, comments, history and reimbursement information.
+- Owner reports, inline SVG charts, CSV export and audit history.
+- In-app notifications, browser/native Firebase pipeline, preferences and safe routing.
+- Guided tours and responsive branded dashboards/navigation.
 
-```bash
-composer install
-cp .env.example .env
-php artisan key:generate
+Laravel remains authoritative for permissions, transitions and decimal financial totals.
+See the [financial](docs/FINANCIAL-API-CONTRACT.md) and
+[tenancy](docs/TENANCY-LIFECYCLE-API.md) contracts before changing those workflows.
 
-# Create the MySQL database named in DB_DATABASE first (SRS 2.4 requires MySQL).
-php artisan migrate --seed
+## Safe local preview
 
-# Profile and property images are served from the public disk.
-php artisan storage:link
+The existing workstation `.env` is configured for staging. The preview command uses
+separate SQLite data, sessions, key and uploads, with email/push disabled.
 
-npm install
-npm run build     # or: npm run dev
-php artisan serve
-```
-
-### Demo accounts
-
-`php artisan migrate:fresh --seed` creates two accounts and nothing else, both with the
-password `password`. Properties, tenancies, records, and applications are created through
-the application itself, so the seeded state never diverges from what the workflows produce.
-
-| Role   | Email                |
-| ------ | -------------------- |
-| Owner  | `owner@example.com`  |
-| Renter | `renter@example.com` |
-
-There are two roles. A **renter** covers the whole journey: they browse the public feed,
-apply for a listing, and become its tenant once an owner accepts - so the same account
-keeps searching for other properties while renting one.
-
-To see the whole system: sign in as the owner, add and publish a property, sign in as the
-renter to apply for it, then assign the renter to it as the owner and submit a month and
-raise a maintenance request as the renter.
-
-## REST API
-
-Versioned at `/api/v1`, authenticated with Sanctum tokens (SRS §9.3). Every endpoint reuses
-the same actions and policies as the web portal.
+With dependencies installed, prepare it once:
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/login \
-  -H 'Accept: application/json' \
-  -d 'identifier=owner@example.com&password=password&device_name=cli'
-
-curl http://localhost:8000/api/v1/listings?area=Gulberg -H 'Accept: application/json'
+npm run build
+php bin/local-ui-preview.php prepare
+php bin/local-ui-preview.php serve
 ```
 
-`php artisan route:list --path=api` lists all 34 endpoints.
+Open **http://127.0.0.1:8000**. For a prepared preview, only the final command is needed;
+if it is running already, open the URL. Sample logins and isolation details are in the
+[run guide](docs/CURRENT-STATUS.md#3-safe-local-review).
 
-## Tests and style
+`prepare` retains completed sample data and does not reset an existing database. Do not
+run fresh/reset migrations or generic seed/setup commands against a shared environment.
+
+## Stack and checks
+
+- Laravel 13, PHP 8.3+, MySQL; isolated SQLite tests.
+- Blade, Tailwind CSS 4, vanilla JavaScript, Vite 8.2.1.
+- Vite Node requirement: `^20.19.0 || >=22.12.0`.
+- Sanctum `/api/v1` API; separate Flutter/BLoC client in `../rentel`.
 
 ```bash
-php artisan test          # 222 tests
-./vendor/bin/pint         # code style
+php artisan test --compact
+npm run test:js
+npm run build
+git diff --check
 ```
 
-## Layout
+Last verified for the merged implementation: **412 Laravel tests / 2,117 assertions**,
+**34 JavaScript tests**, and a successful production frontend build. Rerun relevant
+checks after code changes; these are dated results.
 
-| Path                | Contents                                                       |
-| ------------------- | -------------------------------------------------------------- |
-| `app/Enums`         | Domain state machines (statuses, roles, priorities, categories) |
-| `app/Models`        | The 13 entities from SRS §8 with their relationships and scopes |
-| `app/Policies`      | Record-level authorisation (SRS §3.1, BR-010, NFR-SEC-004)      |
-| `app/Actions`       | Single-purpose write operations reusable by web and API         |
-| `app/Services`      | File handling, notifications, reporting, and the audit logger   |
-| `app/Http/Resources/V1` | Versioned JSON shapes for the Flutter clients (§9.3)        |
-| `app/Support`       | Small helpers (money formatting, BR-012)                        |
-| `config/rental.php` | Currency, registration, upload, and listing configuration       |
-| `docs/`             | SRS and phase notes                                             |
+Current source has 60 API routes; route definitions and deployment acceptance are
+separate. Existing [Postman examples](docs/postman/Rentra-API.postman_collection.json)
+and [phase notes](docs/PHASE-3-TO-7.md) may describe an older subset.
+
+Deployment requires explicit authorization. Preserve server configuration, credentials,
+uploads, storage links, history and the Hostinger entry point. Production is a separate
+release decision from staging.

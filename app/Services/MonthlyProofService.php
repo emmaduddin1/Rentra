@@ -79,6 +79,13 @@ class MonthlyProofService
             }
 
             return DB::transaction(function () use ($record, $category, $stored, $uploader) {
+                $record->refreshForUpdate();
+                if (! $record->isEditableByRenter()) {
+                    throw ValidationException::withMessages(['files' => __('This record can no longer be changed.')]);
+                }
+                if (count($stored) > $this->remainingSlots($record, $category)) {
+                    throw ValidationException::withMessages(['files' => __('You can attach at most :max files per category.', ['max' => $this->maxPerCategory()])]);
+                }
                 $created = collect();
 
                 foreach ($stored as $item) {
@@ -113,20 +120,20 @@ class MonthlyProofService
     public function delete(MonthlyProof $proof): void
     {
         $record = $proof->monthlyRecord;
-
-        if ($record !== null && ! $record->isEditableByRenter()) {
-            throw ValidationException::withMessages([
-                'files' => __('This record can no longer be changed.'),
-            ]);
-        }
-
-        $disk = $proof->disk;
-        $path = $proof->file_path;
-
-        $proof->delete();
-
-        Storage::disk($disk)->delete($path);
-
-        $record?->unsetRelation('proofs');
+        abort_if($record === null, 404);
+        DB::transaction(function () use ($record, $proof) {
+            $record->refreshForUpdate();
+            if (! $record->isEditableByRenter()) {
+                throw ValidationException::withMessages(['files' => __('This record can no longer be changed.')]);
+            }
+            $current = MonthlyProof::whereKey($proof->id)->lockForUpdate()->firstOrFail();
+            $proof->setRawAttributes($current->getAttributes(), true);
+            $disk = $proof->disk;
+            $path = $proof->file_path;
+            $proof->delete();
+            // An outer transaction may still roll back; retain the file until commit.
+            DB::afterCommit(fn () => Storage::disk($disk)->delete($path));
+            $record->unsetRelation('proofs');
+        });
     }
 }

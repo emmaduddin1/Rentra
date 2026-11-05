@@ -5,6 +5,7 @@ namespace App\Actions\Tenancies;
 use App\Enums\PropertyStatus;
 use App\Enums\TenancyStatus;
 use App\Enums\TerminationRequestStatus;
+use App\Models\Tenancy;
 use App\Models\TenancyTerminationRequest;
 use App\Models\User;
 use App\Services\AuditLogger;
@@ -20,9 +21,11 @@ class RespondToTermination
     public function handle(TenancyTerminationRequest $request, User $actor, array $data): TenancyTerminationRequest
     {
         return DB::transaction(function () use ($request, $actor, $data) {
-            $locked = TenancyTerminationRequest::whereKey($request->id)->lockForUpdate()->firstOrFail();
-            $tenancy = $locked->tenancy()->lockForUpdate()->firstOrFail();
+            // Closing and responding must both lock tenancy before its requests.
+            $tenancy = Tenancy::whereKey($request->tenancy_id)->lockForUpdate()->firstOrFail();
+            $locked = TenancyTerminationRequest::whereKey($request->id)->where('tenancy_id', $tenancy->id)->lockForUpdate()->firstOrFail();
             if ($actor->id !== $tenancy->ownerId()
+                || ! $tenancy->isActive()
                 || $locked->requested_by !== $tenancy->renter_id
                 || ! in_array($locked->status, [TerminationRequestStatus::Pending, TerminationRequestStatus::Countered], true)) {
                 throw ValidationException::withMessages(['status' => __('You cannot respond to this termination request.')]);

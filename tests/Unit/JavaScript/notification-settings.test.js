@@ -1,6 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { pushSettingsView, deliverySummary } from '../../../resources/js/notifications/settings.js';
+import { pushSettingsView, deliverySummary, permissionState } from '../../../resources/js/notifications/settings.js';
+
+test('restoring granted permission reconnects a revoked binding while respecting explicit disable', () => {
+    assert.equal(permissionState('denied', false, true), 'blocked');
+    assert.equal(permissionState('granted', false, false), 'connect');
+    assert.equal(permissionState('granted', false, true), 'enabled');
+    assert.equal(permissionState('granted', true, false), 'disabled');
+    assert.equal(permissionState('default', false, false), 'disabled');
+});
 
 test('a confirmed enabled browser offers disable and test instead of another enable action', () => {
     const view = pushSettingsView('enabled');

@@ -10,6 +10,14 @@ const states = {
     unavailable: ['Desktop alerts are temporarily unavailable', 'Your inbox and notification preferences are still available.'],
 };
 
+// Returning from browser settings with permission restored must reconnect;
+// an earlier denied state has no binding and cannot remain stuck as blocked.
+export function permissionState(permission, disabled, connected) {
+    if (permission === 'denied') return 'blocked';
+    if (permission !== 'granted' || disabled) return 'disabled';
+    return connected ? 'enabled' : 'connect';
+}
+
 export function pushSettingsView(status, available = true) {
     const [title, hint] = states[status] || states.unavailable;
     return { title, hint, enabled: status === 'enabled',

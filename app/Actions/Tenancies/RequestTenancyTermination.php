@@ -18,16 +18,16 @@ class RequestTenancyTermination
 
     public function handle(Tenancy $tenancy, User $actor, array $data): TenancyTerminationRequest
     {
-        if (! $actor->isRenter() || $tenancy->renter_id !== $actor->id) {
-            throw ValidationException::withMessages(['status' => __('Only the renter can request contract cancellation.')]);
-        }
-
-        if (! $tenancy->isActive()) {
-            throw ValidationException::withMessages(['status' => __('Only an active tenancy can be terminated.')]);
-        }
-
         return DB::transaction(function () use ($tenancy, $actor, $data) {
-            $locked = Tenancy::whereKey($tenancy->id)->lockForUpdate()->firstOrFail();
+            $locked = $tenancy->refreshForUpdate();
+            if (! $actor->isRenter() || $tenancy->renter_id !== $actor->id) {
+                throw ValidationException::withMessages(['status' => __('Only the renter can request contract cancellation.')]);
+            }
+
+            if (! $tenancy->isActive()) {
+                throw ValidationException::withMessages(['status' => __('Only an active tenancy can be terminated.')]);
+            }
+
             if ($locked->terminationRequests()->whereIn('status', [TerminationRequestStatus::Pending->value, TerminationRequestStatus::Countered->value])->exists()) {
                 throw ValidationException::withMessages(['status' => __('A termination request is already awaiting a response.')]);
             }

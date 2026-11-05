@@ -170,8 +170,17 @@ if ($command === 'prepare') {
     echo "Owner: owner@tenantism.test | Renter: renter@tenantism.test\nPassword for sample accounts: {$password}\n";
     exit;
 }
+if ($command === 'migrate') {
+    if (! is_file($previewRoot.'/ready') || ! is_file($previewDatabase)) {
+        throw new RuntimeException('Prepare the isolated preview before migrating it.');
+    }
+    localUiPreviewApp();
+    $exit = Artisan::call('migrate', ['--force' => true]);
+    echo Artisan::output();
+    exit($exit);
+}
 if ($command !== 'serve') {
-    fwrite(STDERR, "Usage: php bin/local-ui-preview.php [prepare|serve]\n");
+    fwrite(STDERR, "Usage: php bin/local-ui-preview.php [prepare|migrate|serve]\n");
     exit(1);
 }
 if (! is_file($previewRoot.'/ready')) {

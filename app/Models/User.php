@@ -87,7 +87,7 @@ class User extends Authenticatable
      */
     public function inAppNotifications(): HasMany
     {
-        return $this->hasMany(Notification::class)->latest();
+        return $this->hasMany(Notification::class)->latest()->latest('id');
     }
 
     /** @return HasMany<AuditLog, $this> */

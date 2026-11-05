@@ -24,6 +24,8 @@ Utility arrangement values are `provider_direct`, `owner`, `included_in_rent`, `
 
 Record an owner receipt with `POST /api/v1/monthly-records/{id}/payments`:
 
+Clients may include an optional UUID `idempotency_key` for one payment intent. Reuse that same key when retrying after a timeout: identical details return the existing receipt without another ledger/audit/notification entry. Reusing it with different amount/date/reference/notes returns 409. Existing clients without a key retain the original create-per-request behavior; they must adopt a stable key to receive retry deduplication. The web receipt form supplies one automatically. This adds no payment gateway or mutable receipt editing.
+
 ```json
 {
   "amount": "40000.00",

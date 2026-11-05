@@ -235,11 +235,10 @@ class FinancialModelTest extends TestCase
         }
 
         $totals = (new MonthlyReport($owner))->maintenanceTotals();
-        $this->assertSame('20000', $totals['total']);
-        $this->assertSame('10000', $totals['owner_paid']);
-        $this->assertSame('10000', $totals['renter_paid']);
-        $this->assertSame('5000', $totals['owed_to_owner']);
-        $this->assertSame('5000', $totals['owed_to_renter']);
+        // SUM(DECIMAL) preserves scale on MySQL; SQLite returns integer strings.
+        foreach (['total' => '20000.00', 'owner_paid' => '10000.00', 'renter_paid' => '10000.00', 'owed_to_owner' => '5000.00', 'owed_to_renter' => '5000.00'] as $key => $expected) {
+            $this->assertSame(0, bccomp($expected, $totals[$key], 2));
+        }
     }
 
     #[Test]

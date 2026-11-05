@@ -29,29 +29,30 @@ class CreateMonthlyRecord
         // SRS 12 - the month is normalised to one canonical database period.
         $periodMonth = MonthlyRecord::normalizePeriod($period);
 
-        // BR-011 - no submissions outside the tenancy's own date range.
-        if (! $tenancy->coversPeriod($periodMonth)) {
-            throw ValidationException::withMessages([
-                'period_month' => __('This month is outside the tenancy period.'),
-            ]);
-        }
-
-        if ($periodMonth->gt(now()->startOfMonth())) {
-            throw ValidationException::withMessages([
-                'period_month' => __('You cannot open a record for a month that has not started.'),
-            ]);
-        }
-
-        $exists = MonthlyRecord::where('tenancy_id', $tenancy->id)->forPeriod($periodMonth)->exists();
-
-        if ($exists) {
-            throw ValidationException::withMessages([
-                'period_month' => __('A record for :month already exists.', ['month' => $periodMonth->format('F Y')]),
-            ]);
-        }
-
         try {
             return DB::transaction(function () use ($tenancy, $renter, $periodMonth, $data) {
+                $tenancy->refreshForUpdate();
+                // BR-011 - no submissions outside the tenancy's own date range.
+                if (! $tenancy->coversPeriod($periodMonth)) {
+                    throw ValidationException::withMessages([
+                        'period_month' => __('This month is outside the tenancy period.'),
+                    ]);
+                }
+
+                if ($periodMonth->gt(now()->startOfMonth())) {
+                    throw ValidationException::withMessages([
+                        'period_month' => __('You cannot open a record for a month that has not started.'),
+                    ]);
+                }
+
+                $exists = MonthlyRecord::where('tenancy_id', $tenancy->id)->forPeriod($periodMonth)->exists();
+
+                if ($exists) {
+                    throw ValidationException::withMessages([
+                        'period_month' => __('A record for :month already exists.', ['month' => $periodMonth->format('F Y')]),
+                    ]);
+                }
+
                 $record = new MonthlyRecord($data);
                 $record->tenancy_id = $tenancy->id;
                 $record->period_month = $periodMonth;

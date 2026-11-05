@@ -164,6 +164,27 @@ class ReportTest extends TestCase
     }
 
     #[Test]
+    public function spreadsheet_formulas_in_user_text_are_exported_as_text(): void
+    {
+        $owner = User::factory()->owner()->create();
+        $tenancy = $this->tenancyFor($owner);
+        $tenancy->property->update(['title' => '=1+1', 'area' => "\t@SUM(1,2)"]);
+        $tenancy->renter->update(['name' => '+123']);
+        MonthlyRecord::factory()->for($tenancy)->create(['rent_amount' => '123.45']);
+        $csv = $this->actingAs($owner)->get(route('owner.reports.export'))->assertOk()->streamedContent();
+        $stream = fopen('php://memory', 'r+');
+        fwrite($stream, $csv);
+        rewind($stream);
+        fgetcsv($stream, escape: '');
+        $row = fgetcsv($stream, escape: '');
+        fclose($stream);
+        $this->assertSame("'=1+1", $row[1]);
+        $this->assertSame("'\t@SUM(1,2)", $row[2]);
+        $this->assertSame("'+123", $row[3]);
+        $this->assertSame('123.45', $row[5]);
+    }
+
+    #[Test]
     public function reports_are_owner_only(): void
     {
         $this->get(route('owner.reports.index'))->assertRedirect(route('login'));

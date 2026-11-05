@@ -6,6 +6,7 @@ use App\Jobs\DeliverWebPush;
 use App\Jobs\SendWebPush;
 use App\Models\Conversation;
 use App\Models\ConversationMessage;
+use App\Models\MaintenanceRequest;
 use App\Models\MonthlyRecord;
 use App\Models\Notification;
 use App\Models\PushDelivery;
@@ -17,6 +18,7 @@ use App\Services\Push\NotificationPayload;
 use App\Services\Push\PushService;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -85,6 +87,39 @@ class WebPushTest extends TestCase
                 ['@type' => 'type.googleapis.com/google.firebase.fcm.v1.FcmError', 'errorCode' => $code],
             ]]] : ['name' => 'projects/tenantism-test/messages/1'], $status),
         ]);
+    }
+
+    public function test_a_maintenance_comment_reaches_only_the_other_party_through_the_real_database_queue(): void
+    {
+        $this->responses();
+        $this->assertQueuedMaintenanceCommentDelivery();
+        Http::assertSentCount(2); // OAuth and one send, never a send to the author.
+    }
+
+    protected function assertQueuedMaintenanceCommentDelivery(): void
+    {
+        // Replace the test queue fake with Laravel's actual database connector.
+        $this->app->forgetInstance('queue');
+        $this->app->forgetInstance('queue.connection');
+        Queue::clearResolvedInstance('queue');
+        $maintenance = MaintenanceRequest::factory()->create();
+        $renter = $maintenance->tenancy->renter;
+        $owner = $maintenance->tenancy->property->owner;
+        $device = $this->subscribe($owner);
+        $this->subscribe($renter); // The author must not receive their own comment.
+        $this->actingAs($renter)->post(route('renter.maintenance.comments.store', $maintenance), ['comment' => 'Isolated test comment'])->assertRedirect();
+        $notification = Notification::where('type', 'maintenance.commented')->sole();
+        $this->assertSame($owner->id, $notification->user_id);
+        $this->assertTrue($notification->push_pending);
+        $this->assertNotNull($notification->push_queued_at);
+        $this->assertDatabaseCount('jobs', 1);
+        $this->assertSame(0, Artisan::call('queue:work', ['connection' => 'database', '--queue' => 'web-push', '--stop-when-empty' => true, '--sleep' => 0, '--tries' => 3]));
+        $this->assertDatabaseCount('jobs', 0);
+        $this->assertDatabaseCount('failed_jobs', 0);
+        $this->assertDatabaseCount('push_deliveries', 1);
+        $this->assertDatabaseHas('push_deliveries', ['notification_id' => $notification->id, 'push_subscription_id' => $device->id, 'status' => 'sent', 'attempts' => 1]);
+        $this->assertFalse($notification->fresh()->push_pending);
+        $this->assertNull($notification->fresh()->read_at);
     }
 
     public function test_guests_cannot_register_and_registration_is_validated(): void
@@ -209,9 +244,14 @@ class WebPushTest extends TestCase
         Http::fake(['oauth2.googleapis.com/*' => Http::response(['access_token' => 'oauth']),
             'fcm.googleapis.com/*' => Http::sequence()->push(['name' => 'sent'])->push([], 503)->push(['name' => 'sent'])]);
         $this->assertTrue(app(PushService::class)->sendToUser($notification));
+        // SQL does not promise registration order without ORDER BY. Track the
+        // actual successful device instead of assuming it was registered first.
+        $sent = PushDelivery::where('notification_id', $notification->id)->where('status', 'sent')->firstOrFail();
+        $retry = PushDelivery::where('notification_id', $notification->id)->where('status', 'retry')->firstOrFail();
+        $this->assertEqualsCanonicalizing([$a->id, $b->id], [$sent->push_subscription_id, $retry->push_subscription_id]);
         $this->assertFalse(app(PushService::class)->sendToUser($notification));
-        $this->assertSame(1, PushDelivery::where('push_subscription_id', $a->id)->value('attempts'));
-        $this->assertSame(2, PushDelivery::where('push_subscription_id', $b->id)->value('attempts'));
+        $this->assertSame(1, $sent->fresh()->attempts);
+        $this->assertSame(2, $retry->fresh()->attempts);
     }
 
     public function test_preferences_prevent_push_but_preserve_database_notifications(): void

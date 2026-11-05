@@ -9,7 +9,7 @@ use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\Notifier;
 use App\Support\UtilityArrangements;
-use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -39,6 +39,11 @@ class AssignRenter
         }
 
         return DB::transaction(function () use ($owner, $property, $renter, $data) {
+            // Use the same renter-before-property order as invitation acceptance.
+            $renter = User::whereKey($renter->id)->lockForUpdate()->firstOrFail();
+            if (! $renter->isRenter() || ! $renter->isActive()) {
+                throw ValidationException::withMessages(['renter_id' => __('Choose an active renter account.')]);
+            }
             // NFR-REL-002 - lock the property so two concurrent assignments
             // cannot both pass the BR-002 check.
             $locked = Property::whereKey($property->getKey())->lockForUpdate()->firstOrFail();
@@ -82,7 +87,7 @@ class AssignRenter
                     'property_id' => $locked->id,
                     'created_at' => now(), 'updated_at' => now(),
                 ]);
-            } catch (QueryException) {
+            } catch (UniqueConstraintViolationException) {
                 throw ValidationException::withMessages([
                     'renter_id' => __('This renter already has a pending invitation for this property.'),
                 ]);

@@ -8,7 +8,7 @@ use App\Models\Tenancy;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\Notifier;
-use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -20,10 +20,12 @@ class RespondToInvitation
     {
         return DB::transaction(function () use ($invitation, $renter) {
             User::whereKey($renter->id)->lockForUpdate()->firstOrFail();
+            // Serialize contenders on the property before locking their own
+            // invitations; the winner also closes the other invitation rows.
+            $property = $invitation->property()->lockForUpdate()->firstOrFail();
             $tenancy = Tenancy::whereKey($invitation->id)->lockForUpdate()->firstOrFail();
-            $property = $tenancy->property()->lockForUpdate()->firstOrFail();
 
-            if ($tenancy->renter_id !== $renter->id || ! $tenancy->isInvitationPending()) {
+            if ($tenancy->property_id !== $property->id || $tenancy->renter_id !== $renter->id || ! $tenancy->isInvitationPending()) {
                 throw ValidationException::withMessages(['status' => __('This invitation is no longer available.')]);
             }
             if ($property->activeTenancy()->exists()) {
@@ -39,7 +41,7 @@ class RespondToInvitation
                     'tenancy_id' => $tenancy->id, 'renter_id' => $renter->id, 'property_id' => $property->id,
                     'created_at' => now(), 'updated_at' => now(),
                 ]);
-            } catch (QueryException) {
+            } catch (UniqueConstraintViolationException) {
                 throw ValidationException::withMessages(['status' => __('You or this property already has an active tenancy.')]);
             }
 
@@ -68,7 +70,7 @@ class RespondToInvitation
             $this->auditLogger->record('tenancy.accepted', $tenancy, ['status' => $previous->value], ['status' => TenancyStatus::Active->value], actor: $renter);
 
             return $tenancy;
-        });
+        }, attempts: 3);
     }
 
     public function reject(Tenancy $invitation, User $renter, ?string $reason = null): Tenancy

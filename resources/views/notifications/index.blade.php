@@ -15,8 +15,11 @@
             <x-tab-link
                 :href="route('notifications.index', ['filter' => 'unread'])"
                 :active="$filter === 'unread'"
-                :count="$unreadCount ?: null"
-            >{{ __('Unread') }}</x-tab-link>
+            >{{ __('Unread') }}
+                <span data-notification-count @if ($unreadCount < 1) hidden @endif
+                    @class(['rounded-full px-1.5 text-xs font-semibold tabular-nums', 'bg-white/20 text-white' => $filter === 'unread', 'bg-amber-100 text-amber-900' => $filter !== 'unread'])
+                >{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
+            </x-tab-link>
         </div>
 
             <form method="POST" data-notifications-read-all @if ($unreadCount < 1) hidden @endif action="{{ route('notifications.read-all') }}">

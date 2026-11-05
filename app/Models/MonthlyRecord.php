@@ -32,6 +32,16 @@ class MonthlyRecord extends Model
     /** @use HasFactory<MonthlyRecordFactory> */
     use HasFactory, SoftDeletes;
 
+    /** Reload the current row inside a mutation transaction without replacing the caller's instance. */
+    public function refreshForUpdate(): static
+    {
+        $locked = static::query()->whereKey($this->getKey())->lockForUpdate()->firstOrFail();
+        $this->setRawAttributes($locked->getAttributes(), true);
+        $this->unsetRelations();
+
+        return $this;
+    }
+
     protected $attributes = [
         'rent_received' => 0,
         'utilities_payable_to_owner' => 0,

@@ -24,42 +24,43 @@ class SubmitMonthlyRecord
 
     public function handle(MonthlyRecord $record, User $renter): MonthlyRecord
     {
-        if (! $record->isEditableByRenter()) {
-            throw ValidationException::withMessages([
-                'status' => __('This record has already been submitted.'),
-            ]);
-        }
-
-        // SRS 12 - an empty record is not a submission.
-        if (bccomp($record->calculateTotal(), '0.00', 2) !== 1) {
-            throw ValidationException::withMessages([
-                'rent_amount' => __('Enter at least one amount before submitting.'),
-            ]);
-        }
-
-        /*
-        | FR-MON-003/006 - the month is a claim that the rent and the bills were
-        | paid, and the owner confirms it against the receipts. A charge with no
-        | receipt is nothing the owner can confirm, and submitting locks the
-        | record (BR-004), so the check belongs here rather than after the fact.
-        |
-        | Read from the database: the caller may hold a stale proofs relation.
-        */
-        $record->load('proofs');
-
-        $missing = $record->unevidencedCategories();
-
-        if ($missing !== []) {
-            throw ValidationException::withMessages([
-                'files' => __('Attach a receipt for :categories before submitting.', [
-                    'categories' => collect($missing)
-                        ->map(fn ($category) => $category->label())
-                        ->join(', ', ' and '),
-                ]),
-            ]);
-        }
-
         return DB::transaction(function () use ($record, $renter) {
+            $record->refreshForUpdate();
+            if (! $record->isEditableByRenter()) {
+                throw ValidationException::withMessages([
+                    'status' => __('This record has already been submitted.'),
+                ]);
+            }
+
+            // SRS 12 - an empty record is not a submission.
+            if (bccomp($record->calculateTotal(), '0.00', 2) !== 1) {
+                throw ValidationException::withMessages([
+                    'rent_amount' => __('Enter at least one amount before submitting.'),
+                ]);
+            }
+
+            /*
+            | FR-MON-003/006 - the month is a claim that the rent and the bills were
+            | paid, and the owner confirms it against the receipts. A charge with no
+            | receipt is nothing the owner can confirm, and submitting locks the
+            | record (BR-004), so the check belongs here rather than after the fact.
+            |
+            | Read from the database: the caller may hold a stale proofs relation.
+            */
+            $record->load('proofs');
+
+            $missing = $record->unevidencedCategories();
+
+            if ($missing !== []) {
+                throw ValidationException::withMessages([
+                    'files' => __('Attach a receipt for :categories before submitting.', [
+                        'categories' => collect($missing)
+                            ->map(fn ($category) => $category->label())
+                            ->join(', ', ' and '),
+                    ]),
+                ]);
+            }
+
             $from = $record->status;
 
             $record->fill([

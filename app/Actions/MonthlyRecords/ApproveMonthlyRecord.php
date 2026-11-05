@@ -26,17 +26,18 @@ class ApproveMonthlyRecord
 
     public function handle(MonthlyRecord $record, User $owner): MonthlyRecord
     {
-        if ($record->status === MonthlyRecordStatus::Approved) {
-            return $record;
-        }
-
-        if ($record->status !== MonthlyRecordStatus::Pending) {
-            throw ValidationException::withMessages([
-                'status' => __('Only a pending record can be approved.'),
-            ]);
-        }
-
         return DB::transaction(function () use ($record, $owner) {
+            $record->refreshForUpdate();
+            if ($record->status === MonthlyRecordStatus::Approved) {
+                return $record;
+            }
+
+            if ($record->status !== MonthlyRecordStatus::Pending) {
+                throw ValidationException::withMessages([
+                    'status' => __('Only a pending record can be approved.'),
+                ]);
+            }
+
             $record->fill(['status' => MonthlyRecordStatus::Approved]);
             $record->approved_by = $owner->id;
             $record->approved_at = now();

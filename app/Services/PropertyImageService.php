@@ -72,6 +72,10 @@ class PropertyImageService
             }
 
             return DB::transaction(function () use ($property, $stored) {
+                Property::whereKey($property->id)->lockForUpdate()->firstOrFail();
+                if (count($stored) > $this->remainingSlots($property)) {
+                    throw ValidationException::withMessages(['images' => __('A property may hold at most :max images.', ['max' => $this->maxPerProperty()])]);
+                }
                 $sortOrder = (int) $property->images()->max('sort_order');
                 $hasPrimary = $property->images()->where('is_primary', true)->exists();
 
@@ -117,32 +121,28 @@ class PropertyImageService
      */
     public function delete(PropertyImage $image): void
     {
-        $property = $image->property;
-
-        if ($property !== null && $property->images()->count() - 1 < $this->minPerProperty()) {
-            throw ValidationException::withMessages([
-                'images' => __('A listing needs at least :min photos. Upload a replacement before removing this one.', [
-                    'min' => $this->minPerProperty(),
-                ]),
-            ]);
-        }
-
-        $wasPrimary = $image->is_primary;
-        $disk = $image->disk;
-        $path = $image->file_path;
-
-        DB::transaction(function () use ($image, $property, $wasPrimary) {
+        DB::transaction(function () use ($image) {
+            $property = Property::whereKey($image->property_id)->lockForUpdate()->firstOrFail();
+            $current = PropertyImage::whereKey($image->id)->lockForUpdate()->firstOrFail();
+            $image->setRawAttributes($current->getAttributes(), true);
+            if ($property->images()->count() - 1 < $this->minPerProperty()) {
+                throw ValidationException::withMessages([
+                    'images' => __('A listing needs at least :min photos. Upload a replacement before removing this one.', ['min' => $this->minPerProperty()]),
+                ]);
+            }
+            $wasPrimary = $image->is_primary;
+            $disk = $image->disk;
+            $path = $image->file_path;
             $image->delete();
 
-            if ($wasPrimary && $property !== null) {
+            if ($wasPrimary) {
                 $next = $property->images()->first();
                 $next?->forceFill(['is_primary' => true])->save();
             }
+            DB::afterCommit(fn () => Storage::disk($disk)->delete($path));
         });
 
-        Storage::disk($disk)->delete($path);
-
-        $property?->unsetRelation('images')->unsetRelation('primaryImage');
+        $image->property?->unsetRelation('images')->unsetRelation('primaryImage');
     }
 
     /**
@@ -151,6 +151,8 @@ class PropertyImageService
     public function makePrimary(PropertyImage $image): void
     {
         DB::transaction(function () use ($image) {
+            Property::whereKey($image->property_id)->lockForUpdate()->firstOrFail();
+            PropertyImage::whereKey($image->id)->lockForUpdate()->firstOrFail();
             PropertyImage::where('property_id', $image->property_id)
                 ->where('id', '!=', $image->id)
                 ->update(['is_primary' => false]);

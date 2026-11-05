@@ -1,5 +1,6 @@
 import { safeRoute, validPush, newInstallationId } from './notifications/payload.js';
-import { renderPushSettings, deliverySummary } from './notifications/settings.js';
+import { renderPushSettings, deliverySummary, permissionState } from './notifications/settings.js';
+import { renderUnreadCount } from './notifications/count.js';
 import { renderNotificationPagination } from './notifications/pagination.js';
 
 const bootstrap = document.getElementById('tenantism-push-config');
@@ -25,6 +26,7 @@ function start(config) {
     let initialized = false;
     let latest = [];
     let refreshing = null;
+    let connecting = null;
     let channel = null;
     try { if ('BroadcastChannel' in window) channel = new BroadcastChannel(`${key}.updates`); } catch { /* Storage events and polling remain available. */ }
     const announce = () => { channel?.postMessage('refresh'); storage.set(`${key}.refresh`, `${Date.now()}-${Math.random()}`); };
@@ -43,13 +45,7 @@ function start(config) {
     const actionError = () => document.querySelectorAll('[data-notification-action-state]').forEach(el => {
         el.textContent = 'Could not update this notification. Please try again.';
     });
-    const setCount = count => {
-        document.querySelectorAll('[data-notifications-read-all]').forEach(el => { el.hidden = count < 1; });
-        document.querySelectorAll('[data-notification-count]').forEach(el => {
-        el.textContent = count > 99 ? '99+' : String(count);
-        el.classList.toggle('hidden', count < 1);
-        });
-    };
+    const setCount = count => renderUnreadCount(document, count);
     const read = async (id, navigate = true) => {
         if (!/^[1-9]\d*$/.test(String(id))) return;
         const result = await api(`/notifications/${id}/read`, 'POST');
@@ -103,7 +99,7 @@ function start(config) {
                 const page = await api(`${config.feed}?${new URLSearchParams({ page: params.get('page') || '1', filter: params.get('filter') || 'all' })}`);
                 const root = document.querySelector('[data-notification-page-list]');
                 render(root, page.notifications);
-                renderNotificationPagination(root, page.page, page.last_page, location.href);
+                renderNotificationPagination(root, page.page, page.last_page, location.href, page);
             }
             // Reconciliation remains useful when permission is denied or push is unavailable.
             if (initialized && !document.hidden && document.hasFocus()) {
@@ -145,7 +141,12 @@ function start(config) {
         window.dispatchEvent(new CustomEvent('tenantism:notification', { detail: data }));
         await refresh().catch(() => {});
     }
-    async function connect() {
+    function connect() {
+        if (connecting) return connecting;
+        connecting = registerBrowser().finally(() => { connecting = null; });
+        return connecting;
+    }
+    async function registerBrowser() {
         const intent = ++pushIntent;
         if (!config.enabled) { state('unavailable'); return; }
         if (!installation || !window.isSecureContext || !('serviceWorker' in navigator) || !('Notification' in window)) { state('unsupported'); return; }
@@ -277,13 +278,14 @@ function start(config) {
     const reconcilePermission = () => {
         if (!installation || !window.isSecureContext || !('serviceWorker' in navigator) || !('Notification' in window)) { state('unsupported'); return; }
         if (!config.enabled) { state('unavailable'); return; }
-        if (Notification.permission === 'denied') {
-            state('blocked');
+        const status = permissionState(Notification.permission, storage.get(`${key}.disabled`) === '1', !!binding);
+        if (status === 'blocked') {
+            state(status);
             if (binding) disable(false).catch(() => {});
-        } else if (Notification.permission !== 'granted' || storage.get(`${key}.disabled`) === '1') {
-            state('disabled');
-        } else if (binding) {
-            state('enabled');
+        } else if (status === 'connect') {
+            if (!stopped) connect().catch(() => state('unavailable'));
+        } else {
+            state(status);
         }
     };
     window.addEventListener('focus', () => { reconcilePermission(); refresh().catch(() => {}); });

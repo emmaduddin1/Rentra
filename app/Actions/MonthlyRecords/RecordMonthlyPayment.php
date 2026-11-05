@@ -7,6 +7,8 @@ use App\Models\MonthlyRecordPayment;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\Notifier;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class RecordMonthlyPayment
@@ -16,6 +18,22 @@ class RecordMonthlyPayment
     public function handle(MonthlyRecord $record, User $owner, array $data): MonthlyRecordPayment
     {
         return DB::transaction(function () use ($record, $owner, $data) {
+            $record->refreshForUpdate();
+            if (! $owner->isOwner() || $record->tenancy->ownerId() !== $owner->id) {
+                throw new AuthorizationException;
+            }
+            if (! empty($data['idempotency_key'])) {
+                $existing = $record->payments()->where('idempotency_key', $data['idempotency_key'])->first();
+                if ($existing) {
+                    $same = bccomp((string) $existing->amount, (string) $data['amount'], 2) === 0
+                        && $existing->received_on->toDateString() === Carbon::parse($data['received_on'])->toDateString()
+                        && (string) $existing->reference === (string) ($data['reference'] ?? null)
+                        && (string) $existing->notes === (string) ($data['notes'] ?? null);
+                    abort_unless($same, 409, __('This payment request was already used with different details.'));
+
+                    return $existing;
+                }
+            }
             $payment = $record->payments()->create([...$data, 'recorded_by' => $owner->id]);
             $record->syncFinancials();
             $record->save();

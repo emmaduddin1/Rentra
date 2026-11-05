@@ -115,15 +115,14 @@
                 class="portal-icon-button btn btn-ghost relative cursor-pointer list-none px-2.5 [&::-webkit-details-marker]:hidden"
                 @if (request()->routeIs('notifications.*')) aria-current="page" @endif
                 data-notification-count-url="{{ route('notifications.count') }}"
+                aria-label="{{ $unreadNotifications ? __('Notifications: :count unread', ['count' => $unreadNotifications]) : __('Notifications: none unread') }}"
                 data-tour="notifications"
             >
                 <x-icon name="bell" class="size-5" />
                 <span
                     data-notification-count
-                    @class([
-                        'absolute -top-1 -right-1 inline-flex min-w-5 items-center justify-center rounded-full bg-rental-500 px-1.5 py-0.5 text-xs font-semibold text-white ring-2 ring-white',
-                        'hidden' => $unreadNotifications < 1,
-                    ])
+                    @if ($unreadNotifications < 1) hidden @endif
+                    class="absolute -top-1 -right-1 inline-flex min-w-5 items-center justify-center rounded-full bg-rental-500 px-1.5 py-0.5 text-xs font-semibold text-white ring-2 ring-white"
                 >
                     {{ $unreadNotifications }}
                 </span>

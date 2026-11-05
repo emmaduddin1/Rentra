@@ -35,28 +35,30 @@ class EndTenancy
         PropertyStatus $propertyStatus = PropertyStatus::Available,
         ?string $reason = null,
     ): Tenancy {
-        if (! $tenancy->isActive()) {
-            throw ValidationException::withMessages([
-                'status' => __('This tenancy has already ended.'),
-            ]);
-        }
+        return DB::transaction(function () use ($tenancy, $actor, $endDate, $propertyStatus, $reason) {
+            $tenancy->refreshForUpdate();
+            $tenancy->setRelation('property', $tenancy->property()->lockForUpdate()->firstOrFail());
+            if (! $tenancy->isActive()) {
+                throw ValidationException::withMessages([
+                    'status' => __('This tenancy has already ended.'),
+                ]);
+            }
 
-        $endDate = $endDate instanceof Carbon ? $endDate : Carbon::parse($endDate);
+            $endDate = $endDate instanceof Carbon ? $endDate : Carbon::parse($endDate);
 
-        // A contract can already be marked active/notice-period even though its
-        // agreed start date is still ahead. Closing it now is a cancellation,
-        // not an impossible end date before the start date.
-        $finalStatus = $endDate->lt($tenancy->start_date)
-            ? TenancyStatus::Cancelled
-            : TenancyStatus::Ended;
+            // A contract can already be marked active/notice-period even though its
+            // agreed start date is still ahead. Closing it now is a cancellation,
+            // not an impossible end date before the start date.
+            $finalStatus = $endDate->lt($tenancy->start_date)
+                ? TenancyStatus::Cancelled
+                : TenancyStatus::Ended;
 
-        if ($propertyStatus === PropertyStatus::Occupied) {
-            throw ValidationException::withMessages([
-                'property_status' => __('A property cannot stay occupied once its tenancy ends.'),
-            ]);
-        }
+            if ($propertyStatus === PropertyStatus::Occupied) {
+                throw ValidationException::withMessages([
+                    'property_status' => __('A property cannot stay occupied once its tenancy ends.'),
+                ]);
+            }
 
-        return DB::transaction(function () use ($tenancy, $actor, $endDate, $propertyStatus, $reason, $finalStatus) {
             $tenancy->terminationRequests()
                 ->whereIn('status', [TerminationRequestStatus::Pending->value, TerminationRequestStatus::Countered->value])
                 ->update([

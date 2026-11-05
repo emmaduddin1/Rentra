@@ -81,6 +81,7 @@
                 <p class="mt-2 text-sm font-semibold text-slate-900">{{ $record->payment_status->label() }}</p>
                 <form method="POST" action="{{ route('owner.monthly-records.payments.store', $record) }}" class="mt-4 space-y-3">
                     @csrf
+                    <input type="hidden" name="idempotency_key" value="{{ old('idempotency_key', (string) \Illuminate\Support\Str::uuid()) }}">
                     <x-form.field :label="__('Amount received')" name="amount" required><x-form.input name="amount" type="number" step="0.01" min="0.01" /></x-form.field>
                     <x-form.field :label="__('Received on')" name="received_on" required><x-form.input name="received_on" type="date" :value="now()->toDateString()" /></x-form.field>
                     <x-form.field :label="__('Reference')" name="reference"><x-form.input name="reference" /></x-form.field>

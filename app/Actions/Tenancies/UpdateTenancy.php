@@ -24,6 +24,7 @@ class UpdateTenancy
     public function handle(Tenancy $tenancy, array $data): Tenancy
     {
         return DB::transaction(function () use ($tenancy, $data) {
+            $tenancy->refreshForUpdate();
             $effectiveFrom = $data['utility_arrangements_effective_from'] ?? null;
             $changeReason = $data['change_reason'] ?? null;
             unset($data['change_reason']);

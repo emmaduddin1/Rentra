@@ -106,21 +106,46 @@
     }
 
     .notification-pagination {
-        @apply mt-6 flex flex-wrap items-center justify-start gap-1.5;
+        @apply inline-flex max-w-full items-stretch overflow-x-auto rounded-xl border border-slate-600 bg-slate-900 shadow-sm;
+    }
+
+    .notification-pagination-footer {
+        @apply mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between;
+    }
+
+    .notification-pagination-summary {
+        @apply text-sm text-slate-600 sm:text-base;
     }
 
     .notification-page-link {
-        @apply inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700
-            transition hover:border-rental-300 hover:bg-rental-50
-            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rental-600;
+        @apply inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center border-r border-slate-600 bg-slate-900 px-3 text-base font-medium text-slate-200
+            transition hover:bg-slate-700
+            focus-visible:z-10 focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-white
+            sm:min-h-12 sm:min-w-12;
+    }
+
+    .notification-page-link:last-child {
+        border-right: 0;
+    }
+
+    .notification-page-link svg {
+        width: 1.25rem;
+        height: 1.25rem;
+        stroke-width: 2.5;
+    }
+
+    @media (width < 40rem) {
+        .notification-page-link[data-pagination-extra] {
+            display: none;
+        }
     }
 
     .notification-page-link[aria-current="page"] {
-        @apply border-rental-500 bg-rental-500 text-white;
+        @apply bg-slate-700 text-white;
     }
 
     .notification-page-link[aria-disabled="true"] {
-        @apply border-slate-100 bg-slate-50 text-slate-500;
+        @apply bg-slate-800 text-slate-400;
     }
 
     /* Buttons ------------------------------------------------------------ */

@@ -27,6 +27,16 @@ class Tenancy extends Model
     /** @use HasFactory<TenancyFactory> */
     use HasFactory, SoftDeletes;
 
+    /** Reload the current row inside a lifecycle transaction, retaining the caller's instance. */
+    public function refreshForUpdate(): static
+    {
+        $locked = static::query()->whereKey($this->getKey())->lockForUpdate()->firstOrFail();
+        $this->setRawAttributes($locked->getAttributes(), true);
+        $this->unsetRelations();
+
+        return $this;
+    }
+
     protected $attributes = [
         'electricity_arrangement' => UtilityPaymentArrangement::Unclassified->value,
         'gas_arrangement' => UtilityPaymentArrangement::Unclassified->value,

@@ -87,6 +87,7 @@ class NotificationController extends Controller
                 'route' => app(NotificationPayload::class)->route($notification),
             ]),
             'page' => $page->currentPage(), 'last_page' => $page->lastPage(),
+            'from' => $page->firstItem(), 'to' => $page->lastItem(), 'total' => $page->total(),
         ])->header('Cache-Control', 'private, no-store');
     }
 

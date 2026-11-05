@@ -23,21 +23,22 @@ class RejectMonthlyRecord
 
     public function handle(MonthlyRecord $record, User $owner, string $reason): MonthlyRecord
     {
-        // BR-007 - the reason is mandatory. Validation catches this first; the
-        // guard is here so the action cannot be misused from the API.
-        if (trim($reason) === '') {
-            throw ValidationException::withMessages([
-                'rejection_reason' => __('A reason is required when rejecting a record.'),
-            ]);
-        }
-
-        if ($record->status !== MonthlyRecordStatus::Pending) {
-            throw ValidationException::withMessages([
-                'status' => __('Only a pending record can be rejected.'),
-            ]);
-        }
-
         return DB::transaction(function () use ($record, $owner, $reason) {
+            $record->refreshForUpdate();
+            // BR-007 - the reason is mandatory. Validation catches this first; the
+            // guard is here so the action cannot be misused from the API.
+            if (trim($reason) === '') {
+                throw ValidationException::withMessages([
+                    'rejection_reason' => __('A reason is required when rejecting a record.'),
+                ]);
+            }
+
+            if ($record->status !== MonthlyRecordStatus::Pending) {
+                throw ValidationException::withMessages([
+                    'status' => __('Only a pending record can be rejected.'),
+                ]);
+            }
+
             $record->fill(['status' => MonthlyRecordStatus::Rejected]);
             $record->rejected_by = $owner->id;
             $record->rejected_at = now();

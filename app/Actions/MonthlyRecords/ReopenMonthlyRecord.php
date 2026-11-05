@@ -27,19 +27,20 @@ class ReopenMonthlyRecord
 
     public function handle(MonthlyRecord $record, User $owner, string $reason): MonthlyRecord
     {
-        if (trim($reason) === '') {
-            throw ValidationException::withMessages([
-                'reopen_reason' => __('A reason is required when reopening a record.'),
-            ]);
-        }
-
-        if (! $record->isFrozen()) {
-            throw ValidationException::withMessages([
-                'status' => __('Only a frozen record can be reopened.'),
-            ]);
-        }
-
         return DB::transaction(function () use ($record, $owner, $reason) {
+            $record->refreshForUpdate();
+            if (trim($reason) === '') {
+                throw ValidationException::withMessages([
+                    'reopen_reason' => __('A reason is required when reopening a record.'),
+                ]);
+            }
+
+            if (! $record->isFrozen()) {
+                throw ValidationException::withMessages([
+                    'status' => __('Only a frozen record can be reopened.'),
+                ]);
+            }
+
             $previousApprover = $record->approved_by;
 
             $record->fill(['status' => MonthlyRecordStatus::Pending]);
