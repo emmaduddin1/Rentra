@@ -105,6 +105,24 @@
         @apply mb-4;
     }
 
+    .notification-pagination {
+        @apply mt-6 flex flex-wrap items-center justify-start gap-1.5;
+    }
+
+    .notification-page-link {
+        @apply inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700
+            transition hover:border-rental-300 hover:bg-rental-50
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rental-600;
+    }
+
+    .notification-page-link[aria-current="page"] {
+        @apply border-rental-500 bg-rental-500 text-white;
+    }
+
+    .notification-page-link[aria-disabled="true"] {
+        @apply border-slate-100 bg-slate-50 text-slate-500;
+    }
+
     /* Buttons ------------------------------------------------------------ */
     .btn {
         @apply inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold
@@ -246,5 +264,180 @@
         justify-content: center;
         padding-left: 0.75rem;
         padding-right: 0.75rem;
+    }
+}
+
+/* Portal refinements use the existing Tenantism tokens; public pages keep
+   their own layout. Dashboard surfaces are scoped to the two dashboards. */
+@layer components {
+    .tenant-portal [data-sidebar] {
+        box-shadow: 4px 0 24px -20px rgb(26 39 58 / 20%);
+    }
+
+    .tenant-portal .nav-item {
+        @apply relative min-h-11 gap-3 font-medium;
+        transition: background-color 180ms, color 180ms, box-shadow 180ms;
+    }
+
+    .tenant-portal .nav-item-active {
+        @apply bg-rental-50 font-semibold text-rental-700;
+        box-shadow: inset 0 0 0 1px var(--color-rental-100);
+    }
+
+    .tenant-portal .nav-item-active::before {
+        content: '';
+        @apply absolute inset-y-3 left-0 w-0.5 rounded-full bg-rental-500;
+    }
+
+    .portal-icon-button {
+        @apply min-w-11 rounded-xl border border-slate-200 bg-white;
+    }
+
+    .portal-popover {
+        box-shadow: 0 12px 40px -14px rgb(26 39 58 / 24%);
+    }
+
+    .tenant-portal [data-portal-menu] > summary {
+        transition: background-color 180ms, box-shadow 180ms;
+    }
+
+    .tenant-portal [data-portal-menu][open] > summary {
+        @apply bg-slate-100;
+    }
+
+    .tenant-portal [data-tour='profile-menu'] + div a,
+    .tenant-portal [data-tour='profile-menu'] + div button {
+        @apply min-h-11 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-rental-600;
+    }
+
+    .dashboard-heading {
+        @apply mb-7 border-b border-slate-200/80 pb-6;
+    }
+
+    .dashboard-heading > header {
+        @apply mt-3 mb-0;
+    }
+
+    .dashboard-heading h1 {
+        @apply text-2xl leading-tight font-semibold tracking-tight sm:text-3xl;
+    }
+
+    .dashboard-heading h1 + p {
+        @apply mt-2 max-w-xl leading-6;
+    }
+
+    .dashboard-eyebrow {
+        @apply flex flex-wrap items-center gap-2 text-[0.65rem] leading-5 font-semibold tracking-widest text-slate-500 uppercase;
+    }
+
+    .dashboard-eyebrow time {
+        @apply font-medium tracking-normal normal-case;
+    }
+
+    .dashboard-section-title {
+        @apply text-base font-semibold tracking-tight text-slate-900;
+    }
+
+    .dashboard-section-caption {
+        @apply mt-1 text-sm leading-6 text-slate-500;
+    }
+
+    .dashboard-page .card {
+        box-shadow: 0 2px 5px -3px rgb(26 39 58 / 10%), 0 10px 30px -26px rgb(26 39 58 / 18%);
+    }
+
+    .dashboard-page .stat-card {
+        @apply relative overflow-hidden;
+        transition: border-color 180ms, box-shadow 180ms, transform 180ms;
+    }
+
+    .dashboard-page .card-header {
+        @apply flex-wrap items-start gap-2 px-5 py-5;
+    }
+
+    .dashboard-page .card-title {
+        @apply text-base tracking-tight;
+    }
+
+    .dashboard-page .card-header p {
+        @apply mt-1 leading-5;
+    }
+
+    .dashboard-page .card-header .link {
+        @apply inline-flex min-h-8 items-center;
+    }
+
+    .dashboard-list-row {
+        @apply grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-2 px-5 py-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center;
+    }
+
+    .dashboard-list-row > :nth-child(3) {
+        @apply col-start-2 justify-self-start sm:col-start-auto sm:justify-self-end;
+    }
+
+    .dashboard-list-row a {
+        @apply break-words leading-6 underline-offset-4 focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rental-600;
+        overflow-wrap: anywhere;
+    }
+
+    .dashboard-avatar {
+        @apply flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-sm font-semibold text-brand-700;
+    }
+
+    .dashboard-empty {
+        @apply flex min-h-44 flex-col items-center justify-center gap-3 px-6 py-8 text-center text-sm text-slate-500;
+    }
+
+    .dashboard-shortcut {
+        @apply flex min-w-0 items-center gap-3 rounded-card border border-slate-200 bg-white p-5 text-slate-900
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rental-600;
+        transition: background-color 180ms, border-color 180ms, transform 180ms;
+    }
+
+    .dashboard-shortcut-icon {
+        @apply inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-rental-50 text-rental-700;
+    }
+
+    .dashboard-tenancy {
+        background-image: linear-gradient(125deg, var(--color-brand-50), white 65%);
+    }
+
+    .dashboard-month {
+        @apply border-t-2 border-t-rental-300;
+    }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .dashboard-page a.stat-card:hover,
+    .dashboard-shortcut:hover {
+        transform: translateY(-2px);
+        border-color: var(--color-rental-200);
+        box-shadow: 0 8px 20px -12px rgb(26 39 58 / 22%);
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .dashboard-heading,
+    .dashboard-section {
+        animation: dashboard-enter 420ms ease-out both;
+    }
+
+    .dashboard-section:nth-of-type(2) { animation-delay: 40ms; }
+    .dashboard-section:nth-of-type(3) { animation-delay: 80ms; }
+    .tenant-portal [data-portal-menu][open] > .portal-popover {
+        animation: dashboard-enter 180ms ease-out both;
+    }
+}
+
+@keyframes dashboard-enter {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tenant-portal *, .tenant-portal *::before, .tenant-portal *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
     }
 }

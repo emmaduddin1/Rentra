@@ -11,9 +11,10 @@
         $isRent = $selectedPurpose === \App\Enums\ListingPurpose::Rent;
     @endphp
 
-    <section class="relative w-full max-w-7xl overflow-hidden rounded-card border border-slate-200 bg-white shadow-xs sm:left-1/2 sm:w-[calc(100vw-3rem)] sm:-translate-x-1/2 lg:w-[calc(100vw-4rem)]">
+    <section class="relative grid w-full max-w-7xl grid-cols-1 sm:left-1/2 sm:w-[calc(100vw-3rem)] sm:-translate-x-1/2 lg:w-[calc(100vw-4rem)]">
+        <div class="pointer-events-none col-start-1 row-start-1 row-end-3 rounded-card border border-slate-200 bg-white shadow-xs" aria-hidden="true" data-home-hero-background></div>
         <div
-            class="relative overflow-hidden bg-brand-700 bg-cover bg-center lg:bg-[position:center_48%]"
+            class="relative col-start-1 row-start-1 overflow-hidden rounded-t-card bg-brand-700 bg-cover bg-center lg:bg-[position:center_48%]"
             style="background-image: url('{{ $heroUrl }}')"
             role="img"
             aria-label="{{ __('A modern home at sunset') }}"
@@ -37,88 +38,90 @@
         </div>
 
         {{-- FR-APP-002 - search by area/city with the same filters as the listing feed supports. --}}
-        <form method="GET" action="{{ route('listings.index') }}" class="relative z-10 mx-3 -mt-6 min-w-0 rounded-card border border-slate-200 bg-white p-4 shadow-sm sm:mx-8 sm:-mt-10 lg:mx-10">
-            <input type="hidden" name="listing_purpose" value="{{ $selectedPurpose->value }}">
+        <div class="relative z-10 col-start-1 row-start-2 row-end-4 mx-3 -mt-6 grid min-w-0 grid-rows-subgrid rounded-card border border-slate-200 bg-white p-4 shadow-sm sm:mx-8 sm:-mt-10 lg:mx-10" data-home-search-card>
+            <form method="GET" action="{{ route('listings.index') }}">
+                <input type="hidden" name="listing_purpose" value="{{ $selectedPurpose->value }}">
 
-            @if ($salesEnabled)
-                <div class="mb-4 inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1" role="tablist" aria-label="{{ __('Listing purpose') }}">
-                    <a
-                        href="{{ route('home', ['listing_purpose' => 'rent']) }}"
-                        role="tab"
-                        aria-selected="{{ $isRent ? 'true' : 'false' }}"
-                        class="rounded-lg px-5 py-2 text-sm font-bold transition {{ $isRent ? 'bg-rental-500 text-white shadow-xs' : 'text-slate-600 hover:bg-white hover:text-slate-900' }}"
-                    >
-                        {{ __('Rent') }}
+                @if ($salesEnabled)
+                    <div class="mb-4 inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1" role="tablist" aria-label="{{ __('Listing purpose') }}">
+                        <a
+                            href="{{ route('home', ['listing_purpose' => 'rent']) }}"
+                            role="tab"
+                            aria-selected="{{ $isRent ? 'true' : 'false' }}"
+                            class="rounded-lg px-5 py-2 text-sm font-bold transition {{ $isRent ? 'bg-rental-500 text-white shadow-xs' : 'text-slate-600 hover:bg-white hover:text-slate-900' }}"
+                        >
+                            {{ __('Rent') }}
+                        </a>
+                        <a
+                            href="{{ route('home', ['listing_purpose' => 'sale']) }}"
+                            role="tab"
+                            aria-selected="{{ $isRent ? 'false' : 'true' }}"
+                            class="rounded-lg px-5 py-2 text-sm font-bold transition {{ $isRent ? 'text-slate-600 hover:bg-white hover:text-slate-900' : 'bg-rental-500 text-white shadow-xs' }}"
+                        >
+                            {{ __('Buy') }}
+                        </a>
+                    </div>
+                @endif
+
+                <div class="grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+                    <div class="col-span-2 min-w-0 lg:col-span-1">
+                        <label for="landing-area" class="mb-1 block text-xs font-bold text-slate-500">{{ __('Area or city') }}</label>
+                        <input id="landing-area" name="area" type="search" class="input" placeholder="{{ __('e.g. Gulshan-e-Iqbal') }}">
+                    </div>
+
+                    <div class="min-w-0">
+                        <label for="category_id" class="mb-1 block text-xs font-bold text-slate-500">{{ __('Property type') }}</label>
+                        <x-form.select name="category_id" :placeholder="__('All types')" :options="$categoryOptions" />
+                    </div>
+
+                    <div class="min-w-0">
+                        <label for="landing-budget" class="mb-1 block text-xs font-bold text-slate-500">{{ $salesEnabled ? __('Budget') : __('Monthly rent') }}</label>
+                        <select id="landing-budget" name="max_price" class="input">
+                            <option value="">{{ __('Any price') }}</option>
+                            @if ($isRent)
+                                <option value="50000">{{ __('Up to PKR 50,000') }}</option>
+                                <option value="100000">{{ __('Up to PKR 100,000') }}</option>
+                                <option value="200000">{{ __('Up to PKR 200,000') }}</option>
+                            @else
+                                <option value="5000000">{{ __('Up to PKR 5,000,000') }}</option>
+                                <option value="10000000">{{ __('Up to PKR 10,000,000') }}</option>
+                                <option value="25000000">{{ __('Up to PKR 25,000,000') }}</option>
+                                <option value="50000000">{{ __('Up to PKR 50,000,000') }}</option>
+                            @endif
+                        </select>
+                    </div>
+
+                    <div class="col-span-2 flex items-end lg:col-span-1">
+                        <button type="submit" class="btn btn-primary h-11 w-full px-5 lg:w-auto">
+                            <x-icon name="search" class="btn-icon" />
+                            {{ __('Search properties') }}
+                        </button>
+                    </div>
+                </div>
+                <details class="mt-3 border-t border-slate-100 pt-2" data-more-filters>
+                    <summary class="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg text-sm font-semibold text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rental-600" aria-controls="landing-extra-filters" aria-expanded="false">
+                        {{ __('More filters') }}
+                        <x-icon name="chevron-down" class="size-4" />
+                    </summary>
+                    <div id="landing-extra-filters" class="pt-2 sm:max-w-xs">
+                        <x-form.field :label="__('Minimum budget')" name="min_price">
+                            <x-form.input name="min_price" type="number" min="0" step="0.01" :placeholder="__('No minimum')" />
+                        </x-form.field>
+                    </div>
+                </details>
+            </form>
+
+            <nav class="relative mt-3 flex min-w-0 gap-2 overflow-x-auto border-t border-slate-100 pt-3 pb-1" aria-label="{{ __('Browse by property type') }}">
+                @foreach ($categoryCards as $card)
+                    <a href="{{ route('listings.index', ['listing_purpose' => $selectedPurpose->value, 'category_id' => $card['category']->id]) }}"
+                       class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-rental-300 hover:bg-rental-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rental-600">
+                        {{ $card['category']->name }}
+                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600"><span class="sr-only">{{ __('Available:') }}</span>{{ $card['count'] }}</span>
                     </a>
-                    <a
-                        href="{{ route('home', ['listing_purpose' => 'sale']) }}"
-                        role="tab"
-                        aria-selected="{{ $isRent ? 'false' : 'true' }}"
-                        class="rounded-lg px-5 py-2 text-sm font-bold transition {{ $isRent ? 'text-slate-600 hover:bg-white hover:text-slate-900' : 'bg-rental-500 text-white shadow-xs' }}"
-                    >
-                        {{ __('Buy') }}
-                    </a>
-                </div>
-            @endif
-
-            <div class="grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
-                <div class="col-span-2 min-w-0 lg:col-span-1">
-                    <label for="landing-area" class="mb-1 block text-xs font-bold text-slate-500">{{ __('Area or city') }}</label>
-                    <input id="landing-area" name="area" type="search" class="input" placeholder="{{ __('e.g. Gulshan-e-Iqbal') }}">
-                </div>
-
-                <div class="min-w-0">
-                    <label for="category_id" class="mb-1 block text-xs font-bold text-slate-500">{{ __('Property type') }}</label>
-                    <x-form.select name="category_id" :placeholder="__('All types')" :options="$categoryOptions" />
-                </div>
-
-                <div class="min-w-0">
-                    <label for="landing-budget" class="mb-1 block text-xs font-bold text-slate-500">{{ $salesEnabled ? __('Budget') : __('Monthly rent') }}</label>
-                    <select id="landing-budget" name="max_price" class="input">
-                        <option value="">{{ __('Any price') }}</option>
-                        @if ($isRent)
-                            <option value="50000">{{ __('Up to PKR 50,000') }}</option>
-                            <option value="100000">{{ __('Up to PKR 100,000') }}</option>
-                            <option value="200000">{{ __('Up to PKR 200,000') }}</option>
-                        @else
-                            <option value="5000000">{{ __('Up to PKR 5,000,000') }}</option>
-                            <option value="10000000">{{ __('Up to PKR 10,000,000') }}</option>
-                            <option value="25000000">{{ __('Up to PKR 25,000,000') }}</option>
-                            <option value="50000000">{{ __('Up to PKR 50,000,000') }}</option>
-                        @endif
-                    </select>
-                </div>
-
-                <div class="col-span-2 flex items-end lg:col-span-1">
-                    <button type="submit" class="btn btn-primary h-11 w-full px-5 lg:w-auto">
-                        <x-icon name="search" class="btn-icon" />
-                        {{ __('Search properties') }}
-                    </button>
-                </div>
-            </div>
-            <details class="mt-3 border-t border-slate-100 pt-2" data-more-filters>
-                <summary class="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg text-sm font-semibold text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rental-600" aria-controls="landing-extra-filters" aria-expanded="false">
-                    {{ __('More filters') }}
-                    <x-icon name="chevron-down" class="size-4" />
-                </summary>
-                <div id="landing-extra-filters" class="pt-2 sm:max-w-xs">
-                    <x-form.field :label="__('Minimum budget')" name="min_price">
-                        <x-form.input name="min_price" type="number" min="0" step="0.01" :placeholder="__('No minimum')" />
-                    </x-form.field>
-                </div>
-            </details>
-        </form>
+                @endforeach
+            </nav>
+        </div>
     </section>
-
-    <nav class="relative mt-5 flex min-w-0 gap-2 overflow-x-auto pb-2" aria-label="{{ __('Browse by property type') }}">
-        @foreach ($categoryCards as $card)
-            <a href="{{ route('listings.index', ['listing_purpose' => $selectedPurpose->value, 'category_id' => $card['category']->id]) }}"
-               class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-rental-300 hover:bg-rental-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rental-600">
-                {{ $card['category']->name }}
-                <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600"><span class="sr-only">{{ __('Available:') }}</span>{{ $card['count'] }}</span>
-            </a>
-        @endforeach
-    </nav>
 
     <section class="mt-8">
         <div class="flex flex-wrap items-end justify-between gap-3">

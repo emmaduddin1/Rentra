@@ -1,4 +1,4 @@
-@props(['title' => null, 'heading' => null, 'subheading' => null, 'actions' => null, 'back' => null])
+@props(['title' => null, 'heading' => null, 'subheading' => null, 'actions' => null, 'back' => null, 'dashboard' => false])
 @php
     $versionedAsset = fn (string $path): string => asset($path).(file_exists(public_path($path)) ? '?v='.filemtime(public_path($path)) : '');
 @endphp
@@ -21,7 +21,7 @@
     @endif
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-dvh bg-slate-50 text-slate-900 antialiased">
+<body @class(['min-h-dvh bg-slate-50 text-slate-900 antialiased', 'tenant-portal' => auth()->check(), 'dashboard-page' => $dashboard])>
     <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:shadow">
         {{ __('Skip to content') }}
     </a>
@@ -39,10 +39,17 @@
         ></label>
 
         <div class="flex min-h-dvh flex-col transition-[padding] duration-200 lg:pl-64" data-app-shell>
-            <x-nav.authenticated-app-bar :heading="$heading" :subheading="$subheading" :back="$back" />
+            <x-nav.authenticated-app-bar :heading="$heading" :subheading="$subheading" :back="$back" :dashboard="$dashboard" />
 
             <main id="main" class="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
-                <x-page-header :actions="$actions" />
+                @if ($dashboard)
+                    <div class="dashboard-heading">
+                        <p class="dashboard-eyebrow">{{ auth()->user()->role->label() }} {{ __('workspace') }} <span aria-hidden="true">/</span> <time datetime="{{ now()->toDateString() }}">{{ now()->format('d M Y') }}</time></p>
+                        <x-page-header :heading="$heading" :subheading="$subheading" :actions="$actions" :dashboard="true" />
+                    </div>
+                @else
+                    <x-page-header :actions="$actions" />
+                @endif
 
                 <x-flash />
 

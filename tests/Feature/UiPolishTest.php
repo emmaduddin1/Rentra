@@ -69,4 +69,36 @@ class UiPolishTest extends TestCase
         $this->actingAs($user)->patchJson('/notification-preferences', ['payments' => false])->assertOk();
         $this->assertDatabaseHas('web_notification_preferences', ['user_id' => $user->id, 'payments' => false]);
     }
+
+    public function test_notification_pages_match_the_live_feed_and_preserve_the_unread_filter(): void
+    {
+        $user = User::factory()->renter()->create();
+        $user->inAppNotifications()->createMany(array_fill(0, 45, ['type' => 'account.test', 'title' => 'Unread update']));
+        $user->inAppNotifications()->create(['type' => 'account.test', 'title' => 'Read update', 'read_at' => now()]);
+
+        foreach ([1, 2, 3] as $number) {
+            $response = $this->actingAs($user)->get('/notifications?filter=unread&page='.$number)->assertOk();
+            $paginator = $response->viewData('notifications');
+            $this->assertSame(20, $paginator->perPage());
+            $this->assertSame(3, $paginator->lastPage());
+            $response->assertSee('aria-label="Notification pages"', false)
+                ->assertSee('aria-current="page" aria-label="Page '.$number.'"', false)
+                ->assertSeeInOrder(['Previous', 'Go to page '.($number === 1 ? 2 : 1), 'Next']);
+            $response->assertSee('filter=unread&amp;page='.($number === 1 ? 2 : 1), false);
+
+            $feed = $this->getJson('/notifications/feed?filter=unread&page='.$number)->assertOk()
+                ->assertJsonPath('page', $number)->assertJsonPath('last_page', 3);
+            $this->assertSame($paginator->pluck('id')->map(fn ($id) => (string) $id)->all(), array_column($feed->json('notifications'), 'id'));
+        }
+    }
+
+    public function test_notification_pagination_has_gaps_for_large_inboxes_and_is_hidden_for_one_page(): void
+    {
+        $user = User::factory()->renter()->create();
+        $this->actingAs($user)->get('/notifications')->assertOk()->assertDontSee('aria-label="Notification pages"', false);
+
+        $user->inAppNotifications()->createMany(array_fill(0, 221, ['type' => 'account.test', 'title' => 'Inbox update']));
+        $this->get('/notifications?page=6')->assertOk()
+            ->assertSeeInOrder(['Previous', 'Go to page 1', '…', 'Go to page 5', 'Page 6', 'Go to page 7', '…', 'Go to page 12', 'Next']);
+    }
 }

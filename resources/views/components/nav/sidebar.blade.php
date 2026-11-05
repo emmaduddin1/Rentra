@@ -80,12 +80,12 @@
             <x-brand.mark class="size-11" />
         </a>
 
-        <label for="nav-toggle" class="btn btn-ghost btn-sm -mr-2 cursor-pointer lg:hidden" aria-label="{{ __('Close menu') }}">
+        <label for="nav-toggle" class="btn btn-ghost -mr-2 cursor-pointer px-2 lg:hidden" role="button" tabindex="0" aria-label="{{ __('Close menu') }}" aria-controls="app-sidebar" aria-expanded="false" data-sidebar-toggle>
             <x-icon name="close" class="size-5" />
         </label>
     </div>
 
-    <nav class="flex-1 space-y-6 overflow-y-auto px-3 py-6" aria-label="{{ __('Main') }}">
+    <nav class="flex-1 space-y-5 overflow-y-auto px-3 py-5" aria-label="{{ __('Main') }}">
         @foreach ($groups as $group)
             <div class="space-y-1">
                 @if ($group['label'])
@@ -106,7 +106,7 @@
 
     {{-- Who you are signed in as, and the way out - always in the same spot. --}}
     <div class="shrink-0 border-t border-slate-200 p-3">
-        <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 transition hover:bg-slate-100">
+        <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-rental-600" aria-label="{{ __('Your profile') }}">
             <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
                 <x-icon name="user" class="size-5" />
             </span>
@@ -118,7 +118,7 @@
 
         <form method="POST" action="{{ route('logout') }}" class="mt-1">
             @csrf
-            <button type="submit" class="nav-item w-full">
+            <button type="submit" class="nav-item w-full" aria-label="{{ __('Log out') }}" title="{{ __('Log out') }}">
                 <x-icon name="logout" class="size-5 shrink-0 text-slate-400" />
                 <span data-sidebar-label>{{ __('Log out') }}</span>
             </button>

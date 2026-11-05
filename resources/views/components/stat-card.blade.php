@@ -13,22 +13,22 @@
 @endphp
 
 <{{ $tag }} @if ($href) href="{{ $href }}" @endif {{ $attributes->class([
-    'card group flex flex-col gap-1 p-4 transition',
+    'card stat-card group flex min-w-0 flex-col p-4 transition sm:p-5',
     'hover:border-brand-200 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rental-600' => (bool) $href,
 ]) }}>
-    <span class="flex items-center gap-2 text-sm font-medium text-slate-500">
+    <span class="flex items-start justify-between gap-2 text-sm font-medium text-slate-600">
+        <span class="min-w-0 pt-1">{{ $label }}</span>
         @if ($icon)
-            <x-icon :name="$icon" class="size-4 text-slate-400" />
+            <span @class(['stat-icon hidden size-9 shrink-0 items-center justify-center rounded-xl min-[360px]:flex', 'bg-amber-50 text-amber-700' => $variant === 'warning', 'bg-rental-50 text-rental-700' => $variant !== 'warning'])><x-icon :name="$icon" class="size-4" /></span>
         @endif
-        {{ $label }}
     </span>
 
     <span @class([
-        'text-2xl font-semibold tracking-tight tabular-nums',
+        'stat-value mt-3 break-words text-3xl leading-tight font-semibold tracking-tight tabular-nums',
         $accents[$variant] ?? 'text-slate-900',
     ])>{{ $value }}</span>
 
     @if ($hint)
-        <span class="text-xs text-slate-500">{{ $hint }}</span>
+        <span class="mt-2 text-xs leading-5 text-slate-500">{{ $hint }}</span>
     @endif
 </{{ $tag }}>
