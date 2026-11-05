@@ -1,7 +1,8 @@
 <x-layouts.app
     :title="__('Owner dashboard')"
-    :heading="__('Owner dashboard')"
-    :subheading="__('Your properties, renters and tasks in one place.')"
+    :heading="__('Your portfolio, at a glance.')"
+    :subheading="__('Keep an eye on your properties and make room for what needs attention.')"
+    :dashboard="true"
 >
     @if ($stats['tenancy_conflicts'] > 0)
         <x-alert variant="danger" role="alert" class="mb-6" :title="__('Tenancy conflict requires administrator review')">{{ trans_choice(':count renter has conflicting active tenancy records. New financial activity is blocked for the conflict until it is reconciled.|:count renters have conflicting active tenancy records. New financial activity is blocked for those conflicts until they are reconciled.', $stats['tenancy_conflicts'], ['count' => $stats['tenancy_conflicts']]) }}</x-alert>
@@ -12,65 +13,77 @@
     </x-slot:actions>
 
     {{-- FR-ADM-001 - counts are scoped to the authenticated owner (BR-010). --}}
-    <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <x-stat-card
-            icon="building"
-            :label="__('Properties')"
-            :value="$stats['properties']"
-            :hint="__(':available available · :occupied occupied', ['available' => $stats['available'], 'occupied' => $stats['occupied']])"
-            :href="route('owner.properties.index')"
-        />
-        <x-stat-card icon="users" :label="__('Active renters')" :value="$stats['active_renters']" :href="route('owner.renters.index')" />
-        <x-stat-card icon="check-circle" :label="__('Available')" :value="$stats['available']" />
-        <x-stat-card icon="key" :label="__('Occupied')" :value="$stats['occupied']" />
-    </div>
+    <section aria-labelledby="portfolio-overview-title" class="dashboard-section">
+        <h2 id="portfolio-overview-title" class="dashboard-section-title">{{ __('Portfolio overview') }}</h2>
+        <div class="mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            <x-stat-card
+                icon="building"
+                :label="__('Properties')"
+                :value="$stats['properties']"
+                :hint="__(':available available · :occupied occupied', ['available' => $stats['available'], 'occupied' => $stats['occupied']])"
+                :href="route('owner.properties.index')"
+            />
+            <x-stat-card icon="users" :label="__('Active renters')" :value="$stats['active_renters']" :href="route('owner.renters.index')" />
+            <x-stat-card icon="check-circle" :label="__('Available')" :value="$stats['available']" />
+            <x-stat-card icon="key" :label="__('Occupied')" :value="$stats['occupied']" />
+        </div>
+    </section>
 
     {{-- What is waiting on the owner, kept apart from the plain counts. --}}
-    <h2 class="mt-8 mb-3 text-sm font-semibold text-slate-900">{{ __('Needs your attention') }}</h2>
+    <section aria-labelledby="owner-attention-title" class="dashboard-section mt-8">
+        <div class="mb-4">
+            <h2 id="owner-attention-title" class="dashboard-section-title">{{ __('Needs your attention') }}</h2>
+            <p class="dashboard-section-caption">{{ __('A clear view of the next steps in your rental workflow.') }}</p>
+        </div>
 
-    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-        <x-stat-card
-            icon="check-circle"
-            :label="__('Awaiting review')"
-            :value="$stats['pending_approvals']"
-            :variant="$stats['pending_approvals'] > 0 ? 'warning' : null"
-            :href="route('owner.monthly-records.index')"
-        />
-        <x-stat-card
-            icon="wrench"
-            :label="__('Open maintenance')"
-            :value="$stats['open_maintenance']"
-            :variant="$stats['open_maintenance'] > 0 ? 'warning' : null"
-            :href="route('owner.maintenance.index')"
-        />
-        <x-stat-card
-            icon="inbox"
-            class="col-span-2 sm:col-span-1"
-            :label="__('New applications')"
-            :value="$stats['pending_applications']"
-            :variant="$stats['pending_applications'] > 0 ? 'warning' : null"
-            :href="route('owner.applications.index')"
-        />
-    </div>
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+            <x-stat-card
+                icon="check-circle"
+                :label="__('Rent & bill reviews')"
+                :hint="__('Submissions awaiting your review')"
+                :value="$stats['pending_approvals']"
+                :variant="$stats['pending_approvals'] > 0 ? 'warning' : null"
+                :href="route('owner.monthly-records.index')"
+            />
+            <x-stat-card
+                icon="wrench"
+                :label="__('Open maintenance')"
+                :hint="__('Requests that are still open')"
+                :value="$stats['open_maintenance']"
+                :variant="$stats['open_maintenance'] > 0 ? 'warning' : null"
+                :href="route('owner.maintenance.index')"
+            />
+            <x-stat-card
+                icon="inbox"
+                class="col-span-2 sm:col-span-1"
+                :label="__('New applications')"
+                :hint="__('Renters awaiting a response')"
+                :value="$stats['pending_applications']"
+                :variant="$stats['pending_applications'] > 0 ? 'warning' : null"
+                :href="route('owner.applications.index')"
+            />
+        </div>
+    </section>
 
     {{-- FR-ADM-003 - recent items link to their detail pages. --}}
-    <div class="mt-8 grid items-start gap-6 lg:grid-cols-2">
-        <x-card :title="__('Recent applications')" :padded="false">
+    <div class="dashboard-section mt-8 grid items-start gap-5 xl:grid-cols-2">
+        <x-card :title="__('Recent applications')" :description="__('The latest interest in your properties')" :padded="false" class="dashboard-panel">
             <x-slot:action>
                 <a href="{{ route('owner.applications.index') }}" class="link text-sm">{{ __('View all') }}</a>
             </x-slot:action>
 
             @if ($recentApplications->isEmpty())
-                <p class="px-5 py-8 text-center text-sm text-slate-500">{{ __('No applications yet.') }}</p>
+                <div class="dashboard-empty"><x-icon name="inbox" class="size-7 text-rental-600" /><p>{{ __('No applications yet.') }}</p><p class="text-xs">{{ __('New renter enquiries will appear here.') }}</p></div>
             @else
                 <ul class="divide-y divide-slate-100">
                     @foreach ($recentApplications as $application)
-                        <li class="flex flex-wrap items-center justify-between gap-2 px-5 py-3.5">
-                            <span class="min-w-0">
+                        <li class="dashboard-list-row">
+                            <span class="dashboard-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($application->renter->name, 0, 1)) }}</span>
+                            <span class="min-w-0 flex-1">
                                 <a href="{{ route('owner.applications.show', $application) }}" class="text-sm font-medium text-slate-900 hover:underline">
                                     {{ $application->renter->name }}
                                 </a>
-                                <span class="block truncate text-xs text-slate-500">
+                                <span class="mt-1 block break-words text-xs leading-5 text-slate-500">
                                     {{ $application->property->title }} · {{ $application->submitted_at->format('d M Y') }}
                                 </span>
                             </span>
@@ -81,7 +94,7 @@
             @endif
         </x-card>
 
-        <x-card :title="__('Your properties')" :padded="false">
+        <x-card :title="__('Your properties')" :description="__('Recent additions to your portfolio')" :padded="false" class="dashboard-panel">
             <x-slot:action>
                 <a href="{{ route('owner.properties.index') }}" class="link text-sm">{{ __('View all') }}</a>
             </x-slot:action>
@@ -94,16 +107,23 @@
             @else
                 <ul class="divide-y divide-slate-100">
                     @foreach ($recentProperties as $property)
-                        <li class="flex flex-wrap items-center justify-between gap-2 px-5 py-3.5">
-                            <span class="min-w-0">
+                        <li class="dashboard-list-row">
+                            <span class="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand-100 text-brand-600" aria-hidden="true">
+                                @if ($property->primaryImage)
+                                    <img src="{{ $property->primaryImage->url() }}" alt="" class="size-full object-cover" loading="lazy">
+                                @else
+                                    <x-icon name="building" class="size-5" />
+                                @endif
+                            </span>
+                            <span class="min-w-0 flex-1">
                                 <a href="{{ route('owner.properties.show', $property) }}" class="text-sm font-medium text-slate-900 hover:underline">
                                     {{ $property->title }}
                                 </a>
-                                <span class="block truncate text-xs text-slate-500">
+                                <span class="mt-1 block break-words text-xs leading-5 text-slate-500">
                                     {{ $property->purposeBadgeLabel() }} · {{ $property->area }} · <x-property-price :property="$property" />
                                 </span>
                             </span>
-                            <span class="flex flex-wrap justify-end gap-1">
+                            <span class="flex flex-wrap gap-1">
                                 <x-badge :variant="$property->status->badge()">{{ $property->status->label() }}</x-badge>
                                 <x-badge :variant="$property->publication_status->badge()">{{ $property->publication_status->label() }}</x-badge>
                             </span>
@@ -114,8 +134,16 @@
         </x-card>
     </div>
 
-    <div class="mt-8 flex flex-wrap gap-2">
-        <x-form.button :href="route('owner.monthly-records.index')" variant="secondary" icon="check-circle">{{ __('Review submissions') }}</x-form.button>
-        <x-form.button :href="route('owner.reports.index')" variant="secondary" icon="chart">{{ __('Open reports') }}</x-form.button>
+    <div class="dashboard-section mt-6 grid gap-3 sm:grid-cols-2">
+        <a href="{{ route('owner.monthly-records.index') }}" class="dashboard-shortcut">
+            <span class="dashboard-shortcut-icon"><x-icon name="check-circle" class="size-5" /></span>
+            <span class="min-w-0 flex-1"><span class="block text-sm font-semibold">{{ __('Review submissions') }}</span><span class="mt-1 block text-xs leading-5 text-slate-500">{{ __('Review rent records and payment evidence.') }}</span></span>
+            <x-icon name="arrow-right" class="size-4 shrink-0 text-slate-500" />
+        </a>
+        <a href="{{ route('owner.reports.index') }}" class="dashboard-shortcut">
+            <span class="dashboard-shortcut-icon"><x-icon name="chart" class="size-5" /></span>
+            <span class="min-w-0 flex-1"><span class="block text-sm font-semibold">{{ __('Open reports') }}</span><span class="mt-1 block text-xs leading-5 text-slate-500">{{ __('Explore your financial summary and rental records.') }}</span></span>
+            <x-icon name="arrow-right" class="size-4 shrink-0 text-slate-500" />
+        </a>
     </div>
 </x-layouts.app>

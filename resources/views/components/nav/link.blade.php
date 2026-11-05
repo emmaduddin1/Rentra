@@ -1,6 +1,6 @@
 @props(['active' => false, 'icon' => null])
 
-<a {{ $attributes->class([
+<a {{ $attributes->merge(['aria-label' => trim(strip_tags($slot)), 'title' => trim(strip_tags($slot))])->class([
     'nav-item',
     'nav-item-active' => $active,
 ]) }} @if ($active) aria-current="page" @endif>

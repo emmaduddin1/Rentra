@@ -1,4 +1,7 @@
 import './notifications.js';
+import { initPortalNavigation } from './portal-navigation.js';
+
+initPortalNavigation();
 
 // Native details keeps secondary filters usable without JavaScript.
 document.querySelectorAll('[data-more-filters]').forEach(details => {
@@ -11,7 +14,6 @@ document.querySelectorAll('[data-more-filters]').forEach(details => {
 // keyboard user expects - Escape closes it, and the page never scrolls behind.
 const toggle = document.getElementById('nav-toggle');
 const pageLoader = document.getElementById('page-transition-loader');
-const sidebarCollapse = document.querySelector('[data-sidebar-collapse]');
 
 const showPageLoader = () => {
     if (!pageLoader) {
@@ -74,44 +76,6 @@ if (pageLoader) {
         }
     });
 }
-
-if (toggle) {
-    const sync = () => {
-        document.body.classList.toggle('max-lg:overflow-hidden', toggle.checked);
-    };
-
-    toggle.addEventListener('change', sync);
-
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && toggle.checked) {
-            toggle.checked = false;
-            sync();
-        }
-    });
-}
-
-if (sidebarCollapse) {
-    const storageKey = 'tenantism.sidebarCollapsed';
-
-    const sync = () => {
-        const collapsed = document.body.classList.contains('sidebar-collapsed');
-        sidebarCollapse.setAttribute('aria-pressed', collapsed ? 'true' : 'false');
-        sidebarCollapse.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
-    };
-
-    if (window.localStorage.getItem(storageKey) === 'true') {
-        document.body.classList.add('sidebar-collapsed');
-    }
-
-    sidebarCollapse.addEventListener('click', () => {
-        document.body.classList.toggle('sidebar-collapsed');
-        window.localStorage.setItem(storageKey, document.body.classList.contains('sidebar-collapsed') ? 'true' : 'false');
-        sync();
-    });
-
-    sync();
-}
-
 
 const liveMessages = document.querySelector('[data-live-messages]');
 const liveMessageForm = document.querySelector('[data-live-message-form]');

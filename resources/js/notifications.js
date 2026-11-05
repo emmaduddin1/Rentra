@@ -1,5 +1,6 @@
 import { safeRoute, validPush, newInstallationId } from './notifications/payload.js';
 import { renderPushSettings, deliverySummary } from './notifications/settings.js';
+import { renderNotificationPagination } from './notifications/pagination.js';
 
 const bootstrap = document.getElementById('tenantism-push-config');
 if (bootstrap) {
@@ -102,15 +103,7 @@ function start(config) {
                 const page = await api(`${config.feed}?${new URLSearchParams({ page: params.get('page') || '1', filter: params.get('filter') || 'all' })}`);
                 const root = document.querySelector('[data-notification-page-list]');
                 render(root, page.notifications);
-                if (page.last_page > 1) {
-                    const pagination = document.createElement('nav'); pagination.setAttribute('aria-label', 'Notification pages'); pagination.className = 'flex gap-4 mt-4';
-                    for (const [label, number] of [['Previous', page.page - 1], ['Next', page.page + 1]]) {
-                        if (number < 1 || number > page.last_page) continue;
-                        const link = document.createElement('a'); link.textContent = label; link.className = 'underline';
-                        link.href = `/notifications?${new URLSearchParams({ page: number, filter: params.get('filter') || 'all' })}`; pagination.append(link);
-                    }
-                    root.append(pagination);
-                }
+                renderNotificationPagination(root, page.page, page.last_page, location.href);
             }
             // Reconciliation remains useful when permission is denied or push is unavailable.
             if (initialized && !document.hidden && document.hasFocus()) {

@@ -1,4 +1,4 @@
-@props(['heading' => null, 'subheading' => null, 'back' => null])
+@props(['heading' => null, 'subheading' => null, 'back' => null, 'dashboard' => false])
 
 @php
     use Illuminate\Support\Facades\Storage;
@@ -51,7 +51,7 @@
     };
 
     $title = $heading ?: $routeTitle;
-    $subtitle = $subheading ?: $routeSubtitle;
+    $subtitle = $dashboard ? $routeSubtitle : ($subheading ?: $routeSubtitle);
     $unreadNotifications = $user?->inAppNotifications()->unread()->count() ?? 0;
     $initial = mb_strtoupper(mb_substr($user?->name ?? 'T', 0, 1));
     $profileImageUrl = $user?->profile_image
@@ -63,14 +63,14 @@
     $searchValue = request($searchName);
 @endphp
 
-<header class="sticky top-0 z-20 shrink-0 border-b border-slate-200/80 bg-white/95 shadow-xs backdrop-blur supports-[backdrop-filter]:bg-white/85">
+<header class="portal-topbar sticky top-0 z-20 shrink-0 border-b border-slate-200/80 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
     <div class="flex h-16 items-center gap-3 px-4 pt-[env(safe-area-inset-top)] sm:px-6 lg:h-20 lg:px-8">
         @if ($back)
             <a href="{{ $back['href'] ?? $back }}" class="btn btn-ghost -ml-2 px-2 lg:hidden" aria-label="{{ $back['label'] ?? __('Back') }}">
                 <x-icon name="arrow-left" class="size-6" />
             </a>
         @else
-            <label for="nav-toggle" class="btn btn-ghost -ml-2 cursor-pointer px-2 lg:hidden" aria-label="{{ __('Open menu') }}">
+            <label for="nav-toggle" class="btn btn-ghost -ml-2 cursor-pointer px-2 lg:hidden" role="button" tabindex="0" aria-label="{{ __('Open menu') }}" aria-controls="app-sidebar" aria-expanded="false" data-sidebar-toggle>
                 <x-icon name="menu" class="size-6" />
             </label>
         @endif
@@ -84,7 +84,11 @@
         </a>
 
         <div class="min-w-0 flex-1 lg:max-w-xs">
-            <h1 class="truncate text-base font-extrabold tracking-normal text-slate-900 sm:text-lg">{{ $title }}</h1>
+            @if ($dashboard)
+                <p class="text-sm font-semibold text-slate-900 sm:text-base">{{ __('Dashboard') }}</p>
+            @else
+                <h1 class="truncate text-base font-extrabold tracking-normal text-slate-900 sm:text-lg">{{ $title }}</h1>
+            @endif
             @if ($subtitle)
                 <p class="hidden truncate text-xs font-medium text-slate-500 sm:block">{{ $subtitle }}</p>
             @endif
@@ -106,9 +110,9 @@
         </form>
 
         <div class="ms-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
-            <details class="relative" data-notification-panel>
+            <details class="relative" data-notification-panel data-portal-menu>
             <summary
-                class="btn btn-ghost relative cursor-pointer list-none px-2.5"
+                class="portal-icon-button btn btn-ghost relative cursor-pointer list-none px-2.5 [&::-webkit-details-marker]:hidden"
                 @if (request()->routeIs('notifications.*')) aria-current="page" @endif
                 data-notification-count-url="{{ route('notifications.count') }}"
                 data-tour="notifications"
@@ -125,19 +129,19 @@
                 </span>
                 <span class="sr-only">{{ __('Notifications') }}</span>
             </summary>
-            <div class="absolute right-0 mt-3 max-h-[70vh] w-[min(22rem,90vw)] overflow-auto rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
+            <div class="portal-popover fixed inset-x-3 top-[calc(4rem+env(safe-area-inset-top))] mt-3 max-h-[70dvh] overflow-auto rounded-card border border-slate-200 bg-white p-4 shadow-lg sm:absolute sm:inset-x-auto sm:top-full sm:right-0 sm:w-88">
                 <a class="font-semibold text-sm" href="{{ route('notifications.index') }}">{{ __('All notifications and settings') }}</a>
-                <ul data-notification-recent class="my-3 divide-y divide-slate-100"></ul>
+                <div data-notification-recent class="my-3 divide-y divide-slate-100"></div>
                 <form method="POST" data-notifications-read-all action="{{ route('notifications.read-all') }}">
                     @csrf
                     <button class="btn btn-secondary" type="submit">{{ __('Mark all as read') }}</button>
                 </form>
-                <a class="mt-3 block text-sm underline" href="{{ route('notifications.index') }}#notification-settings">{{ __('Enable notifications') }}</a>
+                <a class="link mt-3 inline-flex min-h-11 items-center text-sm" href="{{ route('notifications.index') }}#notification-settings">{{ __('Notification settings') }}</a>
             </div>
             </details>
 
-            <details class="group relative">
-                <summary class="flex cursor-pointer list-none items-center gap-2 rounded-xl px-1.5 py-1 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-rental-500/35 [&::-webkit-details-marker]:hidden" data-tour="profile-menu">
+            <details class="group relative" data-portal-menu>
+                <summary class="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-xl px-1.5 py-1 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-rental-600 [&::-webkit-details-marker]:hidden" aria-label="{{ __('Account menu') }}" data-tour="profile-menu">
                     <span class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-sm font-bold text-white ring-1 ring-slate-200">
                         @if ($profileImageUrl)
                             <img src="{{ $profileImageUrl }}" alt="" class="h-full w-full object-cover">
@@ -152,7 +156,7 @@
                     <x-icon name="chevron-down" class="hidden size-4 text-slate-400 transition group-open:rotate-180 lg:block" />
                 </summary>
 
-                <div class="absolute right-0 mt-2 w-56 overflow-hidden rounded-card border border-slate-200 bg-white py-2 shadow-lg">
+                <div class="portal-popover absolute right-0 mt-2 w-56 overflow-hidden rounded-card border border-slate-200 bg-white py-2 shadow-lg">
                     <div class="border-b border-slate-100 px-4 py-3 lg:hidden">
                         <p class="truncate text-sm font-semibold text-slate-900">{{ $user->name }}</p>
                         <p class="truncate text-xs text-slate-500">{{ $role }}</p>

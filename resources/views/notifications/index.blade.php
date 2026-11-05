@@ -60,9 +60,8 @@
                 </li>
             @endforeach
         </ul>
-
-        <div class="mt-6">{{ $notifications->links() }}</div>
     @endif
+        {{ $notifications->links('pagination.notifications') }}
     </div>
     <x-notification-settings />
 </x-layouts.app>

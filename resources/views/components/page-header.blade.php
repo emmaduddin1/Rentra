@@ -1,4 +1,4 @@
-@props(['heading' => null, 'subheading' => null, 'actions' => null, 'back' => null])
+@props(['heading' => null, 'subheading' => null, 'actions' => null, 'back' => null, 'dashboard' => false])
 
 @if ($heading || $actions || $back)
     <header class="mb-6">
@@ -13,7 +13,7 @@
         <div class="flex flex-wrap items-start justify-between gap-4">
             @if ($heading)
                 <div class="min-w-0">
-                    <h1 class="text-2xl font-semibold tracking-tight text-slate-900">{{ $heading }}</h1>
+                    <h1 @class(['text-2xl font-semibold tracking-tight text-slate-900', 'sm:text-3xl' => $dashboard])>{{ $heading }}</h1>
 
                     @if ($subheading)
                         <p class="mt-1 text-sm text-slate-500">{{ $subheading }}</p>
@@ -24,7 +24,7 @@
             @endif
 
             @if (filled($actions))
-                <div class="ms-auto flex flex-wrap items-center gap-2">{{ $actions }}</div>
+                <div @class(['flex flex-wrap items-center gap-2', 'ms-auto' => ! $dashboard, 'lg:ms-auto' => $dashboard])>{{ $actions }}</div>
             @endif
         </div>
     </header>

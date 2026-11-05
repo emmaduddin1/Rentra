@@ -16,6 +16,9 @@ use Illuminate\View\View;
  */
 class NotificationController extends Controller
 {
+    // Keep the initial inbox and live feed on the same page boundaries.
+    private const PAGE_SIZE = 20;
+
     public function index(Request $request): View
     {
         $filter = $request->string('filter')->toString();
@@ -24,7 +27,7 @@ class NotificationController extends Controller
             'notifications' => $request->user()
                 ->inAppNotifications()
                 ->when($filter === 'unread', fn ($query) => $query->unread())
-                ->paginate(config('rental.pagination.per_page'))
+                ->paginate(self::PAGE_SIZE)
                 ->withQueryString(),
             'filter' => $filter === 'unread' ? 'unread' : 'all',
             'unreadCount' => $request->user()->inAppNotifications()->unread()->count(),
@@ -74,7 +77,7 @@ class NotificationController extends Controller
         if ($request->query('filter') === 'unread') {
             $query->unread();
         }
-        $page = $query->paginate(20);
+        $page = $query->paginate(self::PAGE_SIZE);
 
         return response()->json([
             'unread_count' => $request->user()->inAppNotifications()->unread()->count(),
