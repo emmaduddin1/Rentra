@@ -15,7 +15,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="{{ $versionedAsset('icons/favicon-16.png') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ $versionedAsset('apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ $versionedAsset('site.webmanifest') }}">
-    <meta name="theme-color" content="#1A273A">
+    <meta name="theme-color" content="#272F17">
     @if (request()->routeIs('home'))
         <link rel="preload" as="image" type="image/webp" href="{{ $versionedAsset('images/tenantism-hero.webp') }}" fetchpriority="high">
     @endif

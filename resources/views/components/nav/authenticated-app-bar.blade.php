@@ -79,7 +79,7 @@
             <x-icon name="menu" class="size-5" />
         </button>
 
-        <a href="{{ route('dashboard') }}" class="shrink-0 lg:hidden" aria-label="{{ __('Tenantism dashboard') }}">
+        <a href="{{ route('dashboard') }}" class="shrink-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand-700 lg:hidden" aria-label="{{ __('Tenantism dashboard') }}">
             <x-brand.mark class="size-8" />
         </a>
 
@@ -122,7 +122,7 @@
                 <span
                     data-notification-count
                     @if ($unreadNotifications < 1) hidden @endif
-                    class="absolute -top-1 -right-1 inline-flex min-w-5 items-center justify-center rounded-full bg-rental-500 px-1.5 py-0.5 text-xs font-semibold text-white ring-2 ring-white"
+                    class="absolute -top-1 -right-1 inline-flex min-w-5 items-center justify-center rounded-full bg-rental-600 px-1.5 py-0.5 text-xs font-semibold text-white ring-2 ring-white"
                 >
                     {{ $unreadNotifications }}
                 </span>
@@ -140,7 +140,7 @@
             </details>
 
             <details class="group relative" data-portal-menu>
-                <summary class="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-xl px-1.5 py-1 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-rental-600 [&::-webkit-details-marker]:hidden" aria-label="{{ __('Account menu') }}" data-tour="profile-menu">
+                <summary class="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-xl px-1.5 py-1 outline-none transition hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-brand-700 [&::-webkit-details-marker]:hidden" aria-label="{{ __('Account menu') }}" data-tour="profile-menu">
                     <span class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-900 text-sm font-bold text-white ring-1 ring-slate-200">
                         @if ($profileImageUrl)
                             <img src="{{ $profileImageUrl }}" alt="" class="h-full w-full object-cover">

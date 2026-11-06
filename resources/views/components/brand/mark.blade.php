@@ -1,7 +1,7 @@
-@props(['label' => 'Tenantism'])
+@props(['label' => 'Tenantism', 'variant' => 'light'])
 
 @php
-    $path = 'brand/tenantism-mark.svg';
+    $path = $variant === 'dark' ? 'brand/tenantism-mark-dark.svg' : 'brand/tenantism-mark.svg';
     $version = file_exists(public_path($path)) ? '?v='.filemtime(public_path($path)) : '';
 @endphp
 
