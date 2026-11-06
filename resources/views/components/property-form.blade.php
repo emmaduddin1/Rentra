@@ -247,7 +247,7 @@
                                 name="amenities[]"
                                 value="{{ $amenity->id }}"
                                 @checked(in_array($amenity->id, $selectedAmenities, true))
-                                class="rounded border-slate-300 text-rental-600 focus:ring-rental-500"
+                                class="rounded border-slate-300 text-brand-700 focus:ring-brand-700"
                             >
                             <x-icon :name="$amenity->icon_identifier" class="size-4 text-rental-600" />
                             <span>{{ $amenity->name }}</span>

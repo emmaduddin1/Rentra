@@ -61,7 +61,7 @@
         </div>
 
         <details class="mt-4 border-t border-slate-100 pt-2" data-more-filters @if ($advancedOpen) open @endif>
-            <summary class="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg text-sm font-semibold text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rental-600" aria-expanded="{{ $advancedOpen ? 'true' : 'false' }}" aria-controls="listing-extra-filters">
+            <summary class="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg text-sm font-semibold text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700" aria-expanded="{{ $advancedOpen ? 'true' : 'false' }}" aria-controls="listing-extra-filters">
                 {{ __('More filters') }}
                 @if ($advancedCount > 0)
                     <span class="rounded-full bg-rental-100 px-2 py-1 text-xs text-rental-700">{{ __(':count active', ['count' => $advancedCount]) }}</span>

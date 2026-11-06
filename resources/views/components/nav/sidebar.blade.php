@@ -69,15 +69,15 @@
 {{-- The drawer slides in on small screens and is simply always open from lg up. --}}
 <aside
     id="app-sidebar"
-    class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col border-r border-slate-200 bg-white transition-[width,transform] duration-200 peer-checked:translate-x-0 lg:translate-x-0"
+    class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col border-r border-white/10 bg-charcoal text-white transition-[width,transform] duration-200 peer-checked:translate-x-0 lg:translate-x-0"
     data-sidebar
 >
-    <div class="flex h-20 shrink-0 items-center justify-between gap-2 overflow-hidden border-b border-slate-200/80 px-6" data-sidebar-header>
-        <a href="{{ route('dashboard') }}" class="flex min-w-0 shrink-0 items-center overflow-hidden" aria-label="{{ __('Tenantism dashboard') }}" data-sidebar-brand-full data-tour="brand">
-            <x-brand.logo class="h-9 max-w-40 sm:h-10 sm:max-w-44 lg:h-10 lg:max-w-44" />
+    <div class="flex h-20 shrink-0 items-center justify-between gap-2 overflow-hidden border-b border-white/10 px-6" data-sidebar-header>
+        <a href="{{ route('dashboard') }}" class="flex min-w-0 shrink-0 items-center overflow-hidden rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-butter" aria-label="{{ __('Tenantism dashboard') }}" data-sidebar-brand-full data-tour="brand">
+            <x-brand.logo variant="dark" class="h-9 max-w-40 sm:h-10 sm:max-w-44 lg:h-10 lg:max-w-44" />
         </a>
-        <a href="{{ route('dashboard') }}" class="hidden shrink-0 items-center justify-center" aria-label="{{ __('Tenantism dashboard') }}" data-sidebar-brand-compact data-tour="brand">
-            <x-brand.mark class="size-11" />
+        <a href="{{ route('dashboard') }}" class="hidden shrink-0 items-center justify-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-butter" aria-label="{{ __('Tenantism dashboard') }}" data-sidebar-brand-compact data-tour="brand">
+            <x-brand.mark variant="dark" class="size-11" />
         </a>
 
         <label for="nav-toggle" class="btn btn-ghost -mr-2 cursor-pointer px-2 lg:hidden" role="button" tabindex="0" aria-label="{{ __('Close menu') }}" aria-controls="app-sidebar" aria-expanded="false" data-sidebar-toggle>
@@ -89,7 +89,7 @@
         @foreach ($groups as $group)
             <div class="space-y-1">
                 @if ($group['label'])
-                    <p class="px-3 pb-1 text-xs font-semibold tracking-wider text-slate-500 uppercase" data-sidebar-label>{{ $group['label'] }}</p>
+                    <p class="px-3 pb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase" data-sidebar-label>{{ $group['label'] }}</p>
                 @endif
 
                 @foreach ($group['links'] as $link)
@@ -105,14 +105,14 @@
     </nav>
 
     {{-- Who you are signed in as, and the way out - always in the same spot. --}}
-    <div class="shrink-0 border-t border-slate-200 p-3">
-        <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 transition hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-rental-600" aria-label="{{ __('Your profile') }}">
-            <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+    <div class="shrink-0 border-t border-white/10 p-3">
+        <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-butter" aria-label="{{ __('Your profile') }}">
+            <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-white">
                 <x-icon name="user" class="size-5" />
             </span>
             <span class="min-w-0 flex-1" data-sidebar-label>
-                <span class="block truncate text-sm font-medium text-slate-900">{{ $user->name }}</span>
-                <span class="block truncate text-xs text-slate-500">{{ $user->role->label() }}</span>
+                <span class="block truncate text-sm font-medium text-white">{{ $user->name }}</span>
+                <span class="block truncate text-xs text-slate-300">{{ $user->role->label() }}</span>
             </span>
         </a>
 

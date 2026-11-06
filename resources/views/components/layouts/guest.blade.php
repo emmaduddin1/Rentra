@@ -14,12 +14,12 @@
     <link rel="icon" type="image/png" sizes="16x16" href="{{ $versionedAsset('icons/favicon-16.png') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ $versionedAsset('apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ $versionedAsset('site.webmanifest') }}">
-    <meta name="theme-color" content="#1A273A">
+    <meta name="theme-color" content="#272F17">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-dvh bg-slate-50 text-slate-900 antialiased">
     <div class="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
-        <a href="{{ route('home') }}" class="mb-8 text-lg font-black tracking-tight text-slate-900">
+        <a href="{{ route('home') }}" class="mb-8 rounded-lg text-lg font-black tracking-tight text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-brand-700 focus-visible:ring-offset-2">
             <x-brand.logo class="h-10 max-w-44" />
         </a>
 

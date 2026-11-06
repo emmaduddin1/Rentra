@@ -14,12 +14,12 @@
 
 <{{ $tag }} @if ($href) href="{{ $href }}" @endif {{ $attributes->class([
     'card stat-card group flex min-w-0 flex-col p-4 transition sm:p-5',
-    'hover:border-brand-200 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rental-600' => (bool) $href,
+    'hover:border-brand-200 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700' => (bool) $href,
 ]) }}>
     <span class="flex items-start justify-between gap-2 text-sm font-medium text-slate-600">
         <span class="min-w-0 pt-1">{{ $label }}</span>
         @if ($icon)
-            <span @class(['stat-icon hidden size-9 shrink-0 items-center justify-center rounded-xl min-[360px]:flex', 'bg-amber-50 text-amber-700' => $variant === 'warning', 'bg-rental-50 text-rental-700' => $variant !== 'warning'])><x-icon :name="$icon" class="size-4" /></span>
+            <span @class(['stat-icon hidden size-9 shrink-0 items-center justify-center rounded-xl min-[360px]:flex', 'bg-amber-50 text-amber-700' => $variant === 'warning', 'bg-butter text-brand-700' => $variant !== 'warning'])><x-icon :name="$icon" class="size-4" /></span>
         @endif
     </span>
 

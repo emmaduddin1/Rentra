@@ -99,7 +99,7 @@
                     </div>
                 </div>
                 <details class="mt-3 border-t border-slate-100 pt-2" data-more-filters>
-                    <summary class="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg text-sm font-semibold text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rental-600" aria-controls="landing-extra-filters" aria-expanded="false">
+                    <summary class="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg text-sm font-semibold text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700" aria-controls="landing-extra-filters" aria-expanded="false">
                         {{ __('More filters') }}
                         <x-icon name="chevron-down" class="size-4" />
                     </summary>
@@ -114,7 +114,7 @@
             <nav class="relative mt-3 flex min-w-0 gap-2 overflow-x-auto border-t border-slate-100 pt-3 pb-1" aria-label="{{ __('Browse by property type') }}">
                 @foreach ($categoryCards as $card)
                     <a href="{{ route('listings.index', ['listing_purpose' => $selectedPurpose->value, 'category_id' => $card['category']->id]) }}"
-                       class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-rental-300 hover:bg-rental-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rental-600">
+                       class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-rental-300 hover:bg-rental-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700">
                         {{ $card['category']->name }}
                         <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600"><span class="sr-only">{{ __('Available:') }}</span>{{ $card['count'] }}</span>
                     </a>
@@ -160,7 +160,7 @@
                 @foreach ($areaCards as $areaListing)
                     <a
                         href="{{ route('listings.index', ['listing_purpose' => $selectedPurpose->value, 'area' => $areaListing->area]) }}"
-                        class="group relative min-h-40 overflow-hidden rounded-card bg-brand-700 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rental-500/35"
+                        class="group relative min-h-40 overflow-hidden rounded-card bg-brand-700 shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700/35"
                     >
                         @if ($areaListing->primaryImage)
                             <img

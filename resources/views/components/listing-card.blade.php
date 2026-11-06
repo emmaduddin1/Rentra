@@ -33,7 +33,7 @@
                 @csrf
                 <button
                     type="submit"
-                    class="flex size-11 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition hover:text-red-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rental-600"
+                    class="flex size-11 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm transition hover:text-red-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700"
                     aria-pressed="{{ $saved ? 'true' : 'false' }}"
                 >
                     <x-icon name="heart" @class(['size-5', 'fill-red-500 text-red-500' => $saved]) />

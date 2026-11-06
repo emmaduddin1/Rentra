@@ -14,7 +14,7 @@
     class="pointer-events-none fixed inset-0 z-[100] hidden"
     aria-hidden="true"
 >
-    <div data-tour-highlight class="pointer-events-none fixed rounded-xl border-2 border-rental-400 shadow-[0_0_0_9999px_rgb(15_23_42/0.68)] transition-all duration-200"></div>
+    <div data-tour-highlight class="product-tour-highlight pointer-events-none fixed rounded-xl border-2 border-rental-500 transition-all duration-200"></div>
 
     <section
         data-tour-panel
