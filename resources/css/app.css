@@ -132,7 +132,7 @@
     }
 
     .notification-pagination {
-        @apply inline-flex max-w-full items-stretch overflow-x-auto rounded-xl border border-charcoal bg-charcoal shadow-sm;
+        @apply inline-flex max-w-full items-stretch overflow-x-auto rounded-lg border border-white/10 bg-charcoal shadow-sm;
     }
 
     .notification-pagination-footer {
@@ -144,10 +144,10 @@
     }
 
     .notification-page-link {
-        @apply inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center border-r border-white/15 bg-charcoal px-3 text-base font-medium text-white
-            transition hover:bg-forest
+        @apply inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center border-r border-white/10 bg-charcoal px-3 text-sm font-semibold text-white
+            transition hover:bg-white/10
             focus-visible:z-10 focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-white
-            sm:min-h-12 sm:min-w-12;
+            sm:min-h-11 sm:min-w-11;
     }
 
     .notification-page-link:last-child {
@@ -167,11 +167,11 @@
     }
 
     .notification-page-link[aria-current="page"] {
-        @apply bg-forest text-white;
+        @apply bg-forest text-slate-950;
     }
 
     .notification-page-link[aria-disabled="true"] {
-        @apply bg-charcoal text-slate-400;
+        @apply bg-charcoal text-white/45;
     }
 
     .product-tour-highlight {
@@ -279,10 +279,43 @@
     }
 }
 
-/* Laravel's default pagination markup, nudged onto the same palette. */
+/* Compact, branded pagination shared by audit logs and notifications. */
 @layer components {
-    nav[role='navigation'] [aria-current='page'] span {
-        @apply border-brand-700 bg-brand-50 text-brand-700;
+    .audit-pagination {
+        @apply inline-flex max-w-full items-stretch overflow-x-auto rounded-lg border border-white/10 bg-charcoal shadow-sm;
+    }
+
+    .audit-pagination-footer {
+        @apply mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between;
+    }
+
+    .audit-pagination-summary {
+        @apply text-sm text-slate-600 sm:text-base;
+    }
+
+    .audit-pagination-link {
+        @apply inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center border-r border-white/10 bg-charcoal px-3 text-sm font-semibold text-white
+            transition hover:bg-white/10
+            focus-visible:z-10 focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-white
+            sm:min-h-11 sm:min-w-11;
+    }
+
+    .audit-pagination-link:last-child {
+        border-right: 0;
+    }
+
+    .audit-pagination-link[aria-current='page'] {
+        @apply bg-forest text-slate-950;
+    }
+
+    .audit-pagination-link[aria-disabled='true'] {
+        @apply bg-charcoal text-white/45;
+    }
+
+    .audit-pagination-link svg {
+        width: 1.125rem;
+        height: 1.125rem;
+        stroke-width: 2.5;
     }
 }
 

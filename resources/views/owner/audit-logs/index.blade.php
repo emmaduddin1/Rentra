@@ -77,6 +77,6 @@
             </div>
         </div>
 
-        <div class="mt-6">{{ $logs->links() }}</div>
+        <div class="mt-6">{{ $logs->links('pagination.audit') }}</div>
     @endif
 </x-layouts.app>
